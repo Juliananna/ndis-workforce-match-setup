@@ -486,6 +486,144 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FOR SUPPORT WORKERS ── */}
+      <section id="for-workers" className="py-24 md:py-32" style={{ backgroundColor: "#fafaf9" }}>
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+
+            {/* Left: text content */}
+            <div>
+              <span
+                className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
+                style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
+              >
+                For Support Workers
+              </span>
+              <h2
+                className="mb-5 text-3xl font-black leading-tight md:text-[2.3rem]"
+                style={{ color: "var(--brand-ink)" }}
+              >
+                Find support work without the usual hassle
+              </h2>
+              <p className="mb-10 text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+                Create your profile, upload your documents, and get in front of providers who are actively hiring.
+              </p>
+
+              <div className="space-y-8">
+                {[
+                  {
+                    title: "Stop applying over and over",
+                    body: "Your profile stays visible to providers looking for support workers right now.",
+                  },
+                  {
+                    title: "Show your experience upfront",
+                    body: "Upload your qualifications, references, and worker information in one place.",
+                  },
+                  {
+                    title: "Get discovered by providers",
+                    body: "Providers can review your profile and contact you directly for interviews.",
+                  },
+                  {
+                    title: "Be ready for opportunities faster",
+                    body: "Complete your profile once and be prepared when new opportunities become available.",
+                  },
+                ].map(({ title, body }) => (
+                  <div key={title} className="flex gap-4">
+                    <span
+                      className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: "var(--brand-purple)" }}
+                    />
+                    <div>
+                      <p className="mb-1 font-black" style={{ color: "var(--brand-ink)" }}>{title}</p>
+                      <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-12">
+                <p className="mb-6 text-xl font-black" style={{ color: "var(--brand-ink)" }}>
+                  Less chasing. More opportunity.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    to="/gethired"
+                    className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white transition-all hover:-translate-y-0.5"
+                    style={{ background: "var(--brand-purple-grad)", boxShadow: "0 6px 20px rgba(151,100,199,0.28)" }}
+                  >
+                    Join as a Support Worker <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    to="/gethired"
+                    className="inline-flex items-center gap-2 rounded-xl border px-7 py-3.5 text-sm font-black transition-all hover:-translate-y-0.5"
+                    style={{ borderColor: "var(--brand-purple)", color: "var(--brand-purple)" }}
+                  >
+                    Create Your Profile
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: visual cards */}
+            <div className="flex flex-col gap-4">
+              {[
+                {
+                  Icon: Users,
+                  label: "Visible to providers",
+                  sub: "Actively hiring organisations can find and review your profile",
+                  tint: "var(--brand-purple-tint)",
+                  fg: "var(--brand-purple)",
+                },
+                {
+                  Icon: FileCheck2,
+                  label: "Documents in one place",
+                  sub: "Upload qualifications and references once — providers access them directly",
+                  tint: "var(--brand-cyan-tint)",
+                  fg: "var(--brand-cyan-deep)",
+                },
+                {
+                  Icon: Zap,
+                  label: "Ready when opportunities arise",
+                  sub: "No repeated applications. Your profile works for you in the background",
+                  tint: "#fef9ec",
+                  fg: "#b45309",
+                },
+              ].map(({ Icon, label, sub, tint, fg }) => (
+                <div
+                  key={label}
+                  className="flex items-start gap-5 rounded-2xl border bg-white p-6"
+                  style={{ borderColor: "var(--brand-border)" }}
+                >
+                  <div
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: tint }}
+                  >
+                    <Icon className="h-5 w-5" style={{ color: fg }} />
+                  </div>
+                  <div>
+                    <p className="mb-1 font-black text-sm" style={{ color: "var(--brand-ink)" }}>{label}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{sub}</p>
+                  </div>
+                </div>
+              ))}
+
+              <div
+                className="rounded-2xl border p-6"
+                style={{ borderColor: "var(--brand-purple)", backgroundColor: "var(--brand-purple-tint)" }}
+              >
+                <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>
+                  You're not inventory.
+                </p>
+                <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+                  KizaziHire is built so providers find you — not the other way around.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* ── WHAT'S INCLUDED IN EVERY WORKER PROFILE ── */}
       <section
         id="whats-included"
