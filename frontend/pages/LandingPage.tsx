@@ -405,7 +405,7 @@ export default function LandingPage() {
 
       {/* ── HOW IT WORKS ── */}
       <section id="how-it-works" className="py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <div className="mb-14 text-center">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
@@ -417,99 +417,72 @@ export default function LandingPage() {
               className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              See how it works
+              Hire support workers in 4 simple steps
             </h2>
-            <p className="mx-auto max-w-lg text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-              Two paths. One platform. Designed for safer, smarter care matching.
+            <p className="mx-auto max-w-xl text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+              Everything you need to review, interview, and hire — without the usual recruitment delays.
             </p>
           </div>
 
-          <div className="grid gap-10 md:grid-cols-2">
-            {/* For Providers */}
-            <div
-              className="rounded-3xl border p-8"
-              style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
-            >
-              <div className="mb-6 flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: "var(--brand-cyan-tint)" }}
-                >
-                  <Users className="h-5 w-5" style={{ color: "var(--brand-cyan-deep)" }} />
-                </span>
-                <h3 className="text-lg font-black" style={{ color: "var(--brand-ink)" }}>For Providers</h3>
-              </div>
-              <div className="space-y-5">
-                {[
-                  { n: "1", t: "Tell us your needs", d: "Describe the participant's care requirements, location, and scheduling needs." },
-                  { n: "2", t: "Get matched instantly", d: "Our intelligent system surfaces verified workers who fit your specific requirements." },
-                  { n: "3", t: "Hire with confidence", d: "Review credentials, screening results, and experience before making contact." },
-                ].map(({ n, t, d }) => (
-                  <div key={n} className="flex gap-4">
-                    <span
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
-                      style={{ background: "var(--brand-cyan-grad)" }}
-                    >
-                      {n}
-                    </span>
-                    <div>
-                      <p className="mb-0.5 text-sm font-black" style={{ color: "var(--brand-ink)" }}>{t}</p>
-                      <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{d}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link
-                to="/register"
-                className="mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white transition-all hover:-translate-y-0.5"
-                style={{ background: "var(--brand-cyan-grad)", boxShadow: "0 6px 20px rgba(43,183,227,0.26)" }}
+          <div className="grid gap-6 md:grid-cols-2">
+            {[
+              {
+                n: "1",
+                t: "Browse pre-vetted workers",
+                bullets: [
+                  "qualifications collected",
+                  "2 reference checks completed",
+                  "experience details included",
+                  "profiles ready to review",
+                ],
+              },
+              {
+                n: "2",
+                t: "Review files instantly",
+                body: "Download worker files and compliance documents before making contact.",
+                note: "No waiting. No back-and-forth.",
+              },
+              {
+                n: "3",
+                t: "Interview directly",
+                body: "Book interviews with workers that fit your requirements and assess suitability yourself.",
+                note: "You stay in control of the hiring decision.",
+              },
+              {
+                n: "4",
+                t: "Hire and get started",
+                body: "Choose the right worker and get support started faster.",
+                note: "Many workers are available to start within 24–48 hours.",
+              },
+            ].map(({ n, t, bullets, body, note }) => (
+              <div
+                key={n}
+                className="flex gap-5 rounded-3xl border p-7"
+                style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
               >
-                Start as a provider <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {/* For Workers */}
-            <div
-              className="rounded-3xl border p-8"
-              style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
-            >
-              <div className="mb-6 flex items-center gap-3">
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: "var(--brand-purple-tint)" }}
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black text-white"
+                  style={{ background: "var(--brand-cyan-grad)" }}
                 >
-                  <BadgeCheck className="h-5 w-5" style={{ color: "var(--brand-purple)" }} />
+                  {n}
                 </span>
-                <h3 className="text-lg font-black" style={{ color: "var(--brand-ink)" }}>For Workers</h3>
+                <div>
+                  <p className="mb-2 font-black" style={{ color: "var(--brand-ink)" }}>{t}</p>
+                  {bullets && (
+                    <ul className="space-y-1">
+                      {bullets.map((b) => (
+                        <li key={b} className="flex items-center gap-2 text-sm" style={{ color: "var(--brand-muted)" }}>
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: "var(--brand-cyan-deep)" }} />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {body && <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{body}</p>}
+                  {note && <p className="mt-2 text-sm font-bold" style={{ color: "var(--brand-ink)" }}>{note}</p>}
+                </div>
               </div>
-              <div className="space-y-5">
-                {[
-                  { n: "1", t: "Create your profile", d: "Upload your credentials, screening documents, and care experience in minutes." },
-                  { n: "2", t: "Get matched", d: "Be surfaced to providers who genuinely need your specific skills and availability." },
-                  { n: "3", t: "Start working", d: "Connect with providers, manage your schedule, and build a sustainable practice." },
-                ].map(({ n, t, d }) => (
-                  <div key={n} className="flex gap-4">
-                    <span
-                      className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
-                      style={{ background: "var(--brand-purple-grad)" }}
-                    >
-                      {n}
-                    </span>
-                    <div>
-                      <p className="mb-0.5 text-sm font-black" style={{ color: "var(--brand-ink)" }}>{t}</p>
-                      <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{d}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link
-                to="/gethired"
-                className="mt-8 inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-black text-white transition-all hover:-translate-y-0.5"
-                style={{ background: "var(--brand-purple-grad)", boxShadow: "0 6px 20px rgba(151,100,199,0.26)" }}
-              >
-                Join as a worker <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
       </section>
