@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "encore.dev": "^1.56.0",
+    "encore.dev": "^1.57.11",
     "jose": "^5.10.0",
     "stripe": "^17.7.0"
   },
