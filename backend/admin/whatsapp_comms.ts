@@ -4,11 +4,16 @@ import db from "../db";
 import { assertAdmin } from "./guard";
 import { sendWhatsApp, sendWhatsAppTemplate } from "../emailer/whatsapp";
 
+function firstName(fullName: string | null): string {
+  if (!fullName?.trim()) return "there";
+  return fullName.trim().split(/\s+/)[0];
+}
+
 export interface SendWhatsAppToUserRequest {
   userId: string;
   message: string;
   templateSid?: string;
-  templateVariables?: Record<string, string>;
+  templateBody?: string;
 }
 
 export interface SendWhatsAppResponse {
@@ -27,8 +32,10 @@ export const adminSendWhatsAppToUser = api<SendWhatsAppToUserRequest, SendWhatsA
 
     const user = await db.queryRow<{
       phone: string | null;
+      name: string | null;
     }>`
-      SELECT COALESCE(w.phone, e.phone) AS phone
+      SELECT COALESCE(w.phone, e.phone) AS phone,
+             COALESCE(w.name, e.organisation_name) AS name
       FROM users u
       LEFT JOIN workers w ON w.user_id = u.user_id
       LEFT JOIN employers e ON e.user_id = u.user_id
@@ -43,14 +50,22 @@ export const adminSendWhatsAppToUser = api<SendWhatsAppToUserRequest, SendWhatsA
     const normalised = phone.trim().replace(/\s+/g, "");
 
     if (req.templateSid) {
-      await sendWhatsAppTemplate(normalised, req.templateSid, req.templateVariables);
+      const variables: Record<string, string> = {
+        "1": firstName(user.name),
+        "2": req.templateBody?.trim() ?? "",
+      };
+      await sendWhatsAppTemplate(normalised, req.templateSid, variables);
     } else {
       await sendWhatsApp(normalised, req.message.trim());
     }
 
+    const logMsg = req.templateSid
+      ? `[template:${req.templateSid}] ${req.templateBody?.trim() ?? ""}`
+      : req.message.trim();
+
     await db.exec`
       INSERT INTO whatsapp_sent_log (sent_by, recipient_user_id, phone_number, message, status)
-      VALUES (${auth.userID}, ${req.userId}, ${normalised}, ${req.templateSid ?? req.message.trim()}, 'sent')
+      VALUES (${auth.userID}, ${req.userId}, ${normalised}, ${logMsg}, 'sent')
     `;
 
     return { sent: 1 };
@@ -62,7 +77,7 @@ export interface SendBulkWhatsAppRequest {
   targetRole?: "WORKER" | "EMPLOYER" | "all";
   locationContains?: string;
   templateSid?: string;
-  templateVariables?: Record<string, string>;
+  templateBody?: string;
 }
 
 export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppResponse>(
@@ -81,9 +96,11 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
     const users = await db.queryAll<{
       user_id: string;
       phone: string | null;
+      name: string | null;
     }>`
       SELECT u.user_id,
-        COALESCE(w.phone, e.phone) AS phone
+        COALESCE(w.phone, e.phone) AS phone,
+        COALESCE(w.name, e.organisation_name) AS name
       FROM users u
       LEFT JOIN workers w ON w.user_id = u.user_id
       LEFT JOIN employers e ON e.user_id = u.user_id
@@ -100,6 +117,10 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
       ORDER BY u.created_at DESC
     `;
 
+    const logMsg = req.templateSid
+      ? `[template:${req.templateSid}] ${req.templateBody?.trim() ?? ""}`
+      : req.message.trim();
+
     let sent = 0;
     for (const user of users) {
       const phone = user.phone!.trim().replace(/\s+/g, "");
@@ -107,7 +128,11 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
       let errorMsg: string | null = null;
       try {
         if (req.templateSid) {
-          await sendWhatsAppTemplate(phone, req.templateSid, req.templateVariables);
+          const variables: Record<string, string> = {
+            "1": firstName(user.name),
+            "2": req.templateBody?.trim() ?? "",
+          };
+          await sendWhatsAppTemplate(phone, req.templateSid, variables);
         } else {
           await sendWhatsApp(phone, req.message.trim());
         }
@@ -119,7 +144,7 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
 
       await db.exec`
         INSERT INTO whatsapp_sent_log (sent_by, recipient_user_id, phone_number, message, status, error_message, is_bulk)
-        VALUES (${auth.userID}, ${user.user_id}, ${phone}, ${req.templateSid ?? req.message.trim()}, ${status}, ${errorMsg}, true)
+        VALUES (${auth.userID}, ${user.user_id}, ${phone}, ${logMsg}, ${status}, ${errorMsg}, true)
       `;
     }
 

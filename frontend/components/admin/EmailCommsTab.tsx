@@ -689,6 +689,7 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [sendTarget, setSendTarget] = useState<WhatsAppSendTarget>("single");
   const [mode, setMode] = useState<WhatsAppMode>("template");
   const [message, setMessage] = useState("");
+  const [templateBody, setTemplateBody] = useState("");
   const [userId, setUserId] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userSearch, setUserSearch] = useState("");
@@ -736,6 +737,7 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   };
 
   const handleSend = async () => {
+    if (mode === "template" && !templateBody.trim()) { setError("Message body is required"); return; }
     if (mode === "freeform" && !message.trim()) { setError("Message is required"); return; }
     if (sendTarget === "single" && !userId) { setError("Please select a recipient"); return; }
     setSending(true);
@@ -748,6 +750,7 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
           userId,
           message: message.trim() || " ",
           templateSid,
+          templateBody: templateBody.trim() || undefined,
         });
         setResult(res);
       } else {
@@ -756,6 +759,7 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
           targetRole: targetRole as "WORKER" | "EMPLOYER" | "all",
           locationContains: locationContains.trim() || undefined,
           templateSid,
+          templateBody: templateBody.trim() || undefined,
         });
         setResult(res);
       }
@@ -804,10 +808,28 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
           </div>
 
           {mode === "template" && (
-            <div className="flex items-start gap-2 text-xs bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-md p-3">
-              <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              <div>
-                Uses approved WhatsApp template <span className="font-mono">{APPROVED_TEMPLATE_SID}</span>. Works outside the 24-hour session window. No message body needed.
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 text-xs bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-md p-3">
+                <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div>Uses approved WhatsApp template. Works outside the 24-hour session window.</div>
+                  <div className="font-mono text-blue-300/70 whitespace-pre-wrap">{`Hello {{First Name}}
+{{Body}}
+Many Thanks,
+From the Team at Kizazi`}</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Message Body *</Label>
+                <textarea
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="Your message here…"
+                  value={templateBody}
+                  onChange={(e) => setTemplateBody(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground/60">First name is filled in automatically per recipient. {templateBody.length}/1000 chars</p>
               </div>
             </div>
           )}
