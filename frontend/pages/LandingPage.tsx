@@ -486,6 +486,97 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── WHAT'S INCLUDED IN EVERY WORKER PROFILE ── */}
+      <section
+        id="whats-included"
+        className="py-24 md:py-32"
+        style={{ backgroundColor: "var(--brand-canvas)" }}
+      >
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-14 text-center">
+            <span
+              className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
+              style={{ backgroundColor: "var(--brand-cyan-tint)", color: "var(--brand-cyan-deep)" }}
+            >
+              Worker profiles
+            </span>
+            <h2
+              className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
+              style={{ color: "var(--brand-ink)" }}
+            >
+              Everything you need to review before hiring
+            </h2>
+            <p className="mx-auto max-w-xl text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+              No chasing documents. No incomplete applications. Review worker information upfront before booking interviews.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            {[
+              {
+                Icon: BadgeCheck,
+                title: "Required qualifications collected",
+                body: "Review certifications and required documentation before making contact.",
+              },
+              {
+                Icon: CheckCircle2,
+                title: "2 reference checks completed",
+                body: "Workers complete reference checks before being listed on the platform.",
+              },
+              {
+                Icon: Users,
+                title: "Experience and support background",
+                body: "See previous support experience, skills, and worker information upfront.",
+              },
+              {
+                Icon: FileCheck2,
+                title: "Compliance files ready to download",
+                body: "Access worker documents and files instantly from their profile.",
+              },
+              {
+                Icon: Zap,
+                title: "Availability and readiness to start",
+                body: "View workers who are actively looking and ready for opportunities.",
+              },
+              {
+                Icon: ChevronRight,
+                title: "Direct interview booking",
+                body: "Speak directly with workers and assess suitability yourself before hiring.",
+              },
+            ].map(({ Icon, title, body }) => (
+              <div
+                key={title}
+                className="flex gap-5 rounded-3xl border bg-white p-7"
+                style={{ borderColor: "var(--brand-border)" }}
+              >
+                <div
+                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: "var(--brand-cyan-tint)" }}
+                >
+                  <Icon className="h-5 w-5" style={{ color: "var(--brand-cyan-deep)" }} />
+                </div>
+                <div>
+                  <p className="mb-1 font-black text-sm" style={{ color: "var(--brand-ink)" }}>{title}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="mt-12 rounded-3xl border p-8 text-center"
+            style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
+          >
+            <p className="text-lg font-black" style={{ color: "var(--brand-ink)" }}>
+              We reduce the screening work — not your control.
+            </p>
+            <p className="mt-2 text-base" style={{ color: "var(--brand-muted)" }}>
+              You still choose who you interview and hire.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── VALUE / FEATURE CARDS ── */}
       <section
         id="features"
