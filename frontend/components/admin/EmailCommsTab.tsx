@@ -680,10 +680,14 @@ function ImageUploadPanel() {
   );
 }
 
+const APPROVED_TEMPLATE_SID = "HX88eaaede701a38cbf24904d374dbf836";
+
 type WhatsAppSendTarget = "single" | "bulk";
+type WhatsAppMode = "freeform" | "template";
 
 function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [sendTarget, setSendTarget] = useState<WhatsAppSendTarget>("single");
+  const [mode, setMode] = useState<WhatsAppMode>("template");
   const [message, setMessage] = useState("");
   const [userId, setUserId] = useState("");
   const [userPhone, setUserPhone] = useState("");
@@ -732,20 +736,26 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   };
 
   const handleSend = async () => {
-    if (!message.trim()) { setError("Message is required"); return; }
+    if (mode === "freeform" && !message.trim()) { setError("Message is required"); return; }
     if (sendTarget === "single" && !userId) { setError("Please select a recipient"); return; }
     setSending(true);
     setError(null);
     setResult(null);
     try {
+      const templateSid = mode === "template" ? APPROVED_TEMPLATE_SID : undefined;
       if (sendTarget === "single") {
-        const res = await api!.admin.adminSendWhatsAppToUser({ userId, message });
+        const res = await api!.admin.adminSendWhatsAppToUser({
+          userId,
+          message: message.trim() || " ",
+          templateSid,
+        });
         setResult(res);
       } else {
         const res = await api!.admin.adminSendBulkWhatsApp({
-          message,
+          message: message.trim() || " ",
           targetRole: targetRole as "WORKER" | "EMPLOYER" | "all",
           locationContains: locationContains.trim() || undefined,
+          templateSid,
         });
         setResult(res);
       }
@@ -781,6 +791,33 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
               Bulk Send
             </button>
           </div>
+
+          <div className="flex gap-1 p-1 bg-muted/30 rounded-lg w-fit">
+            <button onClick={() => setMode("template")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${mode === "template" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              Approved Template
+            </button>
+            <button onClick={() => setMode("freeform")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${mode === "freeform" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              Freeform Message
+            </button>
+          </div>
+
+          {mode === "template" && (
+            <div className="flex items-start gap-2 text-xs bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-md p-3">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <div>
+                Uses approved WhatsApp template <span className="font-mono">{APPROVED_TEMPLATE_SID}</span>. Works outside the 24-hour session window. No message body needed.
+              </div>
+            </div>
+          )}
+
+          {mode === "freeform" && (
+            <div className="flex items-start gap-2 text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-md p-3">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              Freeform messages only work within the 24-hour session window. Will fail with error 63016 otherwise.
+            </div>
+          )}
 
           {result && (
             <div className="flex items-center gap-2 text-sm text-green-500 bg-green-500/10 border border-green-500/20 rounded-md p-3">
@@ -850,18 +887,20 @@ function WhatsAppPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Message *</Label>
-            <textarea
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-              rows={5}
-              maxLength={1600}
-              placeholder="Your WhatsApp message…"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground/60">{message.length}/1600 characters</p>
-          </div>
+          {mode === "freeform" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Message *</Label>
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                rows={5}
+                maxLength={1600}
+                placeholder="Your WhatsApp message…"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground/60">{message.length}/1600 characters</p>
+            </div>
+          )}
 
           <Button className="h-9 text-sm gap-2" onClick={handleSend} disabled={sending}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
