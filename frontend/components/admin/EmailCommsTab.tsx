@@ -12,10 +12,11 @@ import {
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import type { EmailTemplate, EmailLogEntry } from "~backend/admin/email_comms";
 import type { WhatsAppLogEntry } from "~backend/admin/whatsapp_comms";
+import type { SMSLogEntry } from "~backend/admin/sms_comms";
 import { RichEmailEditor } from "./RichEmailEditor";
 import { useProxyUpload } from "../../hooks/useProxyUpload";
 
-type CommsTab = "templates" | "send" | "log" | "whatsapp";
+type CommsTab = "templates" | "send" | "log" | "whatsapp" | "sms";
 
 const CATEGORIES = ["general", "onboarding", "compliance", "billing", "marketing", "system"];
 
@@ -976,6 +977,236 @@ From the Team at Kizazi`}</div>
   );
 }
 
+type SMSSendTarget = "single" | "bulk";
+
+function SMSPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
+  const [sendTarget, setSendTarget] = useState<SMSSendTarget>("single");
+  const [message, setMessage] = useState("");
+  const [userId, setUserId] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState<Array<{ userId: string; email: string; name: string; phone: string }>>([])
+  const [searching, setSearching] = useState(false);
+  const [targetRole, setTargetRole] = useState("all");
+  const [locationContains, setLocationContains] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ sent: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [logEntries, setLogEntries] = useState<SMSLogEntry[]>([]);
+  const [logTotal, setLogTotal] = useState(0);
+  const [logPage, setLogPage] = useState(0);
+  const [logLoading, setLogLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"send" | "log">("send");
+  const LOG_LIMIT = 50;
+
+  const loadLog = useCallback(async (p: number) => {
+    if (!api) return;
+    setLogLoading(true);
+    try {
+      const res = await api.admin.adminListSMSLog({ limit: LOG_LIMIT, offset: p * LOG_LIMIT });
+      setLogEntries(res.entries);
+      setLogTotal(res.total);
+    } catch (e) { console.error(e); }
+    finally { setLogLoading(false); }
+  }, [api]);
+
+  useEffect(() => { if (activeTab === "log") loadLog(logPage); }, [activeTab, logPage, loadLog]);
+
+  const handleUserSearch = async () => {
+    if (!api || !userSearch.trim()) return;
+    setSearching(true);
+    try {
+      const res = await api.admin.adminListUsers();
+      const q = userSearch.toLowerCase();
+      setUserResults(
+        res.users
+          .filter((u) => u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
+          .slice(0, 8)
+          .map((u) => ({ userId: u.userId, email: u.email, name: u.name, phone: u.phone ?? "" }))
+      );
+    } catch (e) { console.error(e); }
+    finally { setSearching(false); }
+  };
+
+  const handleSend = async () => {
+    if (!message.trim()) { setError("Message is required"); return; }
+    if (sendTarget === "single" && !userId) { setError("Please select a recipient"); return; }
+    setSending(true);
+    setError(null);
+    setResult(null);
+    try {
+      if (sendTarget === "single") {
+        const res = await api!.admin.adminSendSMSToUser({ userId, message });
+        setResult(res);
+      } else {
+        const res = await api!.admin.adminSendBulkSMS({
+          message,
+          targetRole: targetRole as "WORKER" | "EMPLOYER" | "all",
+          locationContains: locationContains.trim() || undefined,
+        });
+        setResult(res);
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Send failed");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 border-b border-border">
+        {(["send", "log"] as const).map((t) => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === t ? "text-foreground border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"
+            }`}>
+            {t === "send" ? <Send className="h-3.5 w-3.5" /> : <Phone className="h-3.5 w-3.5" />}
+            {t === "send" ? "Send SMS" : "Sent Log"}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "send" && (
+        <div className="space-y-4 max-w-2xl">
+          <div className="flex gap-1 p-1 bg-muted/30 rounded-lg w-fit">
+            <button onClick={() => setSendTarget("single")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sendTarget === "single" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              Single User
+            </button>
+            <button onClick={() => setSendTarget("bulk")}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${sendTarget === "bulk" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              Bulk Send
+            </button>
+          </div>
+
+          {result && (
+            <div className="flex items-center gap-2 text-sm text-green-500 bg-green-500/10 border border-green-500/20 rounded-md p-3">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              Successfully sent to {result.sent} recipient{result.sent !== 1 ? "s" : ""}.
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">
+              <AlertTriangle className="h-4 w-4 shrink-0" />{error}
+            </div>
+          )}
+
+          {sendTarget === "single" ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Recipient User *</Label>
+              <div className="flex gap-2">
+                <Input className="h-8 text-sm flex-1" placeholder="Search by name or email…"
+                  value={userSearch} onChange={(e) => setUserSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleUserSearch()} />
+                <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={handleUserSearch} disabled={searching}>
+                  {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Search"}
+                </Button>
+              </div>
+              {userResults.length > 0 && (
+                <div className="border border-border rounded-md overflow-hidden">
+                  {userResults.map((u) => (
+                    <button key={u.userId} onClick={() => { setUserId(u.userId); setUserPhone(u.phone); setUserResults([]); setUserSearch(u.email); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${userId === u.userId ? "bg-primary/10" : ""}`}>
+                      <span className="font-medium text-foreground">{u.name}</span>
+                      <span className="text-xs text-muted-foreground">{u.email} · {u.phone || "no phone"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {userId && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2">
+                  <Phone className="h-3.5 w-3.5" />
+                  Sending to: <span className="font-medium text-foreground">{userPhone || "phone on file"}</span>
+                  <button onClick={() => { setUserId(""); setUserPhone(""); setUserSearch(""); }} className="ml-auto hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Target Audience *</Label>
+                <select value={targetRole} onChange={(e) => setTargetRole(e.target.value)}
+                  className="w-full h-8 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring">
+                  <option value="all">All users (workers + employers)</option>
+                  <option value="WORKER">Workers only</option>
+                  <option value="EMPLOYER">Employers only</option>
+                </select>
+                <p className="text-xs text-muted-foreground/60">Only sends to verified, non-suspended users with a phone number.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Location contains (optional)</Label>
+                <Input className="h-8 text-sm" placeholder="e.g. Melbourne" value={locationContains} onChange={(e) => setLocationContains(e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Message *</Label>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+              rows={5}
+              maxLength={1600}
+              placeholder="Your SMS message…"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground/60">{message.length}/1600 characters · SMS segments: {Math.ceil(Math.max(message.length, 1) / 160)}</p>
+          </div>
+
+          <Button className="h-9 text-sm gap-2" onClick={handleSend} disabled={sending}>
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
+            {sendTarget === "bulk" ? "Send Bulk SMS" : "Send SMS"}
+          </Button>
+        </div>
+      )}
+
+      {activeTab === "log" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{logTotal} messages logged</span>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={logPage === 0} onClick={() => setLogPage((p) => p - 1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs text-muted-foreground">{logPage + 1} / {Math.max(1, Math.ceil(logTotal / LOG_LIMIT))}</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" disabled={logPage >= Math.ceil(logTotal / LOG_LIMIT) - 1} onClick={() => setLogPage((p) => p + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+          {logLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          ) : logEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic text-center py-8">No SMS messages sent yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {logEntries.map((e) => (
+                <Card key={e.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-foreground">{e.recipientName ?? e.phoneNumber}</p>
+                        <Badge className={`text-xs ${e.status === "sent" ? "bg-green-500/15 text-green-400 border-transparent" : "bg-red-500/15 text-red-400 border-transparent"}`}>{e.status}</Badge>
+                        {e.isBulk && <Badge className="text-xs bg-blue-500/15 text-blue-400 border-transparent">Bulk</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{e.phoneNumber}</p>
+                      <p className="text-xs text-muted-foreground/60 mt-0.5 line-clamp-2">{e.message}</p>
+                      <p className="text-xs text-muted-foreground/40 mt-0.5">{new Date(e.sentAt).toLocaleString()}</p>
+                      {e.errorMessage && <p className="text-xs text-destructive mt-0.5">{e.errorMessage}</p>}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function EmailCommsTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [tab, setTab] = useState<CommsTab>("templates");
 
@@ -983,6 +1214,7 @@ export function EmailCommsTab({ api }: { api: ReturnType<typeof useAuthedBackend
     { id: "templates", label: "Templates",  icon: <FileText className="h-3.5 w-3.5" /> },
     { id: "send",      label: "Send Email", icon: <Send className="h-3.5 w-3.5" /> },
     { id: "log",       label: "Email Log",  icon: <Mail className="h-3.5 w-3.5" /> },
+    { id: "sms",       label: "SMS",        icon: <Phone className="h-3.5 w-3.5" /> },
     { id: "whatsapp",  label: "WhatsApp",   icon: <MessageCircle className="h-3.5 w-3.5" /> },
   ];
 
@@ -994,7 +1226,7 @@ export function EmailCommsTab({ api }: { api: ReturnType<typeof useAuthedBackend
         </div>
         <div>
           <h2 className="text-sm font-semibold text-foreground">Communications</h2>
-          <p className="text-xs text-muted-foreground">Manage templates and send emails or WhatsApp messages to users</p>
+          <p className="text-xs text-muted-foreground">Manage templates and send emails, SMS, or WhatsApp messages to users</p>
         </div>
       </div>
 
@@ -1013,6 +1245,7 @@ export function EmailCommsTab({ api }: { api: ReturnType<typeof useAuthedBackend
       {tab === "templates" && <TemplatesPanel api={api} />}
       {tab === "send"      && <SendPanel api={api} />}
       {tab === "log"       && <LogPanel api={api} />}
+      {tab === "sms"       && <SMSPanel api={api} />}
       {tab === "whatsapp"  && <WhatsAppPanel api={api} />}
     </div>
   );
