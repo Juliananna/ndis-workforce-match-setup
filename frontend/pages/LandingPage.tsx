@@ -15,6 +15,10 @@ import {
   Lock,
   Sparkles,
   Activity,
+  Search,
+  FileText,
+  Video,
+  CheckCircle,
 } from "lucide-react";
 
 const TRUST_STRIP = [
@@ -404,9 +408,9 @@ export default function LandingPage() {
       </div>
 
       {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="py-20 md:py-28">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="mb-14 text-center">
+      <section id="how-it-works" className="py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-20 text-center">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
               style={{ backgroundColor: "var(--brand-cyan-tint)", color: "var(--brand-cyan-deep)" }}
@@ -417,70 +421,65 @@ export default function LandingPage() {
               className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Hire support workers in 4 simple steps
+              Hire in 4 simple steps
             </h2>
-            <p className="mx-auto max-w-xl text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-              Everything you need to review, interview, and hire — without the usual recruitment delays.
+            <p className="mx-auto max-w-md text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+              No agencies. No delays. Just the right worker, fast.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                n: "1",
-                t: "Browse pre-vetted workers",
-                bullets: [
-                  "qualifications collected",
-                  "2 reference checks completed",
-                  "experience details included",
-                  "profiles ready to review",
-                ],
+                Icon: Search,
+                step: "01",
+                title: "Browse pre-vetted workers",
+                note: "We don't list everyone.",
+                body: "Access experienced support workers with qualifications collected, references completed, and profiles ready to review.",
               },
               {
-                n: "2",
-                t: "Review files instantly",
-                body: "Download worker files and compliance documents before making contact.",
-                note: "No waiting. No back-and-forth.",
+                Icon: FileText,
+                step: "02",
+                title: "Review files instantly",
+                note: null,
+                body: "Download compliance documents and worker files before making contact. No waiting. No back-and-forth.",
               },
               {
-                n: "3",
-                t: "Interview directly",
-                body: "Book interviews with workers that fit your requirements and assess suitability yourself.",
-                note: "You stay in control of the hiring decision.",
+                Icon: Video,
+                step: "03",
+                title: "Interview directly",
+                note: null,
+                body: "Book interviews with workers that fit your needs. You stay in control of every hiring decision.",
               },
               {
-                n: "4",
-                t: "Hire and get started",
-                body: "Choose the right worker and get support started faster.",
-                note: "Many workers are available to start within 24–48 hours.",
+                Icon: CheckCircle,
+                step: "04",
+                title: "Hire and get started",
+                note: null,
+                body: "Many workers are available to start within 24–48 hours of you making contact.",
               },
-            ].map(({ n, t, bullets, body, note }) => (
-              <div
-                key={n}
-                className="flex gap-5 rounded-3xl border p-7"
-                style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
-              >
-                <span
-                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black text-white"
-                  style={{ background: "var(--brand-cyan-grad)" }}
+            ].map(({ Icon, step, title, note, body }) => (
+              <div key={step} className="flex flex-col items-start">
+                <div
+                  className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: "var(--brand-cyan-tint)" }}
                 >
-                  {n}
-                </span>
-                <div>
-                  <p className="mb-2 font-black" style={{ color: "var(--brand-ink)" }}>{t}</p>
-                  {bullets && (
-                    <ul className="space-y-1">
-                      {bullets.map((b) => (
-                        <li key={b} className="flex items-center gap-2 text-sm" style={{ color: "var(--brand-muted)" }}>
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: "var(--brand-cyan-deep)" }} />
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {body && <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{body}</p>}
-                  {note && <p className="mt-2 text-sm font-bold" style={{ color: "var(--brand-ink)" }}>{note}</p>}
+                  <Icon className="h-6 w-6" style={{ color: "var(--brand-cyan-deep)" }} />
                 </div>
+                <p className="mb-1 text-xs font-black uppercase tracking-widest" style={{ color: "var(--brand-cyan-deep)" }}>
+                  {step}
+                </p>
+                <h3 className="mb-2 text-base font-black leading-snug" style={{ color: "var(--brand-ink)" }}>
+                  {title}
+                </h3>
+                {note && (
+                  <p className="mb-2 text-sm font-black italic" style={{ color: "var(--brand-ink)" }}>
+                    {note}
+                  </p>
+                )}
+                <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+                  {body}
+                </p>
               </div>
             ))}
           </div>
