@@ -2,13 +2,13 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { assertAdmin } from "./guard";
-import { sendWhatsApp, sendWhatsAppTemplate, WhatsAppTemplateOptions } from "../emailer/whatsapp";
+import { sendWhatsApp, sendWhatsAppTemplate } from "../emailer/whatsapp";
 
 export interface SendWhatsAppToUserRequest {
   userId: string;
   message: string;
   templateSid?: string;
-  templateVariables?: string[];
+  templateVariables?: Record<string, string>;
 }
 
 export interface SendWhatsAppResponse {
@@ -21,7 +21,9 @@ export const adminSendWhatsAppToUser = api<SendWhatsAppToUserRequest, SendWhatsA
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    if (!req.message?.trim()) throw APIError.invalidArgument("message is required");
+    if (!req.templateSid && !req.message?.trim()) {
+      throw APIError.invalidArgument("message is required");
+    }
 
     const user = await db.queryRow<{
       phone: string | null;
@@ -39,22 +41,16 @@ export const adminSendWhatsAppToUser = api<SendWhatsAppToUserRequest, SendWhatsA
     if (!phone?.trim()) throw APIError.invalidArgument("user has no phone number on file");
 
     const normalised = phone.trim().replace(/\s+/g, "");
+
     if (req.templateSid) {
-      const template: WhatsAppTemplateOptions = {
-        name: req.templateSid,
-        language: "en",
-        components: req.templateVariables?.length
-          ? [{ type: "body", parameters: req.templateVariables.map((t) => ({ type: "text", text: t })) }]
-          : undefined,
-      };
-      await sendWhatsAppTemplate(normalised, template);
+      await sendWhatsAppTemplate(normalised, req.templateSid, req.templateVariables);
     } else {
       await sendWhatsApp(normalised, req.message.trim());
     }
 
     await db.exec`
       INSERT INTO whatsapp_sent_log (sent_by, recipient_user_id, phone_number, message, status)
-      VALUES (${auth.userID}, ${req.userId}, ${normalised}, ${req.message.trim()}, 'sent')
+      VALUES (${auth.userID}, ${req.userId}, ${normalised}, ${req.templateSid ?? req.message.trim()}, 'sent')
     `;
 
     return { sent: 1 };
@@ -66,7 +62,7 @@ export interface SendBulkWhatsAppRequest {
   targetRole?: "WORKER" | "EMPLOYER" | "all";
   locationContains?: string;
   templateSid?: string;
-  templateVariables?: string[];
+  templateVariables?: Record<string, string>;
 }
 
 export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppResponse>(
@@ -75,7 +71,9 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    if (!req.message?.trim()) throw APIError.invalidArgument("message is required");
+    if (!req.templateSid && !req.message?.trim()) {
+      throw APIError.invalidArgument("message is required");
+    }
 
     const roleFilter = req.targetRole && req.targetRole !== "all" ? req.targetRole : null;
     const locationFilter = req.locationContains?.trim() || null;
@@ -109,14 +107,7 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
       let errorMsg: string | null = null;
       try {
         if (req.templateSid) {
-          const template: WhatsAppTemplateOptions = {
-            name: req.templateSid,
-            language: "en",
-            components: req.templateVariables?.length
-              ? [{ type: "body", parameters: req.templateVariables.map((t) => ({ type: "text", text: t })) }]
-              : undefined,
-          };
-          await sendWhatsAppTemplate(phone, template);
+          await sendWhatsAppTemplate(phone, req.templateSid, req.templateVariables);
         } else {
           await sendWhatsApp(phone, req.message.trim());
         }
@@ -128,7 +119,7 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
 
       await db.exec`
         INSERT INTO whatsapp_sent_log (sent_by, recipient_user_id, phone_number, message, status, error_message, is_bulk)
-        VALUES (${auth.userID}, ${user.user_id}, ${phone}, ${req.message.trim()}, ${status}, ${errorMsg}, true)
+        VALUES (${auth.userID}, ${user.user_id}, ${phone}, ${req.templateSid ?? req.message.trim()}, ${status}, ${errorMsg}, true)
       `;
     }
 
