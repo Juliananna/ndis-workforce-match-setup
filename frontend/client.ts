@@ -177,14 +177,18 @@ import {
     adminUpdateSetting as api_admin_settings_adminUpdateSetting
 } from "~backend/admin/settings";
 import {
+    adminCreateSMSTemplate as api_admin_sms_comms_adminCreateSMSTemplate,
+    adminDeleteSMSTemplate as api_admin_sms_comms_adminDeleteSMSTemplate,
+    adminListSMSLog as api_admin_sms_comms_adminListSMSLog,
+    adminListSMSTemplates as api_admin_sms_comms_adminListSMSTemplates,
+    adminSendBulkSMS as api_admin_sms_comms_adminSendBulkSMS,
+    adminSendSMSToUser as api_admin_sms_comms_adminSendSMSToUser,
+    adminUpdateSMSTemplate as api_admin_sms_comms_adminUpdateSMSTemplate
+} from "~backend/admin/sms_comms";
+import {
     adminGetDocumentDownloadUrl as api_admin_verify_document_adminGetDocumentDownloadUrl,
     adminVerifyDocument as api_admin_verify_document_adminVerifyDocument
 } from "~backend/admin/verify_document";
-import {
-    adminListWhatsAppLog as api_admin_whatsapp_comms_adminListWhatsAppLog,
-    adminSendBulkWhatsApp as api_admin_whatsapp_comms_adminSendBulkWhatsApp,
-    adminSendWhatsAppToUser as api_admin_whatsapp_comms_adminSendWhatsAppToUser
-} from "~backend/admin/whatsapp_comms";
 import {
     adminGetWorkerDocuments as api_admin_workers_adminGetWorkerDocuments,
     adminGetWorkerReferences as api_admin_workers_adminGetWorkerReferences,
@@ -201,7 +205,9 @@ export namespace admin {
             this.baseClient = baseClient
             this.adminArchiveUser = this.adminArchiveUser.bind(this)
             this.adminCreateEmailTemplate = this.adminCreateEmailTemplate.bind(this)
+            this.adminCreateSMSTemplate = this.adminCreateSMSTemplate.bind(this)
             this.adminDeleteEmailTemplate = this.adminDeleteEmailTemplate.bind(this)
+            this.adminDeleteSMSTemplate = this.adminDeleteSMSTemplate.bind(this)
             this.adminDeleteUser = this.adminDeleteUser.bind(this)
             this.adminGetDocumentDownloadUrl = this.adminGetDocumentDownloadUrl.bind(this)
             this.adminGetPlatformStats = this.adminGetPlatformStats.bind(this)
@@ -214,22 +220,24 @@ export namespace admin {
             this.adminListEmailTemplates = this.adminListEmailTemplates.bind(this)
             this.adminListEmployers = this.adminListEmployers.bind(this)
             this.adminListJobs = this.adminListJobs.bind(this)
+            this.adminListSMSLog = this.adminListSMSLog.bind(this)
+            this.adminListSMSTemplates = this.adminListSMSTemplates.bind(this)
             this.adminListSettings = this.adminListSettings.bind(this)
             this.adminListUserEmailLog = this.adminListUserEmailLog.bind(this)
             this.adminListUsers = this.adminListUsers.bind(this)
-            this.adminListWhatsAppLog = this.adminListWhatsAppLog.bind(this)
             this.adminListWorkers = this.adminListWorkers.bind(this)
             this.adminResetUserPassword = this.adminResetUserPassword.bind(this)
             this.adminRevokeSubscription = this.adminRevokeSubscription.bind(this)
             this.adminSendBulkEmail = this.adminSendBulkEmail.bind(this)
-            this.adminSendBulkWhatsApp = this.adminSendBulkWhatsApp.bind(this)
+            this.adminSendBulkSMS = this.adminSendBulkSMS.bind(this)
             this.adminSendDocumentMessage = this.adminSendDocumentMessage.bind(this)
             this.adminSendEmailToUser = this.adminSendEmailToUser.bind(this)
-            this.adminSendWhatsAppToUser = this.adminSendWhatsAppToUser.bind(this)
+            this.adminSendSMSToUser = this.adminSendSMSToUser.bind(this)
             this.adminSubmitReferenceCheck = this.adminSubmitReferenceCheck.bind(this)
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
             this.adminUpdateEmailTemplate = this.adminUpdateEmailTemplate.bind(this)
             this.adminUpdateJobStatus = this.adminUpdateJobStatus.bind(this)
+            this.adminUpdateSMSTemplate = this.adminUpdateSMSTemplate.bind(this)
             this.adminUpdateSetting = this.adminUpdateSetting.bind(this)
             this.adminVerifyDocument = this.adminVerifyDocument.bind(this)
             this.adminVerifyReference = this.adminVerifyReference.bind(this)
@@ -259,8 +267,18 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminCreateEmailTemplate>
         }
 
+        public async adminCreateSMSTemplate(params: RequestType<typeof api_admin_sms_comms_adminCreateSMSTemplate>): Promise<ResponseType<typeof api_admin_sms_comms_adminCreateSMSTemplate>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms-templates`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminCreateSMSTemplate>
+        }
+
         public async adminDeleteEmailTemplate(params: { id: string }): Promise<void> {
             await this.baseClient.callTypedAPI(`/admin/email-templates/${encodeURIComponent(params.id)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async adminDeleteSMSTemplate(params: { id: string }): Promise<void> {
+            await this.baseClient.callTypedAPI(`/admin/sms-templates/${encodeURIComponent(params.id)}`, {method: "DELETE", body: undefined})
         }
 
         public async adminDeleteUser(params: { userId: string }): Promise<void> {
@@ -353,6 +371,24 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_platform_adminListJobs>
         }
 
+        public async adminListSMSLog(params: RequestType<typeof api_admin_sms_comms_adminListSMSLog>): Promise<ResponseType<typeof api_admin_sms_comms_adminListSMSLog>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                limit:  params.limit === undefined ? undefined : String(params.limit),
+                offset: params.offset === undefined ? undefined : String(params.offset),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms/log`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminListSMSLog>
+        }
+
+        public async adminListSMSTemplates(): Promise<ResponseType<typeof api_admin_sms_comms_adminListSMSTemplates>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms-templates`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminListSMSTemplates>
+        }
+
         public async adminListSettings(): Promise<ResponseType<typeof api_admin_settings_adminListSettings>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/settings`, {method: "GET", body: undefined})
@@ -377,18 +413,6 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_platform_adminListUsers>
         }
 
-        public async adminListWhatsAppLog(params: RequestType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>> {
-            // Convert our params into the objects we need for the request
-            const query = makeRecord<string, string | string[]>({
-                limit:  params.limit === undefined ? undefined : String(params.limit),
-                offset: params.offset === undefined ? undefined : String(params.offset),
-            })
-
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/log`, {query, method: "GET", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>
-        }
-
         public async adminListWorkers(): Promise<ResponseType<typeof api_admin_workers_adminListWorkers>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/workers`, {method: "GET", body: undefined})
@@ -411,10 +435,10 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminSendBulkEmail>
         }
 
-        public async adminSendBulkWhatsApp(params: RequestType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>> {
+        public async adminSendBulkSMS(params: RequestType<typeof api_admin_sms_comms_adminSendBulkSMS>): Promise<ResponseType<typeof api_admin_sms_comms_adminSendBulkSMS>> {
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/send-bulk`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms/send-bulk`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminSendBulkSMS>
         }
 
         public async adminSendDocumentMessage(params: RequestType<typeof api_admin_document_message_adminSendDocumentMessage>): Promise<ResponseType<typeof api_admin_document_message_adminSendDocumentMessage>> {
@@ -434,10 +458,10 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminSendEmailToUser>
         }
 
-        public async adminSendWhatsAppToUser(params: RequestType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>> {
+        public async adminSendSMSToUser(params: RequestType<typeof api_admin_sms_comms_adminSendSMSToUser>): Promise<ResponseType<typeof api_admin_sms_comms_adminSendSMSToUser>> {
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/send-to-user`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms/send-to-user`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminSendSMSToUser>
         }
 
         public async adminSubmitReferenceCheck(params: RequestType<typeof api_admin_reference_check_adminSubmitReferenceCheck>): Promise<ResponseType<typeof api_admin_reference_check_adminSubmitReferenceCheck>> {
@@ -490,6 +514,20 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/jobs/${encodeURIComponent(params.jobId)}/status`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async adminUpdateSMSTemplate(params: RequestType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>): Promise<ResponseType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                body:        params.body,
+                category:    params.category,
+                description: params.description,
+                name:        params.name,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/sms-templates/${encodeURIComponent(params.id)}`, {method: "PUT", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>
         }
 
         public async adminUpdateSetting(params: RequestType<typeof api_admin_settings_adminUpdateSetting>): Promise<ResponseType<typeof api_admin_settings_adminUpdateSetting>> {

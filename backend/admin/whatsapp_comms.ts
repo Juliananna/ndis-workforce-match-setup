@@ -2,11 +2,13 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { assertAdmin } from "./guard";
-import { sendWhatsApp } from "../emailer/whatsapp";
+import { sendWhatsApp, sendWhatsAppTemplate, WhatsAppTemplateOptions } from "../emailer/whatsapp";
 
 export interface SendWhatsAppToUserRequest {
   userId: string;
   message: string;
+  templateSid?: string;
+  templateVariables?: string[];
 }
 
 export interface SendWhatsAppResponse {
@@ -37,7 +39,18 @@ export const adminSendWhatsAppToUser = api<SendWhatsAppToUserRequest, SendWhatsA
     if (!phone?.trim()) throw APIError.invalidArgument("user has no phone number on file");
 
     const normalised = phone.trim().replace(/\s+/g, "");
-    await sendWhatsApp(normalised, req.message.trim());
+    if (req.templateSid) {
+      const template: WhatsAppTemplateOptions = {
+        name: req.templateSid,
+        language: "en",
+        components: req.templateVariables?.length
+          ? [{ type: "body", parameters: req.templateVariables.map((t) => ({ type: "text", text: t })) }]
+          : undefined,
+      };
+      await sendWhatsAppTemplate(normalised, template);
+    } else {
+      await sendWhatsApp(normalised, req.message.trim());
+    }
 
     await db.exec`
       INSERT INTO whatsapp_sent_log (sent_by, recipient_user_id, phone_number, message, status)
@@ -52,6 +65,8 @@ export interface SendBulkWhatsAppRequest {
   message: string;
   targetRole?: "WORKER" | "EMPLOYER" | "all";
   locationContains?: string;
+  templateSid?: string;
+  templateVariables?: string[];
 }
 
 export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppResponse>(
@@ -93,7 +108,18 @@ export const adminSendBulkWhatsApp = api<SendBulkWhatsAppRequest, SendWhatsAppRe
       let status = "sent";
       let errorMsg: string | null = null;
       try {
-        await sendWhatsApp(phone, req.message.trim());
+        if (req.templateSid) {
+          const template: WhatsAppTemplateOptions = {
+            name: req.templateSid,
+            language: "en",
+            components: req.templateVariables?.length
+              ? [{ type: "body", parameters: req.templateVariables.map((t) => ({ type: "text", text: t })) }]
+              : undefined,
+          };
+          await sendWhatsAppTemplate(phone, template);
+        } else {
+          await sendWhatsApp(phone, req.message.trim());
+        }
         sent++;
       } catch (e: unknown) {
         status = "failed";
