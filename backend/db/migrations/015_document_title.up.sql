@@ -1,0 +1,1 @@
+ALTER TABLE worker_documents ADD COLUMN IF NOT EXISTS title TEXT;

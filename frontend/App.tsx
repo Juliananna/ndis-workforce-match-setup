@@ -1,0 +1,151 @@
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { SupportButton } from "./components/SupportButton";
+import { Toaster } from "./components/ui/toaster";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import WorkerSignupPage from "./pages/WorkerSignupPage";
+import GetHiredPage from "./pages/GetHiredPage";
+import DashboardPage from "./pages/DashboardPage";
+import DemoPortalPage from "./pages/DemoPortalPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import { lazy, ReactNode, Suspense, useEffect } from "react";
+
+function useChunkErrorReload() {
+  useEffect(() => {
+    const handler = (event: ErrorEvent) => {
+      if (
+        event.message?.includes("Failed to fetch dynamically imported module") ||
+        event.message?.includes("Importing a module script failed") ||
+        event.message?.includes("MIME type")
+      ) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("error", handler);
+    return () => window.removeEventListener("error", handler);
+  }, []);
+}
+
+const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPage"));
+const SalesPortalPage = lazy(() => import("./pages/SalesPortalPage"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const JobSharePage = lazy(() => import("./pages/JobSharePage"));
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { token, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return token ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+function DemoRoute() {
+  const { token, user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  if (!token) return <Navigate to="/login" replace state={{ from: "/demo" }} />;
+  if (!user?.isAdmin && !user?.isSalesAgent) return <Navigate to="/dashboard" replace />;
+  return <DemoPortalPage />;
+}
+
+function RoleRouter() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  if (user?.isComplianceOfficer) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" /></div>}>
+        <ComplianceDashboardPage />
+      </Suspense>
+    );
+  }
+  if (user?.isSalesAgent && !user?.isAdmin && user?.role !== "EMPLOYER") {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" /></div>}>
+        <SalesPortalPage />
+      </Suspense>
+    );
+  }
+  return <DashboardPage />;
+}
+
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password"];
+const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
+
+function GlobalSupportButton() {
+  const { token } = useAuth();
+  const location = useLocation();
+  const isPublic = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith(JOB_SHARE_PATH_PREFIX);
+  if (!token || isPublic) return null;
+  return <SupportButton />;
+}
+
+function AppInner() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/worker-signup" element={<WorkerSignupPage />} />
+        <Route path="/gethired" element={<GetHiredPage />} />
+        <Route path="/demo" element={<DemoRoute />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/jobs/share/:jobId"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /></div>}>
+              <JobSharePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /></div>}>
+              <PrivacyPolicyPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <RoleRouter />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      <GlobalSupportButton />
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
+  useChunkErrorReload();
+  return (
+    <AuthProvider>
+      <AppInner />
+      <Toaster />
+    </AuthProvider>
+  );
+}

@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "packageManager": "bun",
+  "scripts": {
+    "build": "cd ../frontend \u0026\u0026 bun install \u0026\u0026 npx vite build --outDir=../backend/frontend/dist",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "encore.dev": "^1.56.0",
+    "jose": "^5.10.0",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.9"
+  }
+}
