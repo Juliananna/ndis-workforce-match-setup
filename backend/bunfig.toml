@@ -1,0 +1,5 @@
+[install]
+optional = false
+
+[install.cache]
+disable = true
