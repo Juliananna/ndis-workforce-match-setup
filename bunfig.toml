@@ -1,5 +1,0 @@
-[install]
-optional = false
-
-[install.cache]
-dir = "/tmp/bun-cache"
