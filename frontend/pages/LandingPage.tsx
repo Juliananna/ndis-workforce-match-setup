@@ -577,6 +577,89 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── WHY PROVIDERS ARE SWITCHING ── */}
+      <section id="why-switch" className="py-24 md:py-32" style={{ backgroundColor: "var(--brand-canvas)" }}>
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="mb-16 text-center">
+            <span
+              className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
+              style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
+            >
+              Why providers are switching
+            </span>
+            <h2
+              className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
+              style={{ color: "var(--brand-ink)" }}
+            >
+              NDIS providers are rethinking how they hire
+            </h2>
+            <p className="mx-auto max-w-xl text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+              Traditional hiring is slow, manual, and unpredictable. Providers are looking for faster, lower-friction ways to access qualified support workers.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Traditional Hiring */}
+            <div
+              className="rounded-3xl border p-8"
+              style={{ borderColor: "#fca5a5", backgroundColor: "#fff7f7" }}
+            >
+              <p className="mb-6 text-base font-black" style={{ color: "#991b1b" }}>Traditional hiring</p>
+              <ul className="space-y-4">
+                {[
+                  "Post job ads and wait for applications",
+                  "Spend hours screening candidates",
+                  "Chase interviews and no-shows",
+                  "Review incomplete applications",
+                  "Repeat the process again if it fails",
+                  "Delays impact clients and teams",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-xs font-black" style={{ backgroundColor: "#ef4444" }}>✕</span>
+                    <span className="text-sm leading-relaxed" style={{ color: "#7f1d1d" }}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* KizaziHire */}
+            <div
+              className="rounded-3xl border p-8"
+              style={{ borderColor: "#6ee7f7", backgroundColor: "var(--brand-cyan-tint)" }}
+            >
+              <p className="mb-6 text-base font-black" style={{ color: "var(--brand-cyan-deep)" }}>KizaziHire</p>
+              <ul className="space-y-4">
+                {[
+                  "Browse pre-vetted support workers",
+                  "Qualifications and references already collected",
+                  "Review files before making contact",
+                  "Interview workers directly",
+                  "Reduce recruitment admin",
+                  "Hire faster with more confidence",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-xs font-black" style={{ backgroundColor: "var(--brand-cyan-deep)" }}>✓</span>
+                    <span className="text-sm leading-relaxed font-medium" style={{ color: "var(--brand-ink)" }}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-14 text-center">
+            <p className="text-xl font-black" style={{ color: "var(--brand-ink)" }}>
+              Hiring shouldn't take weeks.
+            </p>
+            <p className="mt-2 text-base" style={{ color: "var(--brand-muted)" }}>
+              The right systems make hiring faster, simpler, and more reliable.
+            </p>
+            <p className="mt-5 text-sm font-black uppercase tracking-widest" style={{ color: "var(--brand-cyan-deep)" }}>
+              More qualified workers. Less recruitment noise.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── VALUE / FEATURE CARDS ── */}
       <section
         id="features"
