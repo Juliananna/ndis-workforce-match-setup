@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   description TEXT,
-  updated_by TEXT REFERENCES users(user_id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -21,7 +21,7 @@ ON CONFLICT (key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS admin_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  admin_user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  admin_user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   admin_email TEXT NOT NULL,
   action TEXT NOT NULL,
   entity_type TEXT,
