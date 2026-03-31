@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, RefreshCw, Users2, Mail, Briefcase, Clock } from "lucide-react";
+import { Loader2, RefreshCw, Users2, Mail, Briefcase, Clock, Phone } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import type { DemoLead } from "~backend/admin/demo_leads";
@@ -114,6 +114,7 @@ export function DemoLeadsTab() {
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Name</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Email</th>
+                  <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Phone</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Role</th>
                   <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Registered</th>
                 </tr>
@@ -134,6 +135,16 @@ export function DemoLeadsTab() {
                         <Mail className="h-3.5 w-3.5 shrink-0" />
                         {lead.email}
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {lead.phone ? (
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          {lead.phone}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/40">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <RoleBadge role={lead.role} />

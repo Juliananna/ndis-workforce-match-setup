@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Loader2, User, Mail, Briefcase } from "lucide-react";
+import { Sparkles, Loader2, User, Mail, Briefcase, Phone } from "lucide-react";
 import backend from "~backend/client";
 
 const ROLES = [
@@ -17,6 +17,7 @@ interface Props {
 export default function DemoLeadGate({ onEnter }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function DemoLeadGate({ onEnter }: Props) {
     setError(null);
     setLoading(true);
     try {
-      await backend.demo.registerDemoLead({ name: name.trim(), email: email.trim(), role });
+      await backend.demo.registerDemoLead({ name: name.trim(), email: email.trim(), role, phone: phone.trim() || undefined });
       sessionStorage.setItem(STORAGE_KEY, "1");
       onEnter();
     } catch (e: unknown) {
@@ -81,6 +82,22 @@ export default function DemoLeadGate({ onEnter }: Props) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jane@example.com"
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-white/70 text-sm font-medium mb-1.5">
+              Phone number <span className="text-white/30 font-normal">(optional)</span>
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="04xx xxx xxx"
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-white/25 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition"
               />
             </div>

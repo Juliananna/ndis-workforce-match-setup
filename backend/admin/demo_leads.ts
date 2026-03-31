@@ -8,6 +8,7 @@ export interface DemoLead {
   name: string;
   email: string;
   role: string;
+  phone: string | null;
   createdAt: Date;
 }
 
@@ -26,9 +27,10 @@ export const listDemoLeads = api(
       name: string;
       email: string;
       role: string;
+      phone: string | null;
       created_at: Date;
     }>`
-      SELECT id, name, email, role, created_at
+      SELECT id, name, email, role, phone, created_at
       FROM demo_leads
       ORDER BY created_at DESC
     `;
@@ -39,6 +41,7 @@ export const listDemoLeads = api(
         name: r.name,
         email: r.email,
         role: r.role,
+        phone: r.phone,
         createdAt: r.created_at,
       })),
     };

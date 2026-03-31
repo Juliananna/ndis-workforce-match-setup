@@ -6,6 +6,7 @@ export interface RegisterDemoLeadRequest {
   name: string;
   email: string;
   role: string;
+  phone?: string;
 }
 
 export interface RegisterDemoLeadResponse {
@@ -16,8 +17,8 @@ export const registerDemoLead = api<RegisterDemoLeadRequest, RegisterDemoLeadRes
   { expose: true, method: "POST", path: "/demo/leads" },
   async (req) => {
     const row = await db.queryRow<{ id: string }>`
-      INSERT INTO demo_leads (name, email, role)
-      VALUES (${req.name}, ${req.email}, ${req.role})
+      INSERT INTO demo_leads (name, email, role, phone)
+      VALUES (${req.name}, ${req.email}, ${req.role}, ${req.phone ?? null})
       ON CONFLICT DO NOTHING
       RETURNING id
     `;
@@ -37,6 +38,7 @@ export const registerDemoLead = api<RegisterDemoLeadRequest, RegisterDemoLeadRes
 
       upsertContact({
         email: req.email,
+        phone: req.phone,
         firstName,
         lastName,
         name: req.name,

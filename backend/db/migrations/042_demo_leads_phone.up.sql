@@ -1,0 +1,1 @@
+ALTER TABLE demo_leads ADD COLUMN IF NOT EXISTS phone TEXT;
