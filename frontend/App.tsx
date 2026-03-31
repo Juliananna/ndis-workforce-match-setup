@@ -47,16 +47,6 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 function DemoRoute() {
-  const { token, user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-  if (!token) return <Navigate to="/login" replace state={{ from: "/demo" }} />;
-  if (!user?.isAdmin && !user?.isSalesAgent) return <Navigate to="/dashboard" replace />;
   return <DemoPortalPage />;
 }
 
