@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Users, Building2, Briefcase, UserCheck, ShieldCheck,
-  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, PlayCircle,
+  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AdminDashboardHome } from "../components/admin/AdminDashboardHome";
@@ -12,9 +12,8 @@ const AdminPage = lazy(() => import("./AdminPage"));
 const SalesPortalInner = lazy(() => import("../components/sales/SalesPortalInner"));
 const PrivacyPolicyEditor = lazy(() => import("../components/admin/PrivacyPolicyEditor"));
 const PlatformSettingsTab = lazy(() => import("../components/admin/PlatformSettingsTab").then((m) => ({ default: m.PlatformSettingsTab })));
-const DemoLeadsTab = lazy(() => import("../components/admin/DemoLeadsTab").then((m) => ({ default: m.DemoLeadsTab })));
 
-type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "demo-leads";
+type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform";
 
 const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean }[] = [
   { id: "home",       label: "Dashboard",    Icon: LayoutDashboard },
@@ -29,7 +28,6 @@ const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOn
   { id: "sales",      label: "Sales Portal", Icon: TrendingUp },
   { id: "privacy",    label: "Privacy Policy", Icon: FileText, adminOnly: true },
   { id: "platform",   label: "Platform Settings", Icon: SlidersHorizontal, adminOnly: true },
-  { id: "demo-leads", label: "Demo Leads", Icon: PlayCircle, adminOnly: true },
 ];
 
 export default function AdminDashboardPage() {
@@ -153,8 +151,7 @@ export default function AdminDashboardPage() {
             {tab === "sales" && <SalesPortalInner />}
             {tab === "privacy" && <PrivacyPolicyEditor />}
             {tab === "platform" && <PlatformSettingsTab api={api} />}
-            {tab === "demo-leads" && <DemoLeadsTab />}
-            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "demo-leads" && (
+            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && (
               <AdminPage
                 initialTab={tab as "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support"}
                 onTabChange={(t) => setTab(t as AdminTab)}

@@ -5,16 +5,18 @@ import { UserAccountsPanel } from "../UserAccountsPanel";
 import { SalesDiscounts } from "./SalesDiscounts";
 import { SalesDemos } from "./SalesDemos";
 import { SalesAgents } from "./SalesAgents";
-import { LayoutDashboard, Users, Tag, MonitorPlay, UserCog, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, Tag, MonitorPlay, UserCog, Briefcase, UserPlus } from "lucide-react";
 import { SalesJobs } from "./SalesJobs";
+import { DemoLeadsTab } from "../admin/DemoLeadsTab";
 
-type SalesTab = "dashboard" | "accounts" | "jobs" | "discounts" | "demos" | "agents";
+type SalesTab = "dashboard" | "accounts" | "jobs" | "discounts" | "demos" | "agents" | "leads";
 
 const tabs: { id: SalesTab; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
   { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
   { id: "accounts", label: "Accounts", icon: <Users className="h-4 w-4" /> },
   { id: "jobs", label: "Jobs", icon: <Briefcase className="h-4 w-4" /> },
   { id: "demos", label: "Demos", icon: <MonitorPlay className="h-4 w-4" /> },
+  { id: "leads", label: "Demo Leads", icon: <UserPlus className="h-4 w-4" /> },
   { id: "discounts", label: "Discounts", icon: <Tag className="h-4 w-4" /> },
   { id: "agents", label: "Sales Team", icon: <UserCog className="h-4 w-4" />, adminOnly: true },
 ];
@@ -60,6 +62,7 @@ export default function SalesPortalInner() {
         {activeTab === "accounts" && <UserAccountsPanel />}
         {activeTab === "jobs" && <SalesJobs />}
         {activeTab === "demos" && <SalesDemos />}
+        {activeTab === "leads" && <DemoLeadsTab />}
         {activeTab === "discounts" && <SalesDiscounts />}
         {activeTab === "agents" && isAdmin && <SalesAgents />}
       </div>
