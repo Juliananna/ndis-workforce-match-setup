@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import backend from "~backend/client";
 import type { DemoPairInfo } from "~backend/demo/list_pairs";
+import DemoLeadGate, { STORAGE_KEY } from "../components/DemoLeadGate";
 import {
   Loader2,
   Play,
@@ -17,6 +18,7 @@ import {
 
 export default function DemoPortalPage() {
   const navigate = useNavigate();
+  const [gateCleared, setGateCleared] = useState(() => !!sessionStorage.getItem(STORAGE_KEY));
   const { login, logout, user } = useAuth();
   const [pairs, setPairs] = useState<DemoPairInfo[]>([]);
   const [seeded, setSeeded] = useState(false);
@@ -91,6 +93,10 @@ export default function DemoPortalPage() {
 
   const isCurrentSession = (pairIndex: number, role: "WORKER" | "EMPLOYER") =>
     activePairIndex === pairIndex && activeRole === role;
+
+  if (!gateCleared) {
+    return <DemoLeadGate onEnter={() => setGateCleared(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col">
