@@ -2,16 +2,18 @@ import { useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Users, Building2, Briefcase, UserCheck, ShieldCheck,
-  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText,
+  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AdminDashboardHome } from "../components/admin/AdminDashboardHome";
+import { useAuthedBackend } from "../hooks/useAuthedBackend";
 
 const AdminPage = lazy(() => import("./AdminPage"));
 const SalesPortalInner = lazy(() => import("../components/sales/SalesPortalInner"));
 const PrivacyPolicyEditor = lazy(() => import("../components/admin/PrivacyPolicyEditor"));
+const PlatformSettingsTab = lazy(() => import("../components/admin/PlatformSettingsTab").then((m) => ({ default: m.PlatformSettingsTab })));
 
-type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy";
+type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform";
 
 const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean }[] = [
   { id: "home",       label: "Dashboard",    Icon: LayoutDashboard },
@@ -25,11 +27,13 @@ const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOn
   { id: "support",    label: "Support",      Icon: HelpCircle },
   { id: "sales",      label: "Sales Portal", Icon: TrendingUp },
   { id: "privacy",    label: "Privacy Policy", Icon: FileText, adminOnly: true },
+  { id: "platform",   label: "Platform Settings", Icon: SlidersHorizontal, adminOnly: true },
 ];
 
 export default function AdminDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const api = useAuthedBackend();
   const [tab, setTab] = useState<AdminTab>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -146,7 +150,8 @@ export default function AdminDashboardPage() {
             {tab === "home" && <AdminDashboardHome onNavigate={(t) => setTab(t as AdminTab)} />}
             {tab === "sales" && <SalesPortalInner />}
             {tab === "privacy" && <PrivacyPolicyEditor />}
-            {tab !== "home" && tab !== "sales" && tab !== "privacy" && (
+            {tab === "platform" && <PlatformSettingsTab api={api} />}
+            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && (
               <AdminPage
                 initialTab={tab as "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support"}
                 onTabChange={(t) => setTab(t as AdminTab)}

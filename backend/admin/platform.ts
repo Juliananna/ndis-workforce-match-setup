@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { assertAdmin, assertSysAdmin } from "./guard";
+import { writeAuditLog } from "./settings";
 
 export interface PlatformStats {
   totalWorkers: number;
@@ -302,10 +303,16 @@ export const adminSuspendUser = api<AdminSuspendUserRequest, void>(
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    const row = await db.queryRow`SELECT user_id FROM users WHERE user_id = ${req.userId}`;
+    const row = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${req.userId}`;
     if (!row) throw APIError.notFound("user not found");
 
     await db.exec`UPDATE users SET is_suspended = ${req.suspend} WHERE user_id = ${req.userId}`;
+
+    const adminUser = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${auth.userID}`;
+    await writeAuditLog(auth.userID, adminUser?.email ?? "unknown",
+      req.suspend ? "SUSPEND_USER" : "UNSUSPEND_USER",
+      "user", req.userId, { targetEmail: row.email }
+    );
   }
 );
 
@@ -320,10 +327,16 @@ export const adminArchiveUser = api<AdminArchiveUserRequest, void>(
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    const row = await db.queryRow`SELECT user_id FROM users WHERE user_id = ${req.userId}`;
+    const row = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${req.userId}`;
     if (!row) throw APIError.notFound("user not found");
 
     await db.exec`UPDATE users SET is_archived = ${req.archive} WHERE user_id = ${req.userId}`;
+
+    const adminUser = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${auth.userID}`;
+    await writeAuditLog(auth.userID, adminUser?.email ?? "unknown",
+      req.archive ? "ARCHIVE_USER" : "UNARCHIVE_USER",
+      "user", req.userId, { targetEmail: row.email }
+    );
   }
 );
 
@@ -337,8 +350,13 @@ export const adminDeleteUser = api<AdminDeleteUserRequest, void>(
     const auth = getAuthData()!;
     await assertSysAdmin(auth.userID);
 
-    const row = await db.queryRow`SELECT user_id FROM users WHERE user_id = ${req.userId}`;
+    const row = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${req.userId}`;
     if (!row) throw APIError.notFound("user not found");
+
+    const adminUser = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${auth.userID}`;
+    await writeAuditLog(auth.userID, adminUser?.email ?? "unknown",
+      "DELETE_USER", "user", req.userId, { targetEmail: row.email }
+    );
 
     await db.exec`DELETE FROM users WHERE user_id = ${req.userId}`;
   }
@@ -354,6 +372,12 @@ export const adminVerifyUserEmail = api<AdminVerifyUserEmailRequest, void>(
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
+    const row = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${req.userId}`;
     await db.exec`UPDATE users SET is_verified = true WHERE user_id = ${req.userId}`;
+
+    const adminUser = await db.queryRow<{ email: string }>`SELECT email FROM users WHERE user_id = ${auth.userID}`;
+    await writeAuditLog(auth.userID, adminUser?.email ?? "unknown",
+      "VERIFY_USER_EMAIL", "user", req.userId, { targetEmail: row?.email }
+    );
   }
 );
