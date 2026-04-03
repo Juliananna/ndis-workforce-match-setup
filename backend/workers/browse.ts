@@ -139,7 +139,35 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             SELECT 1 FROM worker_references wr
             JOIN reference_checks rc ON rc.reference_id = wr.id
             WHERE wr.worker_id = w.worker_id
-          ) AS refs_verified
+          ) AS refs_verified,
+          EXISTS (
+            SELECT 1 FROM worker_documents wd
+            WHERE wd.worker_id = w.worker_id
+            AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+          ) AS has_id_doc,
+          EXISTS (
+            SELECT 1 FROM worker_documents wd
+            WHERE wd.worker_id = w.worker_id
+            AND wd.document_type IN (
+              'NDIS Worker Screening Check', 'NDIS Worker Orientation Module',
+              'NDIS Code of Conduct acknowledgement', 'Infection Control Certificate',
+              'First Aid Certificate', 'CPR Certificate',
+              'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
+            )
+          ) AS has_cert_doc,
+          EXISTS (
+            SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
+          ) AS has_availability,
+          EXISTS (
+            SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id
+          ) AS has_references,
+          (
+            (w.full_name IS NOT NULL AND w.full_name <> '') AND
+            (w.location IS NOT NULL AND w.location <> '') AND
+            (w.bio IS NOT NULL AND w.bio <> '') AND
+            (w.experience_years IS NOT NULL) AND
+            (w.phone IS NOT NULL AND w.phone <> '')
+          ) AS profile_complete
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'

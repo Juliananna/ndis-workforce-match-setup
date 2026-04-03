@@ -16,6 +16,8 @@ export interface VerificationScoreResponse {
   level: "low" | "medium" | "high" | "verified";
   levelLabel: string;
   visibilityLabel: string;
+  tierName: string;
+  offersUnlocked: boolean;
 }
 
 const ID_TYPES = [
@@ -123,24 +125,35 @@ export const getVerificationScore = api<void, VerificationScoreResponse>(
     let levelLabel: string;
     let visibilityLabel: string;
 
-    if (score <= 40) {
+    let tierName: string;
+    let offersUnlocked: boolean;
+
+    if (score <= 49) {
       level = "low";
-      levelLabel = "Low Visibility 🔴";
-      visibilityLabel = "Your profile has low visibility to providers";
+      levelLabel = "Getting Started";
+      visibilityLabel = "Your profile is not visible to most providers yet. Complete your profile to start getting matched.";
+      tierName = "Getting Started";
+      offersUnlocked = false;
     } else if (score <= 79) {
       level = "medium";
-      levelLabel = "Medium Visibility 🟡";
-      visibilityLabel = "You're appearing in some provider searches";
+      levelLabel = "In Progress";
+      visibilityLabel = "You're visible, but not prioritised. Verified workers are chosen first.";
+      tierName = "In Progress";
+      offersUnlocked = false;
     } else if (score <= 99) {
       level = "high";
-      levelLabel = "High Visibility 🟢";
-      visibilityLabel = "Providers can see your profile — great work!";
+      levelLabel = "Priority Profile";
+      visibilityLabel = "You're now prioritised by providers. Complete your final steps to become fully verified.";
+      tierName = "Priority Profile";
+      offersUnlocked = true;
     } else {
       level = "verified";
-      levelLabel = "Fully Verified ✅";
-      visibilityLabel = "You have maximum visibility and priority matching";
+      levelLabel = "Verified Worker ✅";
+      visibilityLabel = "Your profile is fully verified and trusted by providers.";
+      tierName = "Verified Worker";
+      offersUnlocked = true;
     }
 
-    return { score, pillars, level, levelLabel, visibilityLabel };
+    return { score, pillars, level, levelLabel, visibilityLabel, tierName, offersUnlocked };
   }
 );

@@ -6,6 +6,34 @@ import type { Offer } from "./types";
 import { offerEmailTopic } from "./topic";
 import { offerDeclinedTopic } from "../notifications/lifecycle_topics";
 
+const ID_TYPES = ["Driver's Licence", "Passport / ID"];
+const CERT_TYPES = [
+  "NDIS Worker Screening Check", "NDIS Worker Orientation Module",
+  "NDIS Code of Conduct acknowledgement", "Infection Control Certificate",
+  "First Aid Certificate", "CPR Certificate",
+  "Certificate III / IV Disability", "Working With Children Check", "Police Clearance",
+];
+
+async function computeWorkerVerificationScore(workerId: string): Promise<number> {
+  const [worker, availRow, refsRow, docsRows] = await Promise.all([
+    db.queryRow<{ full_name: string | null; location: string | null; bio: string | null; experience_years: number | null; phone: string | null }>`
+      SELECT full_name, location, bio, experience_years, phone FROM workers WHERE worker_id = ${workerId}
+    `,
+    db.queryRow<{ cnt: number }>`SELECT COUNT(*)::int AS cnt FROM worker_availability WHERE worker_id = ${workerId}`,
+    db.queryRow<{ cnt: number }>`SELECT COUNT(*)::int AS cnt FROM worker_references WHERE worker_id = ${workerId}`,
+    db.queryAll<{ document_type: string }>`SELECT document_type FROM worker_documents WHERE worker_id = ${workerId}`,
+  ]);
+  if (!worker) return 0;
+  const uploadedTypes = new Set(docsRows.map((d) => d.document_type));
+  let score = 0;
+  if (!!worker.full_name?.trim() && !!worker.location?.trim() && !!worker.bio?.trim() && worker.experience_years !== null && !!worker.phone?.trim()) score += 20;
+  if (ID_TYPES.some((t) => uploadedTypes.has(t))) score += 20;
+  if (CERT_TYPES.some((t) => uploadedTypes.has(t))) score += 20;
+  if ((refsRow?.cnt ?? 0) > 0) score += 20;
+  if ((availRow?.cnt ?? 0) > 0) score += 20;
+  return score;
+}
+
 export interface WorkerRespondRequest {
   offerId: string;
   action: "accept" | "decline" | "propose_rate";
@@ -25,6 +53,16 @@ export const workerRespond = api<WorkerRespondRequest, Offer>(
       SELECT worker_id FROM workers WHERE user_id = ${auth.userID}
     `;
     if (!worker) throw APIError.notFound("worker profile not found");
+
+    if (req.action === "accept" || req.action === "propose_rate") {
+      const verificationScore = await computeWorkerVerificationScore(worker.worker_id);
+      if (verificationScore < 80) {
+        throw APIError.failedPrecondition(
+          "Your profile must be at least 80% complete (Priority Profile tier) to accept or negotiate offers. " +
+          "Complete your profile details, upload an ID, add certifications, and set your availability to unlock offers."
+        );
+      }
+    }
 
     const offer = await db.queryRow<{
       offer_id: string;

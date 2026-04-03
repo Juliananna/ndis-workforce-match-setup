@@ -228,7 +228,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
               <TrendingUp className="h-4 w-4 text-indigo-500 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-bold text-indigo-700">Boost Score</p>
-                <p className="text-xs text-indigo-500">+{earnablePoints} pts available</p>
+                <p className="text-xs text-indigo-500">Unlock more opportunities</p>
               </div>
             </button>
           )}
@@ -404,14 +404,34 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                   : <><MapPin className="h-3 w-3" />Add your location for distance sorting</>}
               </p>
 
+              {(level === "low" || level === "medium") && (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-amber-800">Offers locked — reach 80% to unlock</p>
+                    <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                      You unlock more opportunities when you reach <strong>Priority Profile</strong> (80% score). Providers choose verified workers first.
+                    </p>
+                    <button
+                      onClick={() => onTabChange("profile")}
+                      className="mt-2 text-xs font-bold text-amber-800 underline underline-offset-2 hover:text-amber-900"
+                    >
+                      Complete your profile to increase your chances →
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2.5">
                 {topJobs.length === 0 ? (
                   <div className="text-center py-10">
                     <Briefcase className="h-9 w-9 text-gray-200 mx-auto mb-2" />
                     <p className="text-sm text-gray-400 font-medium">No matched jobs yet</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {level === "low" || level === "medium"
-                        ? "Boost your verification score to start getting matched"
+                      {level === "low"
+                        ? "Complete your profile to start getting matched with providers"
+                        : level === "medium"
+                        ? "You're visible, but incomplete profiles may not be selected"
                         : "Providers will match you when shifts become available"}
                     </p>
                     {(level === "low" || level === "medium") && (
@@ -419,7 +439,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                         onClick={() => onTabChange("profile")}
                         className="mt-3 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors"
                       >
-                        Complete Profile →
+                        Complete Profile to Get Matched →
                       </button>
                     )}
                   </div>

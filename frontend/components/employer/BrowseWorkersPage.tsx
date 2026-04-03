@@ -310,20 +310,27 @@ function VerificationBadge({ score }: { score: number }) {
   if (score === 100) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
-        <CheckCircle2 className="h-3 w-3" />Verified ✅
+        <CheckCircle2 className="h-3 w-3" />Verified Worker ✅
       </span>
     );
   }
-  if (score >= 60) {
+  if (score >= 80) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+        <CheckCircle2 className="h-3 w-3" />Priority Profile
+      </span>
+    );
+  }
+  if (score >= 50) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
-        <AlertCircle className="h-3 w-3" />Partially verified
+        <AlertCircle className="h-3 w-3" />In Progress
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
-      <AlertCircle className="h-3 w-3" />Profile incomplete
+      <AlertCircle className="h-3 w-3" />Getting Started
     </span>
   );
 }
@@ -431,7 +438,11 @@ function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () =>
 
       {!worker.isFullyVerified && (
         <p className="text-[11px] text-muted-foreground/60 italic pt-0.5">
-          Verification score: {worker.verificationScore}% — this worker has an incomplete profile
+          {worker.verificationScore >= 80
+            ? `Priority Profile — ${worker.verificationScore}% complete`
+            : worker.verificationScore >= 50
+            ? `In Progress — ${worker.verificationScore}% complete`
+            : `Getting Started — ${worker.verificationScore}% complete`}
         </p>
       )}
     </div>

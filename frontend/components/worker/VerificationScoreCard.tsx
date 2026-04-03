@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, ChevronRight, ShieldCheck, User, FileText, Users, Clock, CreditCard } from "lucide-react";
+import { CheckCircle2, Circle, ChevronRight, ShieldCheck, User, Users, Clock, CreditCard, Lock, Unlock } from "lucide-react";
 import type { VerificationScoreResponse } from "~backend/workers/verification_score";
 
 interface Props {
@@ -27,7 +27,7 @@ const LEVEL_STYLES: Record<Level, {
   low: {
     bar: "bg-red-500",
     badge: "bg-red-100 border-red-200 text-red-700",
-    badgeText: "Low Visibility 🔴",
+    badgeText: "Getting Started",
     ring: "ring-red-200",
     glow: "shadow-red-100",
     scoreText: "text-red-600",
@@ -35,7 +35,7 @@ const LEVEL_STYLES: Record<Level, {
   medium: {
     bar: "bg-yellow-400",
     badge: "bg-yellow-100 border-yellow-200 text-yellow-700",
-    badgeText: "Medium Visibility 🟡",
+    badgeText: "In Progress",
     ring: "ring-yellow-200",
     glow: "shadow-yellow-100",
     scoreText: "text-yellow-600",
@@ -43,7 +43,7 @@ const LEVEL_STYLES: Record<Level, {
   high: {
     bar: "bg-green-500",
     badge: "bg-green-100 border-green-200 text-green-700",
-    badgeText: "High Visibility 🟢",
+    badgeText: "Priority Profile",
     ring: "ring-green-200",
     glow: "shadow-green-100",
     scoreText: "text-green-600",
@@ -51,7 +51,7 @@ const LEVEL_STYLES: Record<Level, {
   verified: {
     bar: "bg-emerald-500",
     badge: "bg-emerald-100 border-emerald-200 text-emerald-700",
-    badgeText: "Fully Verified ✅",
+    badgeText: "Verified Worker ✅",
     ring: "ring-emerald-300",
     glow: "shadow-emerald-100",
     scoreText: "text-emerald-600",
@@ -60,19 +60,19 @@ const LEVEL_STYLES: Record<Level, {
 
 const OUTCOME_MESSAGES: Record<Level, string[]> = {
   low: [
-    "Your profile has low visibility to providers",
-    "Complete more steps to start appearing in searches",
+    "Your profile is not visible to most providers yet",
+    "Complete your profile to start getting matched",
   ],
   medium: [
-    "Workers with 80%+ score get significantly more matches",
-    "Upload your ID and certifications to boost your score",
+    "You're visible, but not prioritised by providers",
+    "Verified workers are chosen first — incomplete profiles may not be selected",
   ],
   high: [
-    "Workers with 80%+ get more matches",
-    "Reach 100% for priority placement in searches",
+    "You're now prioritised by providers",
+    "Complete your final steps to become fully verified",
   ],
   verified: [
-    "Fully verified profiles are prioritised by providers",
+    "Your profile is fully verified and trusted by providers",
     "You have maximum visibility and priority matching",
   ],
 };
@@ -127,7 +127,7 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
   const styles = LEVEL_STYLES[data.level];
   const messages = OUTCOME_MESSAGES[data.level];
   const incomplete = data.pillars.filter((p) => !p.earned);
-  const complete = data.pillars.filter((p) => p.earned);
+  const offersUnlocked = data.offersUnlocked ?? (data.level === "high" || data.level === "verified");
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -166,6 +166,27 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Offer access banner */}
+      <div className={`mx-5 mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border ${
+        offersUnlocked
+          ? "border-green-200 bg-green-50"
+          : "border-amber-200 bg-amber-50"
+      }`}>
+        {offersUnlocked
+          ? <Unlock className="h-4 w-4 text-green-600 shrink-0" />
+          : <Lock className="h-4 w-4 text-amber-500 shrink-0" />}
+        <div>
+          <p className={`text-xs font-bold ${offersUnlocked ? "text-green-800" : "text-amber-800"}`}>
+            {offersUnlocked ? "Offers unlocked" : "Offers locked — reach 80% to unlock"}
+          </p>
+          <p className={`text-xs mt-0.5 ${offersUnlocked ? "text-green-700" : "text-amber-700"}`}>
+            {offersUnlocked
+              ? "You can receive and respond to offers from providers."
+              : "You unlock more opportunities when you reach Priority Profile (80%). Providers choose verified workers first."}
+          </p>
         </div>
       </div>
 
@@ -219,13 +240,13 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
           >
             {`Earn +${incomplete.reduce((s, p) => s + p.points, 0)} Points →`}
           </button>
-          {data.level !== "verified" && (
-            <p className="text-xs text-center text-gray-400 mt-2">
-              {data.level === "low" || data.level === "medium"
-                ? "Workers with 80%+ get more matches"
-                : "Fully verified profiles are prioritised"}
-            </p>
-          )}
+          <p className="text-xs text-center text-gray-400 mt-2">
+            {data.level === "low"
+              ? "Complete your profile to increase your chances of getting shifts"
+              : data.level === "medium"
+              ? "Reach 80% to unlock offers and start getting hired"
+              : "Fully verified profiles are prioritised — you're almost there"}
+          </p>
         </div>
       )}
 
