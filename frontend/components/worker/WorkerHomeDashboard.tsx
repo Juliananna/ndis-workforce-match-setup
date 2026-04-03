@@ -9,9 +9,11 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { JobDetailModal } from "../matching/JobDetailModal";
 import { ActivationPanel } from "./ActivationPanel";
+import { VerificationScoreCard } from "./VerificationScoreCard";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { WorkerCompletionResponse } from "~backend/workers/completion";
+import type { VerificationScoreResponse } from "~backend/workers/verification_score";
 
 type SidebarTab = "home" | "jobs" | "profile";
 
@@ -136,6 +138,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const [allJobs, setAllJobs] = useState<MatchedJob[]>([]);
   const [documents, setDocuments] = useState<WorkerDocument[]>([]);
   const [completion, setCompletion] = useState<WorkerCompletionResponse | null>(null);
+  const [verificationScore, setVerificationScore] = useState<VerificationScoreResponse | null>(null);
   const [workerName, setWorkerName] = useState<string | null>(null);
   const [hasGeoFilter, setHasGeoFilter] = useState(false);
   const [selectedJob, setSelectedJob] = useState<MatchedJob | null>(null);
@@ -148,11 +151,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
 
   const load = useCallback(async () => {
     if (!api) return;
-    const [profileRes, docsRes, jobsRes, completionRes] = await Promise.allSettled([
+    const [profileRes, docsRes, jobsRes, completionRes, scoreRes] = await Promise.allSettled([
       api.workers.getWorkerProfile(),
       api.workers.listWorkerDocuments(),
       api.matching.matchJobsForWorker(),
       api.workers.getWorkerCompletion(),
+      api.workers.getVerificationScore(),
     ]);
     if (profileRes.status === "fulfilled") {
       if (profileRes.value.fullName) setWorkerName(profileRes.value.fullName);
@@ -163,6 +167,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
       setHasGeoFilter(jobsRes.value.hasGeoFilter);
     }
     if (completionRes.status === "fulfilled") setCompletion(completionRes.value);
+    if (scoreRes.status === "fulfilled") setVerificationScore(scoreRes.value);
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
@@ -471,6 +476,9 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                 </button>
               </div>
 
+              {verificationScore && (
+                <VerificationScoreCard score={verificationScore} onGoToProfile={() => onTabChange("profile")} />
+              )}
               {completion && (
                 <ActivationPanel completion={completion} onGoToProfile={() => onTabChange("profile")} />
               )}
