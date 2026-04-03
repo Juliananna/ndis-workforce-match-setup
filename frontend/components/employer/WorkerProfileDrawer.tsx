@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   X, Star, MapPin, Car, FileCheck, Briefcase, Loader2,
-  ChevronRight, Send, Users, CheckCircle, Lock,
+  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, ShieldCheck,
 } from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +147,27 @@ export function WorkerProfileDrawer({ worker, onClose }: Props) {
 
         {view === "profile" && (
           <div className="flex-1 p-5 space-y-5">
+
+            {worker.isFullyVerified ? (
+              <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-green-800">Verified Worker ✅</p>
+                  <p className="text-xs text-green-700 mt-0.5">ID confirmed, compliance docs uploaded, availability set &amp; references provided.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Profile incomplete</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Verification score: {worker.verificationScore}% — this worker hasn't fully completed their profile.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <div className="flex items-start justify-between gap-3">
                 <div>

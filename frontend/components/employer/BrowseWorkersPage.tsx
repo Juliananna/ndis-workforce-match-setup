@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import { Search, MapPin, Star, Car, FileCheck, Loader2, ChevronDown, ChevronUp, X, BadgeCheck, Shield } from "lucide-react";
+import {
+  Search, MapPin, Star, Car, FileCheck, Loader2,
+  ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle,
+} from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,7 @@ export function BrowseWorkersPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [driversLicense, setDriversLicense] = useState(false);
   const [vehicleAccess, setVehicleAccess] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [geoLocation, setGeoLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
@@ -64,6 +68,7 @@ export function BrowseWorkersPage() {
         skills: selectedSkills.length > 0 ? selectedSkills : undefined,
         driversLicense: driversLicense || undefined,
         vehicleAccess: vehicleAccess || undefined,
+        verifiedOnly: verifiedOnly || undefined,
         latitude: geoLocation?.latitude,
         longitude: geoLocation?.longitude,
         maxDistanceKm: geoLocation ? radiusKm : undefined,
@@ -76,7 +81,7 @@ export function BrowseWorkersPage() {
     } finally {
       setLoading(false);
     }
-  }, [api, query, selectedSkills, driversLicense, vehicleAccess, geoLocation, radiusKm]);
+  }, [api, query, selectedSkills, driversLicense, vehicleAccess, verifiedOnly, geoLocation, radiusKm]);
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
@@ -88,9 +93,12 @@ export function BrowseWorkersPage() {
     setSelectedSkills([]);
     setDriversLicense(false);
     setVehicleAccess(false);
+    setVerifiedOnly(false);
   };
 
-  const activeFilterCount = selectedSkills.length + (driversLicense ? 1 : 0) + (vehicleAccess ? 1 : 0);
+  const activeFilterCount = selectedSkills.length + (driversLicense ? 1 : 0) + (vehicleAccess ? 1 : 0) + (verifiedOnly ? 1 : 0);
+
+  const verifiedCount = workers.filter((w) => w.isFullyVerified).length;
 
   return (
     <div className="space-y-5">
@@ -99,6 +107,18 @@ export function BrowseWorkersPage() {
         <p className="text-sm text-muted-foreground mt-0.5">
           Search and filter NDIS support workers to find the right match for your clients.
         </p>
+      </div>
+
+      {/* Trust message */}
+      <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-green-800">Verified workers are more reliable and ready to work</p>
+          <p className="text-xs text-green-700 mt-0.5">
+            Verified workers have confirmed their identity, uploaded compliance documents, set their availability, and provided references.
+            They appear first in search results.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -117,6 +137,19 @@ export function BrowseWorkersPage() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
           </Button>
         </div>
+
+        {/* Verified-only quick filter — top-level */}
+        <label className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-border bg-card cursor-pointer hover:border-green-400 hover:bg-green-50/50 transition-colors select-none">
+          <input
+            type="checkbox"
+            className="rounded accent-green-600"
+            checked={verifiedOnly}
+            onChange={(e) => setVerifiedOnly(e.target.checked)}
+          />
+          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+          <span className="text-sm font-semibold text-foreground">Verified workers only</span>
+          <span className="text-xs text-muted-foreground">(Confirmed ID, docs, references &amp; availability)</span>
+        </label>
 
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
@@ -248,7 +281,15 @@ export function BrowseWorkersPage() {
 
       {!loading && workers.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{workers.length} worker{workers.length !== 1 ? "s" : ""} found</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {workers.length} worker{workers.length !== 1 ? "s" : ""} found
+              {verifiedCount > 0 && !verifiedOnly && (
+                <span className="ml-1.5 text-green-700 font-semibold">· {verifiedCount} verified</span>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground">Verified workers shown first</p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {workers.map((w) => (
               <WorkerCard key={w.workerId} worker={w} onClick={() => setSelectedWorker(w)} />
@@ -265,38 +306,63 @@ export function BrowseWorkersPage() {
   );
 }
 
+function VerificationBadge({ score }: { score: number }) {
+  if (score === 100) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+        <CheckCircle2 className="h-3 w-3" />Verified ✅
+      </span>
+    );
+  }
+  if (score >= 60) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+        <AlertCircle className="h-3 w-3" />Partially verified
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+      <AlertCircle className="h-3 w-3" />Profile incomplete
+    </span>
+  );
+}
+
 function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () => void }) {
   const days = Array.isArray(worker.availableDays) ? worker.availableDays : [];
   return (
     <div
-      className={`rounded-lg border bg-card p-4 space-y-3 cursor-pointer transition-colors ${
-        worker.priorityBoost
+      className={`rounded-lg border bg-card p-4 space-y-3 cursor-pointer transition-all ${
+        worker.isFullyVerified
+          ? "border-green-200 ring-1 ring-green-100 hover:border-green-400 hover:ring-green-200"
+          : worker.priorityBoost
           ? "border-primary/50 ring-1 ring-primary/20 hover:border-primary"
           : "border-border hover:border-primary/40"
       }`}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between gap-2">
-        {worker.priorityBoost ? (
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
-            <Star className="h-3 w-3 fill-primary" />
-            Priority Worker
-            {worker.docsVerified && (
-              <span className="flex items-center gap-0.5 text-green-600">
-                <BadgeCheck className="h-3 w-3" /> Verified Docs
-              </span>
-            )}
-            {worker.refsVerified && (
-              <span className="flex items-center gap-0.5 text-blue-600">
-                <Shield className="h-3 w-3" /> Ref Checked
-              </span>
-            )}
-          </div>
-        ) : (
-          <span />
-        )}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <VerificationBadge score={worker.verificationScore} />
+          {worker.priorityBoost && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary">
+              <Star className="h-3 w-3 fill-primary" />Priority
+            </span>
+          )}
+          {worker.docsVerified && !worker.isFullyVerified && (
+            <span className="flex items-center gap-0.5 text-[11px] text-green-600">
+              <BadgeCheck className="h-3 w-3" />Docs
+            </span>
+          )}
+          {worker.refsVerified && !worker.isFullyVerified && (
+            <span className="flex items-center gap-0.5 text-[11px] text-blue-600">
+              <Shield className="h-3 w-3" />Refs
+            </span>
+          )}
+        </div>
         <LastOnlineBadge lastLoginAt={worker.lastLoginAt} />
       </div>
+
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-sm text-foreground truncate">
@@ -361,6 +427,12 @@ function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () =>
             <span className="text-[11px] text-muted-foreground">+{worker.skills.length - 3} more</span>
           )}
         </div>
+      )}
+
+      {!worker.isFullyVerified && (
+        <p className="text-[11px] text-muted-foreground/60 italic pt-0.5">
+          Verification score: {worker.verificationScore}% — this worker has an incomplete profile
+        </p>
       )}
     </div>
   );

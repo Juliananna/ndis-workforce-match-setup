@@ -20,6 +20,8 @@ export interface MatchedWorker {
   priorityBoost: boolean;
   docsVerifiedPurchased: boolean;
   refsPurchased: boolean;
+  isFullyVerified: boolean;
+  verificationScore: number;
 }
 
 export interface MatchWorkersRequest {
@@ -44,6 +46,7 @@ function computeCompatibility(params: {
   workerExpYears: number | null;
   distanceKm: number | null;
   travelRadiusKm: number | null;
+  verificationScore: number;
 }): { score: number; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
@@ -81,9 +84,19 @@ function computeCompatibility(params: {
   }
 
   if (params.workerExpYears != null && params.workerExpYears >= 1) {
-    const expScore = Math.min(15, params.workerExpYears * 3);
+    const expScore = Math.min(10, params.workerExpYears * 2);
     score += expScore;
     reasons.push(`${params.workerExpYears} yr${params.workerExpYears !== 1 ? "s" : ""} experience`);
+  }
+
+  if (params.verificationScore === 100) {
+    score += 15;
+    reasons.push("Fully verified worker");
+  } else if (params.verificationScore >= 80) {
+    score += 8;
+    reasons.push("High verification score");
+  } else if (params.verificationScore >= 60) {
+    score += 4;
   }
 
   return { score: Math.min(max, score), reasons };
@@ -136,6 +149,11 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
       priority_boost: boolean;
       docs_verified_purchased: boolean;
       refs_purchased: boolean;
+      has_id_doc: boolean;
+      has_cert_doc: boolean;
+      has_avail: boolean;
+      has_refs: boolean;
+      profile_complete: boolean;
     };
 
     let workers: WorkerRow[];
@@ -157,7 +175,12 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
                 POWER(SIN(RADIANS(w.longitude - ${lon}) / 2), 2)
               ))
             ELSE NULL
-          END AS distance_km
+          END AS distance_km,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
+          EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
+          EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
+          ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE
@@ -180,7 +203,12 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
           w.drivers_license, w.vehicle_access, w.experience_years, w.bio,
           w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
           wa.available_days, wa.minimum_pay_rate,
-          NULL::double precision AS distance_km
+          NULL::double precision AS distance_km,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
+          EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
+          EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
+          ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
@@ -212,6 +240,8 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
 
       const distanceKm = w.distance_km != null ? Math.round(w.distance_km * 10) / 10 : null;
 
+      const workerVerifScore = (w.profile_complete ? 20 : 0) + (w.has_id_doc ? 20 : 0) + (w.has_cert_doc ? 20 : 0) + (w.has_refs ? 20 : 0) + (w.has_avail ? 20 : 0);
+
       const { score, reasons } = computeCompatibility({
         jobTags,
         jobWeekdayRate: job.weekday_rate,
@@ -222,6 +252,7 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         workerExpYears: w.experience_years,
         distanceKm,
         travelRadiusKm: w.travel_radius_km,
+        verificationScore: workerVerifScore,
       });
 
       result.push({
@@ -242,6 +273,8 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         priorityBoost: w.priority_boost,
         docsVerifiedPurchased: w.docs_verified_purchased,
         refsPurchased: w.refs_purchased,
+        isFullyVerified: workerVerifScore === 100,
+        verificationScore: workerVerifScore,
       });
     }
 

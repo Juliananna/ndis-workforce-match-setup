@@ -18,6 +18,7 @@ export interface BrowseWorkersRequest {
   location?: string;
   driversLicense?: boolean;
   vehicleAccess?: boolean;
+  verifiedOnly?: boolean;
   maxDistanceKm?: number;
   latitude?: number;
   longitude?: number;
@@ -49,6 +50,8 @@ export interface WorkerSummary {
   docsVerified: boolean;
   refsVerified: boolean;
   lastLoginAt: string | null;
+  verificationScore: number;
+  isFullyVerified: boolean;
 }
 
 export interface BrowseWorkersResponse {
@@ -69,6 +72,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
     const limit = Math.min(req.limit ?? 20, 50);
     const offset = req.offset ?? 0;
     const hasGeo = req.latitude != null && req.longitude != null;
+    const verifiedOnly = req.verifiedOnly ?? false;
 
     type WorkerRow = {
       worker_id: string;
@@ -93,6 +97,11 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       docs_verified: boolean;
       refs_verified: boolean;
       last_login_at: Date | null;
+      has_id_doc: boolean;
+      has_cert_doc: boolean;
+      has_availability: boolean;
+      has_references: boolean;
+      profile_complete: boolean;
     };
 
     let rows: WorkerRow[];
@@ -176,7 +185,35 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             SELECT 1 FROM worker_references wr
             JOIN reference_checks rc ON rc.reference_id = wr.id
             WHERE wr.worker_id = w.worker_id
-          ) AS refs_verified
+          ) AS refs_verified,
+          EXISTS (
+            SELECT 1 FROM worker_documents wd
+            WHERE wd.worker_id = w.worker_id
+            AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+          ) AS has_id_doc,
+          EXISTS (
+            SELECT 1 FROM worker_documents wd
+            WHERE wd.worker_id = w.worker_id
+            AND wd.document_type IN (
+              'NDIS Worker Screening Check', 'NDIS Worker Orientation Module',
+              'NDIS Code of Conduct acknowledgement', 'Infection Control Certificate',
+              'First Aid Certificate', 'CPR Certificate',
+              'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
+            )
+          ) AS has_cert_doc,
+          EXISTS (
+            SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
+          ) AS has_availability,
+          EXISTS (
+            SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id
+          ) AS has_references,
+          (
+            (w.full_name IS NOT NULL AND w.full_name <> '') AND
+            (w.location IS NOT NULL AND w.location <> '') AND
+            (w.bio IS NOT NULL AND w.bio <> '') AND
+            (w.experience_years IS NOT NULL) AND
+            (w.phone IS NOT NULL AND w.phone <> '')
+          ) AS profile_complete
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'
@@ -198,7 +235,21 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       `;
     }
 
-    let filteredWorkerIds = rows.map((r) => r.worker_id);
+    const computeVerificationScore = (r: typeof rows[0]): number => {
+      let s = 0;
+      if (r.profile_complete) s += 20;
+      if (r.has_id_doc) s += 20;
+      if (r.has_cert_doc) s += 20;
+      if (r.has_references) s += 20;
+      if (r.has_availability) s += 20;
+      return s;
+    };
+
+    const preFiltered = verifiedOnly
+      ? rows.filter((r) => computeVerificationScore(r) === 100)
+      : rows;
+
+    let filteredWorkerIds = preFiltered.map((r) => r.worker_id);
 
     if (skills.length > 0) {
       const skillMatches = await db.queryAll<{ worker_id: string; match_count: number }>`
@@ -212,7 +263,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       filteredWorkerIds = filteredWorkerIds.filter((id) => matchedIds.has(id));
     }
 
-    const filteredRows = rows.filter((r) => filteredWorkerIds.includes(r.worker_id));
+    const filteredRows = preFiltered.filter((r) => filteredWorkerIds.includes(r.worker_id));
 
     const allSkills = filteredWorkerIds.length > 0
       ? await db.queryAll<{ worker_id: string; skill: string }>`
@@ -227,7 +278,12 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       skillsByWorker.set(s.worker_id, arr);
     }
 
-    const workers: WorkerSummary[] = filteredRows.map((r) => ({
+    const sortedFilteredRows = [...filteredRows].sort((a, b) => {
+      if (a.priority_boost !== b.priority_boost) return a.priority_boost ? -1 : 1;
+      return computeVerificationScore(b) - computeVerificationScore(a);
+    });
+
+    const workers: WorkerSummary[] = sortedFilteredRows.map((r) => ({
       workerId: r.worker_id,
       name: r.name,
       fullName: r.full_name,
@@ -251,6 +307,8 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       docsVerified: r.docs_verified,
       refsVerified: r.refs_verified,
       lastLoginAt: r.last_login_at ? r.last_login_at.toISOString() : null,
+      verificationScore: computeVerificationScore(r),
+      isFullyVerified: computeVerificationScore(r) === 100,
     }));
 
     return { workers, total: workers.length };
