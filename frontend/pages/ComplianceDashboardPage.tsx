@@ -39,6 +39,7 @@ export default function ComplianceDashboardPage() {
 
   const totalWorkers = workers.length;
   const pendingDocs = workers.reduce((sum, w) => sum + w.pendingDocumentCount, 0);
+  const pendingRefs = workers.reduce((sum, w) => sum + (w.pendingReferenceCount ?? 0), 0);
   const verifiedWorkers = workers.filter((w) => w.isVerified).length;
   const workersWithPending = workers.filter((w) => w.pendingDocumentCount > 0).length;
   const avgCompletion = totalWorkers > 0
@@ -117,7 +118,7 @@ export default function ComplianceDashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 <StatCard
                   icon={<Users className="h-5 w-5 text-indigo-600" />}
                   bg="bg-indigo-50"
@@ -162,6 +163,14 @@ export default function ComplianceDashboardPage() {
                   highlight={incompleteWorkers > 0}
                   onClick={() => setSection("verification")}
                 />
+                <StatCard
+                  icon={<UserCheck className="h-5 w-5 text-purple-600" />}
+                  bg="bg-purple-50"
+                  label="Pending Ref Checks"
+                  value={pendingRefs}
+                  highlight={pendingRefs > 0}
+                  onClick={() => setSection("verification")}
+                />
               </div>
             )}
 
@@ -182,6 +191,8 @@ export default function ComplianceDashboardPage() {
                 title="Reference Checks"
                 description="Conduct structured reference checks and generate risk assessments."
                 cta="Manage References"
+                badge={pendingRefs > 0 ? `${pendingRefs} pending` : undefined}
+                badgeColor="bg-purple-100 text-purple-700"
                 onClick={() => setSection("verification")}
               />
             </div>

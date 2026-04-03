@@ -24,6 +24,7 @@ export interface PlatformStats {
   workersFullyComplete: number;
   workersMostlyComplete: number;
   workersIncomplete: number;
+  pendingReferenceChecks: number;
 }
 
 export const adminGetPlatformStats = api<void, PlatformStats>(
@@ -46,6 +47,7 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       newEmployersRow,
       verifiedWorkersRow,
       unverifiedRow,
+      pendingRefsRow,
       profileCompletionRow,
     ] = await Promise.all([
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
@@ -75,6 +77,7 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       db.queryRow<{ count: number }>`
         SELECT COUNT(*)::int AS count FROM users WHERE is_verified = false AND role IN ('WORKER','EMPLOYER') AND is_demo = FALSE
       `,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references WHERE status IN ('Pending', 'Contacted')`,
       db.queryRow<{ avg_pct: number; fully_complete: number; mostly_complete: number; incomplete: number }>`
         WITH completion AS (
           SELECT
@@ -124,6 +127,7 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       workersFullyComplete: profileCompletionRow?.fully_complete ?? 0,
       workersMostlyComplete: profileCompletionRow?.mostly_complete ?? 0,
       workersIncomplete: profileCompletionRow?.incomplete ?? 0,
+      pendingReferenceChecks: pendingRefsRow?.count ?? 0,
     };
   }
 );

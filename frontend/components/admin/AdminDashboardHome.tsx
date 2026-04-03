@@ -147,6 +147,24 @@ export function AdminDashboardHome({
         </div>
       </div>
 
+      {stats && stats.pendingReferenceChecks > 0 && (
+        <div className="flex items-center gap-3 rounded-xl bg-purple-500/10 border border-purple-500/30 p-4">
+          <UserCheck className="h-5 w-5 text-purple-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              {stats.pendingReferenceChecks} reference check{stats.pendingReferenceChecks !== 1 ? "s" : ""} pending
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">Workers are waiting for their references to be verified.</p>
+          </div>
+          <button
+            onClick={() => onNavigate("workers")}
+            className="text-xs font-semibold text-purple-400 hover:text-purple-300 whitespace-nowrap"
+          >
+            Review now →
+          </button>
+        </div>
+      )}
+
       {stats && stats.pendingDocuments > 0 && (
         <div className="flex items-center gap-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-4">
           <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0" />
@@ -227,6 +245,14 @@ export function AdminDashboardHome({
             sub="Email not confirmed"
             color="bg-rose-500/10"
             onClick={() => onNavigate("users")}
+          />
+          <StatTile
+            icon={<UserCheck className="h-5 w-5 text-purple-400" />}
+            label="Pending Ref Checks"
+            value={stats?.pendingReferenceChecks ?? "—"}
+            sub="Awaiting verification"
+            color="bg-purple-500/10"
+            onClick={() => onNavigate("workers")}
           />
         </div>
       </div>

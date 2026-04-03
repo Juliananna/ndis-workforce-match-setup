@@ -15,6 +15,7 @@ export interface AdminWorkerSummary {
   isVerified: boolean;
   documentCount: number;
   pendingDocumentCount: number;
+  pendingReferenceCount: number;
   createdAt: Date;
   profileCompletionPct: number;
   profileCompletionSections: CompletionSection[];
@@ -52,6 +53,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       is_verified: boolean;
       doc_count: number;
       pending_count: number;
+      pending_ref_count: number;
       created_at: Date;
       has_bio: boolean;
       has_experience: boolean;
@@ -72,6 +74,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
         u.is_verified,
         COUNT(wd.id)::int AS doc_count,
         COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Pending')::int AS pending_count,
+        (SELECT COUNT(*)::int FROM worker_references wr WHERE wr.worker_id = w.worker_id AND wr.status IN ('Pending', 'Contacted')) AS pending_ref_count,
         u.created_at,
         (w.bio IS NOT NULL AND w.bio <> '') AS has_bio,
         (w.experience_years IS NOT NULL) AS has_experience,
@@ -127,6 +130,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           isVerified: r.is_verified,
           documentCount: r.doc_count,
           pendingDocumentCount: r.pending_count,
+          pendingReferenceCount: r.pending_ref_count,
           createdAt: r.created_at,
           profileCompletionPct: completionPercent,
           profileCompletionItems: items,

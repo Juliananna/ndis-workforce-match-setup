@@ -155,6 +155,13 @@ export function SalesDashboard() {
           value={stats.activeDiscounts.toLocaleString()}
           accent="bg-rose-50"
         />
+        <StatCard
+          icon={<UserPlus className="h-5 w-5 text-purple-600" />}
+          label="Pending Ref Checks"
+          value={stats.pendingReferenceChecks.toLocaleString()}
+          sub="Awaiting verification"
+          accent="bg-purple-50"
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

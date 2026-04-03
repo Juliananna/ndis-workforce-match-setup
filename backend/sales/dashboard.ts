@@ -18,6 +18,7 @@ export interface SalesDashboardStats {
   activeDiscounts: number;
   newWorkersThisMonth: number;
   newEmployersThisMonth: number;
+  pendingReferenceChecks: number;
 }
 
 export const getSalesDashboard = api<void, SalesDashboardStats>(
@@ -39,6 +40,7 @@ export const getSalesDashboard = api<void, SalesDashboardStats>(
       discountsRow,
       newWorkersRow,
       newEmployersRow,
+      pendingRefsRow,
     ] = await Promise.all([
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employers e JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE`,
@@ -81,6 +83,7 @@ export const getSalesDashboard = api<void, SalesDashboardStats>(
         JOIN users u ON u.user_id = e.user_id
         WHERE u.created_at >= date_trunc('month', NOW()) AND u.is_demo = FALSE
       `,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references WHERE status IN ('Pending', 'Contacted')`,
     ]);
 
     return {
@@ -98,6 +101,7 @@ export const getSalesDashboard = api<void, SalesDashboardStats>(
       activeDiscounts: discountsRow?.count ?? 0,
       newWorkersThisMonth: newWorkersRow?.count ?? 0,
       newEmployersThisMonth: newEmployersRow?.count ?? 0,
+      pendingReferenceChecks: pendingRefsRow?.count ?? 0,
     };
   }
 );
