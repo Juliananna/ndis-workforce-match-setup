@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Home, Briefcase, ShieldCheck, Settings as SettingsIcon, LogOut,
-  Bell, HelpCircle, MapPin, ChevronRight,
+  Bell, HelpCircle, MapPin,
   CheckCircle2, AlertTriangle, XCircle,
   User, Zap, Star, Navigation, Clock, Menu, X, Rocket,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { JobDetailModal } from "../matching/JobDetailModal";
+import { ActivationPanel } from "./ActivationPanel";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { WorkerCompletionResponse } from "~backend/workers/completion";
@@ -53,40 +54,6 @@ function toDateStr(v: unknown): string {
   return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
-const SECTION_TAB: Record<string, string> = {
-  fullName: "profile", phone: "profile", location: "profile",
-  bio: "profile", experience: "profile", photo: "profile",
-  skills: "profile", availability: "profile",
-  documents: "profile", resume: "profile", references: "profile",
-};
-
-const SECTION_ICON: Record<string, React.ReactNode> = {
-  fullName:     <User className="h-4 w-4 text-blue-500" />,
-  phone:        <User className="h-4 w-4 text-blue-500" />,
-  location:     <MapPin className="h-4 w-4 text-indigo-500" />,
-  bio:          <User className="h-4 w-4 text-violet-500" />,
-  experience:   <Briefcase className="h-4 w-4 text-indigo-500" />,
-  photo:        <User className="h-4 w-4 text-pink-500" />,
-  skills:       <Star className="h-4 w-4 text-yellow-500" />,
-  availability: <Clock className="h-4 w-4 text-green-500" />,
-  documents:    <ShieldCheck className="h-4 w-4 text-blue-600" />,
-  resume:       <Briefcase className="h-4 w-4 text-orange-500" />,
-  references:   <CheckCircle2 className="h-4 w-4 text-teal-500" />,
-};
-
-const SECTION_DESC: Record<string, string> = {
-  fullName:     "Add your full legal name",
-  phone:        "Add your phone number",
-  location:     "Add your suburb so employers can find you",
-  bio:          "Write a short bio about yourself",
-  experience:   "Enter your years of experience",
-  photo:        "Upload a profile photo",
-  skills:       "Select the support skills you have",
-  availability: "Set your available days and times",
-  documents:    "Upload at least 3 compliance documents",
-  resume:       "Upload your resume or CV",
-  references:   "Add at least one reference",
-};
 
 function VerificationUrgencyBanner({ completion, onTabChange, onDismiss }: {
   completion: WorkerCompletionResponse;
@@ -160,70 +127,7 @@ function VerificationUrgencyBanner({ completion, onTabChange, onDismiss }: {
   );
 }
 
-function NextStepsPanel({ completion, onTabChange }: { completion: WorkerCompletionResponse; onTabChange: (tab: string) => void }) {
-  const pct = completion.completionPercent;
-  const missing = completion.sections.filter((s) => !s.done);
-  const done = completion.sections.filter((s) => s.done);
 
-  if (pct === 100) {
-    return (
-      <div className="bg-white rounded-2xl border border-green-200 p-4 flex items-center gap-3">
-        <CheckCircle2 className="h-6 w-6 text-green-500 shrink-0" />
-        <div>
-          <p className="font-semibold text-gray-900 text-sm">Profile 100% complete!</p>
-          <p className="text-xs text-gray-400">You're ready to receive job matches.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-sm font-semibold text-gray-900">Profile — {pct}% complete</p>
-          <span className="text-xs text-gray-400">{done.length}/{completion.sections.length} done</span>
-        </div>
-        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-yellow-400" : "bg-blue-500"}`}
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-      <p className="text-xs text-gray-500">Complete these steps to get matched with more jobs:</p>
-      <div className="space-y-2">
-        {missing.slice(0, 4).map((s) => (
-          <button
-            key={s.key}
-            onClick={() => onTabChange(SECTION_TAB[s.key] ?? "profile")}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/40 transition-all text-left"
-          >
-            <div className="h-7 w-7 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-              {SECTION_ICON[s.key] ?? <ChevronRight className="h-4 w-4 text-gray-400" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-800">{s.label}</p>
-              <p className="text-xs text-gray-400 truncate">{SECTION_DESC[s.key]}</p>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="text-xs font-semibold text-blue-600">+{s.weight}%</span>
-              <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
-            </div>
-          </button>
-        ))}
-        {missing.length > 4 && (
-          <button
-            onClick={() => onTabChange("profile")}
-            className="w-full text-xs text-blue-600 font-medium hover:underline text-center py-1"
-          >
-            +{missing.length - 4} more — View full profile
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const { user } = useAuth();
@@ -568,7 +472,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
               </div>
 
               {completion && (
-                <NextStepsPanel completion={completion} onTabChange={onTabChange} />
+                <ActivationPanel completion={completion} onGoToProfile={() => onTabChange("profile")} />
               )}
             </div>
           </div>
