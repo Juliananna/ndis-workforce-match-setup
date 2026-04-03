@@ -22,7 +22,8 @@ import type { WorkerResume } from "~backend/workers/resume";
 import type { WorkerReference, CreateReferenceRequest, UpdateReferenceRequest } from "~backend/workers/references";
 import type { PaymentStatus } from "~backend/payments/status";
 import type { WorkerCompletionResponse } from "~backend/workers/completion";
-import { CheckCircle2, XCircle } from "lucide-react";
+import type { VerificationScoreResponse } from "~backend/workers/verification_score";
+import { CheckCircle2, XCircle, CreditCard, Users, ShieldCheck as ShieldCheckIcon } from "lucide-react";
 
 function initials(name: string | null | undefined, fallback: string): string {
   const n = name || fallback;
@@ -97,10 +98,54 @@ function AvatarUpload({
   );
 }
 
+const PILLAR_ICON: Record<string, React.ReactNode> = {
+  profile:        <CheckCircle className="h-3.5 w-3.5" />,
+  id:             <CreditCard className="h-3.5 w-3.5" />,
+  certifications: <ShieldCheckIcon className="h-3.5 w-3.5" />,
+  references:     <Users className="h-3.5 w-3.5" />,
+  availability:   <Clock className="h-3.5 w-3.5" />,
+};
+
+function ScoreRing({ score, level }: { score: number; level: string }) {
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ;
+
+  const fillColor = level === "low" ? "#ef4444"
+    : level === "medium" ? "#eab308"
+    : level === "high" ? "#22c55e"
+    : "#10b981";
+
+  const textColor = level === "low" ? "text-red-600"
+    : level === "medium" ? "text-yellow-600"
+    : level === "high" ? "text-green-600"
+    : "text-emerald-600";
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r={r} fill="none" stroke="#f3f4f6" strokeWidth="7" />
+        <circle
+          cx="36" cy="36" r={r} fill="none"
+          stroke={fillColor}
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circ - dash}`}
+          strokeDashoffset={circ / 4}
+          style={{ transition: "stroke-dasharray 0.8s ease" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className={`text-base font-black tabular-nums leading-none ${textColor}`}>{score}%</span>
+      </div>
+    </div>
+  );
+}
+
 function SidebarProfileCard({
   profile,
   documents,
-  completion,
+  verificationScore,
   paymentStatus,
   onEditProfile,
   onUpgrade,
@@ -108,7 +153,7 @@ function SidebarProfileCard({
 }: {
   profile: WorkerProfile | null;
   documents: WorkerDocument[];
-  completion: WorkerCompletionResponse | null;
+  verificationScore: VerificationScoreResponse | null;
   paymentStatus: PaymentStatus | null;
   onEditProfile: () => void;
   onUpgrade: () => void;
@@ -117,8 +162,16 @@ function SidebarProfileCard({
   const verifiedCount = documents.filter((d) => d.verificationStatus === "Verified").length;
   const isVerified = verifiedCount >= 5;
   const displayName = profile?.fullName || profile?.name || "";
-  const pct = completion?.completionPercent ?? 0;
-  const missing = completion?.sections.filter((s) => !s.done) ?? [];
+  const score = verificationScore?.score ?? 0;
+  const level = verificationScore?.level ?? "low";
+
+  const levelBadge = level === "verified"
+    ? { text: "Fully Verified ✅", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" }
+    : level === "high"
+    ? { text: "High Visibility 🟢", cls: "bg-green-100 text-green-700 border-green-200" }
+    : level === "medium"
+    ? { text: "Medium Visibility 🟡", cls: "bg-yellow-100 text-yellow-700 border-yellow-200" }
+    : { text: "Low Visibility 🔴", cls: "bg-red-100 text-red-700 border-red-200" };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -132,43 +185,44 @@ function SidebarProfileCard({
         />
 
         <h2 className="text-gray-900 font-bold text-lg leading-tight">{displayName || "Your Name"}</h2>
-        <p className="text-gray-500 text-sm mt-0.5">Verified Care Provider</p>
+        <p className="text-gray-500 text-sm mt-0.5">NDIS Support Worker</p>
 
-        {isVerified && (
-          <span className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-semibold">
-            <CheckCircle className="h-3 w-3" />
-            VERIFIED
-          </span>
-        )}
+        <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
+          <div className="flex items-center gap-3">
+            <ScoreRing score={score} level={level} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-gray-700 mb-1">Verification Score</p>
+              <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full border ${levelBadge.cls}`}>
+                {levelBadge.text}
+              </span>
+              {verificationScore && (
+                <p className="text-xs text-gray-400 mt-1.5 leading-snug">
+                  {verificationScore.visibilityLabel}
+                </p>
+              )}
+            </div>
+          </div>
 
-        <div className="mt-4 space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500 font-medium">Profile Completion</span>
-            <span className={`font-bold ${pct >= 80 ? "text-green-600" : pct >= 50 ? "text-yellow-600" : "text-blue-600"}`}>{pct}%</span>
-          </div>
-          <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-yellow-500" : "bg-blue-600"
-              }`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          {completion && (
-            <div className="mt-2 space-y-1">
-              {completion.sections.map((s) => (
-                <div key={s.key} className="flex items-center gap-1.5">
-                  {s.done
-                    ? <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
-                    : <XCircle className="h-3 w-3 text-gray-300 shrink-0" />}
-                  <span className={`text-xs ${s.done ? "text-gray-400 line-through" : "text-gray-700"}`}>{s.label}</span>
-                  {!s.done && <span className="ml-auto text-xs text-gray-400">+{s.weight}%</span>}
+          {verificationScore && (
+            <div className="mt-3 space-y-1.5">
+              {verificationScore.pillars.map((p) => (
+                <div key={p.key} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${
+                  p.earned ? "bg-green-50" : "bg-white border border-gray-100"
+                }`}>
+                  <span className={p.earned ? "text-green-500" : "text-gray-300"}>
+                    {p.earned
+                      ? <CheckCircle2 className="h-3.5 w-3.5" />
+                      : <XCircle className="h-3.5 w-3.5" />}
+                  </span>
+                  <span className={`text-xs flex-1 ${p.earned ? "text-gray-400 line-through" : "text-gray-700 font-medium"}`}>
+                    {p.label}
+                  </span>
+                  {!p.earned && (
+                    <span className="text-xs font-bold text-indigo-500">+{p.points}</span>
+                  )}
                 </div>
               ))}
             </div>
-          )}
-          {missing.length === 0 && pct === 100 && (
-            <p className="text-xs text-green-600 font-medium mt-1">Profile complete!</p>
           )}
         </div>
 
@@ -294,6 +348,7 @@ export default function WorkerProfilePage() {
   const api = useAuthedBackend();
   const proxy = useProxyUpload();
   const [completion, setCompletion] = useState<WorkerCompletionResponse | null>(null);
+  const [verificationScore, setVerificationScore] = useState<VerificationScoreResponse | null>(null);
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [skills, setSkills] = useState<string[]>([]);
   const [availability, setAvailability] = useState<WorkerAvailability | null>(null);
@@ -309,7 +364,7 @@ export default function WorkerProfilePage() {
   const load = useCallback(async () => {
     if (!api) return;
     try {
-      const [profileRes, skillsRes, availRes, docsRes, videoRes, resumeRes, refsRes, payRes, completionRes] = await Promise.allSettled([
+      const [profileRes, skillsRes, availRes, docsRes, videoRes, resumeRes, refsRes, payRes, completionRes, scoreRes] = await Promise.allSettled([
         api.workers.getWorkerProfile(),
         api.workers.getWorkerSkills(),
         api.workers.getWorkerAvailability(),
@@ -319,6 +374,7 @@ export default function WorkerProfilePage() {
         api.workers.listWorkerReferences(),
         api.payments.getPaymentStatus(),
         api.workers.getWorkerCompletion(),
+        api.workers.getVerificationScore(),
       ]);
 
       if (profileRes.status === "fulfilled") setProfile(profileRes.value);
@@ -330,6 +386,7 @@ export default function WorkerProfilePage() {
       if (refsRes.status === "fulfilled") setReferences(refsRes.value.references);
       if (payRes.status === "fulfilled") setPaymentStatus(payRes.value);
       if (completionRes.status === "fulfilled") setCompletion(completionRes.value);
+      if (scoreRes.status === "fulfilled") setVerificationScore(scoreRes.value);
     } finally {
       setLoading(false);
     }
@@ -348,8 +405,12 @@ export default function WorkerProfilePage() {
   const refreshCompletion = async () => {
     if (!api) return;
     try {
-      const c = await api.workers.getWorkerCompletion();
+      const [c, s] = await Promise.all([
+        api.workers.getWorkerCompletion(),
+        api.workers.getVerificationScore(),
+      ]);
       setCompletion(c);
+      setVerificationScore(s);
     } catch {}
   };
 
@@ -447,7 +508,7 @@ export default function WorkerProfilePage() {
         <SidebarProfileCard
           profile={profile}
           documents={documents}
-          completion={completion}
+          verificationScore={verificationScore}
           paymentStatus={paymentStatus}
           onEditProfile={() => setEditingProfile(true)}
           onUpgrade={() => setShowUpgrade(true)}
