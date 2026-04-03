@@ -11,6 +11,7 @@ import DemoPortalPage from "./pages/DemoPortalPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import LandingPage from "./pages/LandingPage";
 import { lazy, ReactNode, Suspense, useEffect } from "react";
 
 function useChunkErrorReload() {
@@ -46,6 +47,18 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function PublicOnlyRoute({ children }: { children: ReactNode }) {
+  const { token, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+  return token ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+}
+
 function DemoRoute() {
   return <DemoPortalPage />;
 }
@@ -76,7 +89,7 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password", "/demo"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 
 function GlobalSupportButton() {
@@ -91,8 +104,8 @@ function AppInner() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<PublicOnlyRoute><LandingPage /></PublicOnlyRoute>} />
+        <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/worker-signup" element={<WorkerSignupPage />} />
         <Route path="/gethired" element={<GetHiredPage />} />
