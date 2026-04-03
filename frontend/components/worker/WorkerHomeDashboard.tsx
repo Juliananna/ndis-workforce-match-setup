@@ -3,7 +3,7 @@ import {
   Home, Briefcase, ShieldCheck, Settings as SettingsIcon, LogOut,
   Bell, HelpCircle, MapPin, ChevronRight,
   CheckCircle2, AlertTriangle, XCircle,
-  User, Zap, Star, Navigation, Clock, Menu, X,
+  User, Zap, Star, Navigation, Clock, Menu, X, Rocket,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
@@ -88,6 +88,78 @@ const SECTION_DESC: Record<string, string> = {
   references:   "Add at least one reference",
 };
 
+function VerificationUrgencyBanner({ completion, onTabChange, onDismiss }: {
+  completion: WorkerCompletionResponse;
+  onTabChange: (tab: string) => void;
+  onDismiss: () => void;
+}) {
+  const pct = completion.completionPercent;
+  const missingDocs = completion.sections.find((s) => s.key === "documents" && !s.done);
+  const incompleteCount = completion.sections.filter((s) => !s.done).length;
+
+  if (pct >= 100) return null;
+
+  const isEarly = pct < 40;
+  const hasDocs = !missingDocs;
+
+  const gradientClass = isEarly
+    ? "from-blue-600 via-indigo-600 to-violet-600"
+    : "from-amber-500 via-orange-500 to-red-500";
+
+  const message = isEarly
+    ? `Providers prioritise verified workers. Complete your profile to start getting hired.`
+    : hasDocs
+    ? `Almost there! ${incompleteCount} step${incompleteCount !== 1 ? "s" : ""} left before providers can fully see your profile.`
+    : `Upload your compliance documents to appear in provider searches and get matched faster.`;
+
+  const urgencyNote = isEarly
+    ? "Free verification available for the first 200 workers"
+    : "Verified profiles are chosen more often by providers";
+
+  return (
+    <div className={`relative rounded-2xl bg-gradient-to-r ${gradientClass} p-4 sm:p-5 text-white overflow-hidden`}>
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute -right-8 -top-8 h-48 w-48 rounded-full bg-white/30" />
+        <div className="absolute right-16 bottom-0 h-32 w-32 rounded-full bg-white/10" />
+      </div>
+      <button
+        onClick={onDismiss}
+        className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/20 transition-colors z-10"
+        aria-label="Dismiss"
+      >
+        <X className="h-4 w-4 text-white/70" />
+      </button>
+      <div className="relative z-10 flex items-start gap-4">
+        <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+          <Rocket className="h-5 w-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0 pr-6">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <p className="font-bold text-sm">Get Verified — Get Hired Faster</p>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20">{pct}% complete</span>
+          </div>
+          <p className="text-sm text-white/85 mb-3 leading-relaxed">{message}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => onTabChange("profile")}
+              className="px-4 py-2 bg-white text-indigo-700 font-bold rounded-xl text-sm hover:bg-indigo-50 transition-colors shrink-0"
+            >
+              Complete Profile →
+            </button>
+            <p className="text-xs text-white/70">&#127381; {urgencyNote}</p>
+          </div>
+          <div className="mt-3 h-1.5 rounded-full bg-white/20 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-white/80 transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NextStepsPanel({ completion, onTabChange }: { completion: WorkerCompletionResponse; onTabChange: (tab: string) => void }) {
   const pct = completion.completionPercent;
   const missing = completion.sections.filter((s) => !s.done);
@@ -163,6 +235,9 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const [workerName, setWorkerName] = useState<string | null>(null);
   const [hasGeoFilter, setHasGeoFilter] = useState(false);
   const [selectedJob, setSelectedJob] = useState<MatchedJob | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    return sessionStorage.getItem("onboarding-banner-dismissed") === "1";
+  });
 
   const displayName = workerName ?? user?.email?.split("@")[0] ?? "User";
   const firstName = displayName.split(" ")[0];
@@ -331,6 +406,16 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+          {completion && !bannerDismissed && completion.completionPercent < 100 && (
+            <VerificationUrgencyBanner
+              completion={completion}
+              onTabChange={onTabChange}
+              onDismiss={() => {
+                setBannerDismissed(true);
+                sessionStorage.setItem("onboarding-banner-dismissed", "1");
+              }}
+            />
+          )}
           <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-600 p-5 sm:p-7 text-white relative overflow-hidden flex items-center justify-between">
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/20" />

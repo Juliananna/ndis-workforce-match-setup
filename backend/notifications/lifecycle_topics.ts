@@ -47,3 +47,13 @@ export interface PaymentSucceededEvent {
 export const paymentSucceededTopic = new Topic<PaymentSucceededEvent>("payment-succeeded", {
   deliveryGuarantee: "at-least-once",
 });
+
+export interface WorkerSignedUpEvent {
+  userId: string;
+  email: string;
+  firstName: string;
+}
+
+export const workerSignedUpTopic = new Topic<WorkerSignedUpEvent>("worker-signed-up", {
+  deliveryGuarantee: "at-least-once",
+});

@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import db from "../db";
 import { sendVerificationEmail, sendResendVerificationEmail } from "../emailer/verification_email";
 import { upsertContact } from "../ghl/client";
+import { workerSignedUpTopic } from "../notifications/lifecycle_topics";
 
 const appBaseUrl = secret("AppBaseUrl");
 
@@ -81,6 +82,10 @@ export const register = api<RegisterRequest, RegisterResponse>(
         INSERT INTO workers (user_id, name, phone)
         VALUES (${user.user_id}, ${req.name.trim()}, ${req.phone.trim()})
       `;
+      const firstName = req.name.trim().split(/\s+/)[0] ?? req.name.trim();
+      try {
+        await workerSignedUpTopic.publish({ userId: user.user_id, email: req.email.toLowerCase(), firstName });
+      } catch { }
     } else {
       await db.exec`
         INSERT INTO employers (user_id, organisation_name, contact_person, phone, abn)
