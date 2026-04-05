@@ -417,6 +417,89 @@ export interface ListEmailLogRequest {
   offset?: number;
 }
 
+export interface ListUserEmailLogRequest {
+  userId: string;
+  limit?: number;
+  offset?: number;
+}
+
+export const adminListUserEmailLog = api<ListUserEmailLogRequest, ListEmailLogResponse>(
+  { expose: true, auth: true, method: "GET", path: "/admin/email-comms/log/user/:userId" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const limit = Math.min(req.limit ?? 50, 200);
+    const offset = req.offset ?? 0;
+
+    const [rows, countRow] = await Promise.all([
+      db.queryAll<{
+        id: string;
+        template_id: string | null;
+        sent_by: string | null;
+        sent_by_email: string | null;
+        recipient_email: string;
+        recipient_name: string | null;
+        subject: string;
+        category: string;
+        is_bulk: boolean;
+        bulk_count: number | null;
+        target_role: string | null;
+        status: string;
+        error_message: string | null;
+        sent_at: Date;
+      }>`
+        SELECT
+          l.id,
+          l.template_id,
+          l.sent_by,
+          u.email AS sent_by_email,
+          l.recipient_email,
+          COALESCE(w.name, e.organisation_name) AS recipient_name,
+          l.subject,
+          l.category,
+          l.is_bulk,
+          l.bulk_count,
+          l.target_role,
+          l.status,
+          l.error_message,
+          l.sent_at
+        FROM email_sent_log l
+        LEFT JOIN users u ON u.user_id = l.sent_by
+        LEFT JOIN users ru ON ru.user_id = l.recipient_user_id
+        LEFT JOIN workers w ON w.user_id = ru.user_id
+        LEFT JOIN employers e ON e.user_id = ru.user_id
+        WHERE l.recipient_user_id = ${req.userId}
+        ORDER BY l.sent_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      db.queryRow<{ count: number }>`
+        SELECT COUNT(*)::int AS count FROM email_sent_log WHERE recipient_user_id = ${req.userId}
+      `,
+    ]);
+
+    return {
+      entries: rows.map((r) => ({
+        id: r.id,
+        templateId: r.template_id,
+        sentByUserId: r.sent_by,
+        sentByEmail: r.sent_by_email,
+        recipientEmail: r.recipient_email,
+        recipientName: r.recipient_name,
+        subject: r.subject,
+        category: r.category,
+        isBulk: r.is_bulk,
+        bulkCount: r.bulk_count,
+        targetRole: r.target_role,
+        status: r.status,
+        errorMessage: r.error_message,
+        sentAt: r.sent_at,
+      })),
+      total: countRow?.count ?? 0,
+    };
+  }
+);
+
 export const adminListEmailLog = api<ListEmailLogRequest, ListEmailLogResponse>(
   { expose: true, auth: true, method: "GET", path: "/admin/email-comms/log" },
   async (req) => {

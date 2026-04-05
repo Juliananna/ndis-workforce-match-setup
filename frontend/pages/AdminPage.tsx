@@ -13,6 +13,7 @@ import {
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminWorkerSummary, AdminWorkerDocumentView, AdminReferenceView } from "~backend/admin/workers";
+import type { EmailLogEntry } from "~backend/admin/email_comms";
 import type { ReferenceCheckResult, SubmitReferenceCheckRequest } from "~backend/admin/reference_check";
 import type { AdminEmployerSummary } from "~backend/admin/employers";
 import type { PlatformStats, AdminJobSummary } from "~backend/admin/platform";
@@ -22,6 +23,47 @@ import { ReferenceCheckWizard } from "../components/admin/ReferenceCheckWizard";
 import { EmailCommsTab } from "../components/admin/EmailCommsTab";
 import { UserAccountsPanel } from "../components/UserAccountsPanel";
 import { SupportTicketsTab } from "../components/admin/SupportTicketsTab";
+
+const EMAIL_STATUS_COLORS: Record<string, string> = {
+  sent: "bg-green-500/15 text-green-400 border-transparent",
+  failed: "bg-red-500/15 text-red-400 border-transparent",
+};
+
+function UserEmailLogPanel({ loading, entries, total }: { loading: boolean; entries: EmailLogEntry[]; total: number }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{total} email{total !== 1 ? "s" : ""} sent to this user</span>
+      </div>
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4"><Loader2 className="h-4 w-4 animate-spin" />Loading email log…</div>
+      ) : entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground italic py-4 text-center">No emails sent to this user yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((e) => (
+            <Card key={e.id} className="p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-foreground truncate max-w-xs">{e.subject}</p>
+                    <Badge className={`text-xs ${EMAIL_STATUS_COLORS[e.status] ?? "bg-muted text-muted-foreground border-transparent"}`}>{e.status}</Badge>
+                    {e.isBulk && <Badge className="text-xs bg-blue-500/15 text-blue-400 border-transparent">Bulk</Badge>}
+                    <Badge className="text-xs bg-muted text-muted-foreground border-transparent capitalize">{e.category}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">
+                    Sent by {e.sentByEmail ?? "system"} · {new Date(e.sentAt).toLocaleString()}
+                  </p>
+                  {e.errorMessage && <p className="text-xs text-destructive mt-0.5">{e.errorMessage}</p>}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATUS_COLORS: Record<string, string> = {
   Pending: "bg-yellow-500/15 text-yellow-400 border-transparent",
@@ -60,7 +102,7 @@ const JOB_STATUS_COLORS: Record<string, string> = {
 
 type AdminTab = "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "home";
 type WorkerView = "list" | "worker";
-type WorkerTab = "documents" | "references";
+type WorkerTab = "documents" | "references" | "emails";
 
 function fmtAud(cents: number) {
   return `$${(cents / 100).toLocaleString("en-AU", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -204,6 +246,9 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
   const [wizardRef, setWizardRef] = useState<AdminReferenceView | null>(null);
   const [existingChecks, setExistingChecks] = useState<Record<string, ReferenceCheckResult | null>>({});
   const [checksLoading, setChecksLoading] = useState<Record<string, boolean>>({});
+  const [emailLog, setEmailLog] = useState<EmailLogEntry[]>([]);
+  const [emailLogTotal, setEmailLogTotal] = useState(0);
+  const [emailLogLoading, setEmailLogLoading] = useState(false);
   const [messageDocId, setMessageDocId] = useState<string | null>(null);
   const [messageDocLabel, setMessageDocLabel] = useState("");
   const [messageText, setMessageText] = useState("");
@@ -259,6 +304,18 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
 
   useEffect(() => { loadWorkers(); }, [loadWorkers]);
 
+  const loadWorkerEmailLog = useCallback(async (userId: string) => {
+    if (!api) return;
+    setEmailLogLoading(true);
+    setEmailLog([]);
+    try {
+      const res = await api.admin.adminListUserEmailLog({ userId });
+      setEmailLog(res.entries);
+      setEmailLogTotal(res.total);
+    } catch (e: unknown) { console.error(e); }
+    finally { setEmailLogLoading(false); }
+  }, [api]);
+
   const handleSelectWorker = (worker: AdminWorkerSummary) => {
     setSelectedWorker(worker);
     setView("worker");
@@ -266,6 +323,7 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
     setError(null);
     loadWorkerDocs(worker.workerId);
     loadWorkerRefs(worker.workerId);
+    loadWorkerEmailLog(worker.userId);
   };
 
   const handleGetDownloadUrl = async (docId: string): Promise<string> => {
@@ -382,16 +440,21 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
         </Card>
 
         <div className="flex gap-1 border-b border-border">
-          {(["documents", "references"] as WorkerTab[]).map((t) => (
+          {(["documents", "references", "emails"] as WorkerTab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 capitalize ${
                 tab === t ? "text-foreground border-b-2 border-primary -mb-px" : "text-muted-foreground hover:text-foreground"
               }`}>
-              {t === "documents" ? <FileText className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
-              {t}
+              {t === "documents" ? <FileText className="h-3.5 w-3.5" /> : t === "references" ? <UserCheck className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
+              {t === "emails" ? "Email Log" : t}
               {t === "documents" && documents.filter((d) => d.verificationStatus === "Pending").length > 0 && (
                 <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium">
                   {documents.filter((d) => d.verificationStatus === "Pending").length}
+                </span>
+              )}
+              {t === "emails" && emailLogTotal > 0 && (
+                <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium">
+                  {emailLogTotal}
                 </span>
               )}
             </button>
@@ -553,6 +616,10 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
           </div>
         )}
 
+        {tab === "emails" && (
+          <UserEmailLogPanel loading={emailLogLoading} entries={emailLog} total={emailLogTotal} />
+        )}
+
         <DocumentPreviewModal doc={previewDoc} open={previewOpen}
           onClose={() => { setPreviewOpen(false); setRejectId(null); setRejectReason(""); setError(null); }}
           onGetDownloadUrl={handleGetDownloadUrl}
@@ -618,6 +685,32 @@ function EmployersTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [grantDays, setGrantDays] = useState("30");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailLogFor, setEmailLogFor] = useState<string | null>(null);
+  const [emailLogs, setEmailLogs] = useState<Record<string, EmailLogEntry[]>>({});
+  const [emailLogTotals, setEmailLogTotals] = useState<Record<string, number>>({});
+  const [emailLogLoading, setEmailLogLoading] = useState<Record<string, boolean>>({});
+
+  const loadEmployerEmailLog = useCallback(async (userId: string, employerId: string) => {
+    if (!api) return;
+    setEmailLogLoading((prev) => ({ ...prev, [employerId]: true }));
+    try {
+      const res = await api.admin.adminListUserEmailLog({ userId });
+      setEmailLogs((prev) => ({ ...prev, [employerId]: res.entries }));
+      setEmailLogTotals((prev) => ({ ...prev, [employerId]: res.total }));
+    } catch (e: unknown) { console.error(e); }
+    finally { setEmailLogLoading((prev) => ({ ...prev, [employerId]: false })); }
+  }, [api]);
+
+  const handleToggleEmailLog = (emp: AdminEmployerSummary) => {
+    if (emailLogFor === emp.employerId) {
+      setEmailLogFor(null);
+    } else {
+      setEmailLogFor(emp.employerId);
+      if (!emailLogs[emp.employerId]) {
+        loadEmployerEmailLog(emp.userId, emp.employerId);
+      }
+    }
+  };
 
   const load = useCallback(async () => {
     if (!api) return;
@@ -704,6 +797,13 @@ function EmployersTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
                   </div>
                 </div>
                 <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleToggleEmailLog(emp)}>
+                    <Mail className="h-3 w-3 mr-1" />
+                    Email Log
+                    {emailLogTotals[emp.employerId] != null && (
+                      <span className="ml-1 text-xs px-1 py-0 rounded-full bg-blue-500/20 text-blue-400">{emailLogTotals[emp.employerId]}</span>
+                    )}
+                  </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setGrantingFor(grantingFor === emp.employerId ? null : emp.employerId)}>
                     <DollarSign className="h-3 w-3 mr-1" />Grant Sub
                   </Button>
@@ -737,6 +837,16 @@ function EmployersTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
                     </Button>
                     <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setGrantingFor(null); setError(null); }}>Cancel</Button>
                   </div>
+                </div>
+              )}
+
+              {emailLogFor === emp.employerId && (
+                <div className="border-t border-border pt-3">
+                  <UserEmailLogPanel
+                    loading={!!emailLogLoading[emp.employerId]}
+                    entries={emailLogs[emp.employerId] ?? []}
+                    total={emailLogTotals[emp.employerId] ?? 0}
+                  />
                 </div>
               )}
             </Card>
