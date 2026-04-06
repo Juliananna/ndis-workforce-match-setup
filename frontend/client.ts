@@ -181,6 +181,11 @@ import {
     adminVerifyDocument as api_admin_verify_document_adminVerifyDocument
 } from "~backend/admin/verify_document";
 import {
+    adminListWhatsAppLog as api_admin_whatsapp_comms_adminListWhatsAppLog,
+    adminSendBulkWhatsApp as api_admin_whatsapp_comms_adminSendBulkWhatsApp,
+    adminSendWhatsAppToUser as api_admin_whatsapp_comms_adminSendWhatsAppToUser
+} from "~backend/admin/whatsapp_comms";
+import {
     adminGetWorkerDocuments as api_admin_workers_adminGetWorkerDocuments,
     adminGetWorkerReferences as api_admin_workers_adminGetWorkerReferences,
     adminListWorkers as api_admin_workers_adminListWorkers,
@@ -212,12 +217,15 @@ export namespace admin {
             this.adminListSettings = this.adminListSettings.bind(this)
             this.adminListUserEmailLog = this.adminListUserEmailLog.bind(this)
             this.adminListUsers = this.adminListUsers.bind(this)
+            this.adminListWhatsAppLog = this.adminListWhatsAppLog.bind(this)
             this.adminListWorkers = this.adminListWorkers.bind(this)
             this.adminResetUserPassword = this.adminResetUserPassword.bind(this)
             this.adminRevokeSubscription = this.adminRevokeSubscription.bind(this)
             this.adminSendBulkEmail = this.adminSendBulkEmail.bind(this)
+            this.adminSendBulkWhatsApp = this.adminSendBulkWhatsApp.bind(this)
             this.adminSendDocumentMessage = this.adminSendDocumentMessage.bind(this)
             this.adminSendEmailToUser = this.adminSendEmailToUser.bind(this)
+            this.adminSendWhatsAppToUser = this.adminSendWhatsAppToUser.bind(this)
             this.adminSubmitReferenceCheck = this.adminSubmitReferenceCheck.bind(this)
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
             this.adminUpdateEmailTemplate = this.adminUpdateEmailTemplate.bind(this)
@@ -369,6 +377,18 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_platform_adminListUsers>
         }
 
+        public async adminListWhatsAppLog(params: RequestType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                limit:  params.limit === undefined ? undefined : String(params.limit),
+                offset: params.offset === undefined ? undefined : String(params.offset),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/log`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminListWhatsAppLog>
+        }
+
         public async adminListWorkers(): Promise<ResponseType<typeof api_admin_workers_adminListWorkers>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/workers`, {method: "GET", body: undefined})
@@ -391,6 +411,12 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminSendBulkEmail>
         }
 
+        public async adminSendBulkWhatsApp(params: RequestType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/send-bulk`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminSendBulkWhatsApp>
+        }
+
         public async adminSendDocumentMessage(params: RequestType<typeof api_admin_document_message_adminSendDocumentMessage>): Promise<ResponseType<typeof api_admin_document_message_adminSendDocumentMessage>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
@@ -406,6 +432,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/email-comms/send-to-user`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminSendEmailToUser>
+        }
+
+        public async adminSendWhatsAppToUser(params: RequestType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>): Promise<ResponseType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/whatsapp/send-to-user`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_whatsapp_comms_adminSendWhatsAppToUser>
         }
 
         public async adminSubmitReferenceCheck(params: RequestType<typeof api_admin_reference_check_adminSubmitReferenceCheck>): Promise<ResponseType<typeof api_admin_reference_check_adminSubmitReferenceCheck>> {
