@@ -13,12 +13,20 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
 
+  const toE164 = (num: string): string => {
+    const stripped = num.replace(/[\s\-().]/g, "");
+    if (stripped.startsWith("+")) return stripped;
+    if (stripped.startsWith("0")) return `+61${stripped.slice(1)}`;
+    if (stripped.startsWith("61")) return `+${stripped}`;
+    return `+${stripped}`;
+  };
+
   const normaliseWA = (num: string) =>
     num.startsWith("whatsapp:") ? num : `whatsapp:${num}`;
 
   const params = new URLSearchParams({
     From: normaliseWA(from),
-    To: normaliseWA(to),
+    To: normaliseWA(toE164(to)),
     Body: body,
   });
 
