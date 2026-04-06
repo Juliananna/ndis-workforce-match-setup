@@ -13,9 +13,12 @@ export async function sendWhatsApp(to: string, body: string): Promise<void> {
 
   const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
 
+  const normaliseWA = (num: string) =>
+    num.startsWith("whatsapp:") ? num : `whatsapp:${num}`;
+
   const params = new URLSearchParams({
-    From: from,
-    To: `whatsapp:${to}`,
+    From: normaliseWA(from),
+    To: normaliseWA(to),
     Body: body,
   });
 
