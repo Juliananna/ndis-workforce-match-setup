@@ -9,6 +9,7 @@ import type { EmployerProfile } from "~backend/employers/profile_get";
 import type { UpdateEmployerProfileRequest } from "~backend/employers/profile_update";
 import { RatingBadge } from "../reviews/RatingBadge";
 import { LocationAutocomplete } from "../LocationAutocomplete";
+import { emailError, phoneError } from "../../lib/validation";
 
 interface Props {
   profile: EmployerProfile | null;
@@ -38,6 +39,11 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<UpdateEmployerProfileRequest>({});
   const [newArea, setNewArea] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  const emailErr = emailTouched ? emailError(form.email ?? "") : null;
+  const phoneErr = phoneTouched ? phoneError(form.phone ?? "") : null;
 
   const startEdit = () => {
     setForm({
@@ -54,6 +60,8 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
       servicesProvided: profile?.servicesProvided ?? [],
     });
     setError(null);
+    setEmailTouched(false);
+    setPhoneTouched(false);
     setEditing(true);
   };
 
@@ -63,6 +71,14 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
   };
 
   const save = async () => {
+    setEmailTouched(true);
+    setPhoneTouched(true);
+    const eErr = emailError(form.email ?? "");
+    const pErr = phoneError(form.phone ?? "");
+    if (eErr || pErr) {
+      setError(eErr ?? pErr);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -196,8 +212,32 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
         <FormField label="Organisation Name" value={form.organisationName ?? ""} onChange={(v) => setForm((f) => ({ ...f, organisationName: v }))} />
         <FormField label="ABN" value={form.abn ?? ""} onChange={(v) => setForm((f) => ({ ...f, abn: v }))} />
         <FormField label="Contact Person" value={form.contactPerson ?? ""} onChange={(v) => setForm((f) => ({ ...f, contactPerson: v }))} />
-        <FormField label="Email" type="email" value={form.email ?? ""} onChange={(v) => setForm((f) => ({ ...f, email: v }))} />
-        <FormField label="Phone" type="tel" value={form.phone ?? ""} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
+
+        <div className="space-y-1">
+          <Label className="text-xs">Email</Label>
+          <Input
+            type="email"
+            value={form.email ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            onBlur={() => setEmailTouched(true)}
+            className={`h-8 text-sm ${emailErr ? "border-red-400 focus:ring-red-400" : ""}`}
+          />
+          {emailErr && <p className="text-xs text-destructive">{emailErr}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Phone</Label>
+          <Input
+            type="tel"
+            value={form.phone ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            onBlur={() => setPhoneTouched(true)}
+            placeholder="04XX XXX XXX"
+            className={`h-8 text-sm ${phoneErr ? "border-red-400 focus:ring-red-400" : ""}`}
+          />
+          {phoneErr && <p className="text-xs text-destructive">{phoneErr}</p>}
+        </div>
+
         <div className="space-y-1">
           <LocationAutocomplete
             label="Location (suburb/city)"

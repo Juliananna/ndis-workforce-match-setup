@@ -6,6 +6,7 @@ import db from "../db";
 import { sendVerificationEmail, sendResendVerificationEmail } from "../emailer/verification_email";
 import { upsertContact } from "../ghl/client";
 import { workerSignedUpTopic } from "../notifications/lifecycle_topics";
+import { isValidEmail, isValidPhone } from "./validation";
 
 const appBaseUrl = secret("AppBaseUrl");
 
@@ -30,7 +31,7 @@ export interface RegisterResponse {
 export const register = api<RegisterRequest, RegisterResponse>(
   { expose: true, method: "POST", path: "/auth/register" },
   async (req) => {
-    if (!req.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) {
+    if (!req.email || !isValidEmail(req.email)) {
       throw APIError.invalidArgument("valid email is required");
     }
     if (!req.password || req.password.length < 8) {
@@ -44,6 +45,9 @@ export const register = api<RegisterRequest, RegisterResponse>(
     }
     if (!req.phone || !req.phone.trim()) {
       throw APIError.invalidArgument("phone is required");
+    }
+    if (!isValidPhone(req.phone)) {
+      throw APIError.invalidArgument("please enter a valid Australian phone number");
     }
     if (req.role === "EMPLOYER") {
       if (!req.organisation_name?.trim()) {
@@ -229,7 +233,7 @@ export interface ResendVerificationResponse {
 export const resendVerification = api<ResendVerificationRequest, ResendVerificationResponse>(
   { expose: true, method: "POST", path: "/auth/resend-verification" },
   async (req) => {
-    if (!req.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) {
+    if (!req.email || !isValidEmail(req.email)) {
       throw APIError.invalidArgument("valid email is required");
     }
 

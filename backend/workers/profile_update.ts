@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { WorkerProfile } from "./profile_get";
+import { isValidEmail, isValidPhone } from "../auth/validation";
 
 export interface UpdateWorkerProfileRequest {
   name?: string;
@@ -30,9 +31,14 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
       throw APIError.permissionDenied("only workers can access this endpoint");
     }
 
-    if (req.email !== undefined) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) {
+    if (req.email !== undefined && req.email !== "") {
+      if (!isValidEmail(req.email)) {
         throw APIError.invalidArgument("invalid email format");
+      }
+    }
+    if (req.phone !== undefined && req.phone.trim() !== "") {
+      if (!isValidPhone(req.phone)) {
+        throw APIError.invalidArgument("please enter a valid Australian phone number");
       }
     }
 

@@ -6,6 +6,7 @@ import { Loader2, CheckCircle, Edit3, MapPin, Car, X } from "lucide-react";
 import type { WorkerProfile } from "~backend/workers/profile_get";
 import type { UpdateWorkerProfileRequest } from "~backend/workers/profile_update";
 import { LocationAutocomplete } from "../LocationAutocomplete";
+import { emailError, phoneError } from "../../lib/validation";
 
 interface Props {
   profile: WorkerProfile | null;
@@ -20,6 +21,8 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -38,11 +41,24 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
         qualifications: profile.qualifications ?? "",
         ndisScreeningNumber: profile.ndisScreeningNumber ?? "",
       });
+      setEmailTouched(false);
+      setPhoneTouched(false);
     }
   }, [profile]);
 
+  const emailErr = emailTouched ? emailError(form.email as string ?? "") : null;
+  const phoneErr = phoneTouched ? phoneError(form.phone as string ?? "") : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailTouched(true);
+    setPhoneTouched(true);
+    const eErr = emailError(form.email as string ?? "");
+    const pErr = phoneError(form.phone as string ?? "");
+    if (eErr || pErr) {
+      setError(eErr ?? pErr);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -181,8 +197,32 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {field("Display Name", "name")}
               {field("Full Legal Name", "fullName")}
-              {field("Email Address", "email", "email")}
-              {field("Phone", "phone")}
+
+              <div className="space-y-1.5">
+                <Label className="text-gray-600 text-xs font-medium">Email Address</Label>
+                <Input
+                  type="email"
+                  value={(form.email as string) ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  onBlur={() => setEmailTouched(true)}
+                  className={`bg-gray-50 text-gray-900 text-sm rounded-lg ${emailErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"}`}
+                />
+                {emailErr && <p className="text-xs text-red-600">{emailErr}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-gray-600 text-xs font-medium">Phone</Label>
+                <Input
+                  type="tel"
+                  value={(form.phone as string) ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  onBlur={() => setPhoneTouched(true)}
+                  placeholder="04XX XXX XXX"
+                  className={`bg-gray-50 text-gray-900 text-sm rounded-lg ${phoneErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"}`}
+                />
+                {phoneErr && <p className="text-xs text-red-600">{phoneErr}</p>}
+              </div>
+
               <LocationAutocomplete
                 label="Location / Suburb"
                 value={(form.location as string) ?? ""}
@@ -197,7 +237,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
               />
               {field("Travel Radius (km)", "travelRadiusKm", "number")}
               {field("Years of Experience", "experienceYears", "number")}
-            {field("NDIS Worker Screening Number", "ndisScreeningNumber")}
+              {field("NDIS Worker Screening Number", "ndisScreeningNumber")}
             </div>
 
             <div className="space-y-1.5">

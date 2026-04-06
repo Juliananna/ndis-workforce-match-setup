@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle2, Loader2, User, Building2, Mail } from "lucide-react";
 import backend from "~backend/client";
+import { emailError, phoneError } from "../lib/validation";
 
 type Role = "WORKER" | "EMPLOYER";
 
@@ -21,8 +22,25 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ email: string } | null>(null);
 
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  const emailErr = emailTouched ? emailError(email) : null;
+  const phoneErr = phoneTouched ? phoneError(phone) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailTouched(true);
+    setPhoneTouched(true);
+
+    if (emailError(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (phoneError(phone)) {
+      setError("Please enter a valid Australian phone number.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -34,7 +52,7 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await backend.auth.register({
+      await backend.auth.register({
         email,
         password,
         role,
@@ -188,9 +206,13 @@ export default function RegisterPage() {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
                 required
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                className={`w-full px-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                  emailErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"
+                }`}
               />
+              {emailErr && <p className="mt-1 text-xs text-red-600">{emailErr}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -226,9 +248,13 @@ export default function RegisterPage() {
                   placeholder="04XX XXX XXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onBlur={() => setPhoneTouched(true)}
                   required
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className={`w-full px-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                    phoneErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"
+                  }`}
                 />
+                {phoneErr && <p className="mt-1 text-xs text-red-600">{phoneErr}</p>}
               </div>
             )}
 
@@ -264,9 +290,13 @@ export default function RegisterPage() {
                       placeholder="04XX XXX XXX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
+                      onBlur={() => setPhoneTouched(true)}
                       required
-                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      className={`w-full px-4 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                        phoneErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"
+                      }`}
                     />
+                    {phoneErr && <p className="mt-1 text-xs text-red-600">{phoneErr}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">ABN</label>
