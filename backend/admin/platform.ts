@@ -245,6 +245,7 @@ export interface AdminUserSummary {
   isSuspended: boolean;
   isArchived: boolean;
   name: string;
+  phone: string | null;
   createdAt: Date;
 }
 
@@ -262,6 +263,7 @@ export const adminListUsers = api<void, AdminListUsersResponse>(
       is_suspended: boolean;
       is_archived: boolean;
       name: string;
+      phone: string | null;
       created_at: Date;
     }>`
       SELECT
@@ -272,6 +274,7 @@ export const adminListUsers = api<void, AdminListUsersResponse>(
         COALESCE(u.is_suspended, false) AS is_suspended,
         COALESCE(u.is_archived, false) AS is_archived,
         COALESCE(w.name, e.organisation_name, u.email) AS name,
+        COALESCE(w.phone, e.phone) AS phone,
         u.created_at
       FROM users u
       LEFT JOIN workers w ON w.user_id = u.user_id
@@ -290,6 +293,7 @@ export const adminListUsers = api<void, AdminListUsersResponse>(
         isSuspended: r.is_suspended,
         isArchived: r.is_archived,
         name: r.name,
+        phone: r.phone,
         createdAt: r.created_at,
       })),
     };
