@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { VerifyEmailModal } from "../components/VerifyEmailModal";
 import { WorkerHomeDashboard } from "../components/worker/WorkerHomeDashboard";
+import { DocumentUploadGate } from "../components/worker/DocumentUploadGate";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import type { JobRequest } from "~backend/jobs/get";
 import type { EmployerProfile } from "~backend/employers/profile_get";
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const { user, logout, login } = useAuth();
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("home");
+  const [docGateCleared, setDocGateCleared] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const api = useAuthedBackend();
@@ -77,6 +79,10 @@ export default function DashboardPage() {
   }
 
   if (isWorker && !isAdmin) {
+    if (!docGateCleared) {
+      return <DocumentUploadGate onComplete={() => setDocGateCleared(true)} />;
+    }
+
     return (
       <>
         <WorkerHomeDashboard
