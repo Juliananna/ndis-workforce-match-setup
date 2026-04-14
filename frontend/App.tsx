@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import WorkerSignupPage from "./pages/WorkerSignupPage";
 import GetHiredPage from "./pages/GetHiredPage";
+import HireNowPage from "./pages/HireNowPage";
 import DashboardPage from "./pages/DashboardPage";
 import DemoPortalPage from "./pages/DemoPortalPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
@@ -89,7 +90,7 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password", "/demo"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password", "/demo"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 
 function GlobalSupportButton() {
@@ -109,6 +110,7 @@ function AppInner() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/worker-signup" element={<WorkerSignupPage />} />
         <Route path="/gethired" element={<GetHiredPage />} />
+        <Route path="/hirenow" element={<HireNowPage />} />
         <Route path="/demo" element={<DemoRoute />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
