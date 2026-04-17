@@ -15,6 +15,28 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import LandingPage from "./pages/LandingPage";
 import { lazy, ReactNode, Suspense, useEffect } from "react";
 
+function useMetaPixel() {
+  useEffect(() => {
+    if ((window as any).fbq) return;
+    const n: any = function () {
+      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    };
+    (window as any).fbq = n;
+    (window as any)._fbq = n;
+    n.push = n;
+    n.loaded = true;
+    n.version = "2.0";
+    n.queue = [];
+    const t = document.createElement("script");
+    t.async = true;
+    t.src = "https://connect.facebook.net/en_US/fbevents.js";
+    const s = document.getElementsByTagName("script")[0];
+    s.parentNode!.insertBefore(t, s);
+    (window as any).fbq("init", "810287805470074");
+    (window as any).fbq("track", "PageView");
+  }, []);
+}
+
 function useChunkErrorReload() {
   useEffect(() => {
     const handler = (event: ErrorEvent) => {
@@ -147,6 +169,7 @@ function AppInner() {
 
 export default function App() {
   useChunkErrorReload();
+  useMetaPixel();
   return (
     <AuthProvider>
       <AppInner />
