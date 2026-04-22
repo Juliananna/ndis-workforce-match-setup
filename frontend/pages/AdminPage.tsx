@@ -241,6 +241,10 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
   const [rejectReason, setRejectReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filterVerified, setFilterVerified] = useState<"all" | "verified" | "unverified">("all");
+  const [filterDocs, setFilterDocs] = useState<"all" | "pending" | "none">("all");
+  const [filterCompletion, setFilterCompletion] = useState<"all" | "lt25" | "lt50" | "lt75" | "complete">("all");
+  const [filterSort, setFilterSort] = useState<"default" | "completion_asc" | "completion_desc" | "joined_desc" | "joined_asc" | "pending_desc">("default");
   const [previewDoc, setPreviewDoc] = useState<PreviewDoc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [wizardRef, setWizardRef] = useState<AdminReferenceView | null>(null);
@@ -406,9 +410,27 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
     return result;
   };
 
-  const filtered = workers.filter(
-    (w) => !search || w.name.toLowerCase().includes(search.toLowerCase()) || w.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = workers
+    .filter((w) => {
+      if (search && !w.name.toLowerCase().includes(search.toLowerCase()) && !w.email.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterVerified === "verified" && !w.isVerified) return false;
+      if (filterVerified === "unverified" && w.isVerified) return false;
+      if (filterDocs === "pending" && w.pendingDocumentCount === 0) return false;
+      if (filterDocs === "none" && w.documentCount > 0) return false;
+      if (filterCompletion === "lt25" && w.profileCompletionPct >= 25) return false;
+      if (filterCompletion === "lt50" && w.profileCompletionPct >= 50) return false;
+      if (filterCompletion === "lt75" && w.profileCompletionPct >= 75) return false;
+      if (filterCompletion === "complete" && w.profileCompletionPct < 100) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (filterSort === "completion_asc") return a.profileCompletionPct - b.profileCompletionPct;
+      if (filterSort === "completion_desc") return b.profileCompletionPct - a.profileCompletionPct;
+      if (filterSort === "joined_desc") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (filterSort === "joined_asc") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (filterSort === "pending_desc") return b.pendingDocumentCount - a.pendingDocumentCount;
+      return 0;
+    });
 
   if (view === "worker" && selectedWorker) {
     return (
@@ -633,14 +655,69 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
     );
   }
 
+  const activeFilterCount = [filterVerified !== "all", filterDocs !== "all", filterCompletion !== "all", filterSort !== "default"].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input className="pl-8 h-8 text-sm" placeholder="Search workers…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input className="pl-8 h-8 text-sm" placeholder="Search workers…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <span className="text-xs text-muted-foreground shrink-0">{filtered.length} / {workers.length} workers</span>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { setFilterVerified("all"); setFilterDocs("all"); setFilterCompletion("all"); setFilterSort("default"); }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 shrink-0"
+            >
+              <X className="h-3 w-3" />Clear filters
+            </button>
+          )}
         </div>
-        <span className="text-xs text-muted-foreground">{filtered.length} workers</span>
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={filterVerified}
+            onChange={(e) => setFilterVerified(e.target.value as typeof filterVerified)}
+            className="h-7 text-xs rounded-lg border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All accounts</option>
+            <option value="verified">Email verified</option>
+            <option value="unverified">Email unverified</option>
+          </select>
+          <select
+            value={filterDocs}
+            onChange={(e) => setFilterDocs(e.target.value as typeof filterDocs)}
+            className="h-7 text-xs rounded-lg border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">All documents</option>
+            <option value="pending">Has pending docs</option>
+            <option value="none">No documents</option>
+          </select>
+          <select
+            value={filterCompletion}
+            onChange={(e) => setFilterCompletion(e.target.value as typeof filterCompletion)}
+            className="h-7 text-xs rounded-lg border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="all">Any completion</option>
+            <option value="lt25">&lt; 25% complete</option>
+            <option value="lt50">&lt; 50% complete</option>
+            <option value="lt75">&lt; 75% complete</option>
+            <option value="complete">100% complete</option>
+          </select>
+          <select
+            value={filterSort}
+            onChange={(e) => setFilterSort(e.target.value as typeof filterSort)}
+            className="h-7 text-xs rounded-lg border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="default">Sort: default</option>
+            <option value="pending_desc">Sort: most pending docs</option>
+            <option value="completion_asc">Sort: least complete first</option>
+            <option value="completion_desc">Sort: most complete first</option>
+            <option value="joined_desc">Sort: newest first</option>
+            <option value="joined_asc">Sort: oldest first</option>
+          </select>
+        </div>
       </div>
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
