@@ -86,6 +86,7 @@ export const adminListEmployers = api<void, ListEmployersResponse>(
       FROM employers e
       JOIN users u ON u.user_id = e.user_id
       LEFT JOIN job_requests j ON j.employer_id = e.employer_id
+      WHERE u.is_demo = FALSE
       GROUP BY e.employer_id, e.user_id, e.organisation_name, e.contact_person,
                u.email, e.phone, e.abn, e.location, e.subscription_status,
                e.subscription_plan, e.subscription_period_end, u.is_verified, u.created_at,

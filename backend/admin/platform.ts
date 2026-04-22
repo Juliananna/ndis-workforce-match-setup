@@ -190,6 +190,7 @@ export const adminListJobs = api<void, AdminListJobsResponse>(
       FROM job_requests j
       JOIN employers e ON e.employer_id = j.employer_id
       JOIN users u ON u.user_id = e.user_id
+      WHERE u.is_demo = FALSE
       ORDER BY j.created_at DESC
       LIMIT 500
     `;
@@ -280,6 +281,7 @@ export const adminListUsers = api<void, AdminListUsersResponse>(
       LEFT JOIN workers w ON w.user_id = u.user_id
       LEFT JOIN employers e ON e.user_id = u.user_id
       WHERE u.role IN ('WORKER', 'EMPLOYER')
+        AND u.is_demo = FALSE
       ORDER BY u.created_at DESC
       LIMIT 1000
     `;

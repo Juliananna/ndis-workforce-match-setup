@@ -87,6 +87,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       FROM workers w
       JOIN users u ON u.user_id = w.user_id
       LEFT JOIN worker_documents wd ON wd.worker_id = w.worker_id
+      WHERE u.is_demo = FALSE
       GROUP BY w.worker_id, w.user_id, w.name, u.email, w.phone, w.location, u.is_verified, u.created_at,
                w.bio, w.experience_years, w.intro_video_url, w.avatar_url
       ORDER BY pending_count DESC, u.created_at DESC

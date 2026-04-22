@@ -228,6 +228,7 @@ export const adminSendBulkSMS = api<SendBulkSMSRequest, SendSMSResponse>(
       LEFT JOIN employers e ON e.user_id = u.user_id
       WHERE u.is_verified = true
         AND u.is_suspended = false
+        AND u.is_demo = FALSE
         AND u.role IN ('WORKER', 'EMPLOYER')
         AND (${roleFilter}::text IS NULL OR u.role = ${roleFilter}::text)
         AND (
