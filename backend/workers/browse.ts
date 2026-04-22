@@ -171,7 +171,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'
-        LEFT JOIN users u ON u.id = w.user_id
+        LEFT JOIN users u ON u.user_id = w.user_id
         WHERE
           (
             ${searchQuery} = '' OR
@@ -245,7 +245,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         FROM workers w
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'
-        LEFT JOIN users u ON u.id = w.user_id
+        LEFT JOIN users u ON u.user_id = w.user_id
         WHERE
           (
             ${searchQuery} = '' OR
