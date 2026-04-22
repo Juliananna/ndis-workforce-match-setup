@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Search, MapPin, Star, Car, FileCheck, Loader2,
   ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle,
@@ -57,14 +57,18 @@ export function BrowseWorkersPage() {
     }).catch(() => {});
   }, [api, orgLocationLoaded]);
 
-  const search = useCallback(async () => {
+  const searchRef = useRef<AbortController | null>(null);
+
+  const search = useCallback(async (overrideQuery?: string) => {
     if (!api) return;
+    if (searchRef.current) searchRef.current.abort();
+    searchRef.current = new AbortController();
     setLoading(true);
     setError(null);
     setSearched(true);
     try {
       const res = await api.workers.browseWorkers({
-        query: query.trim() || undefined,
+        query: (overrideQuery ?? query).trim() || undefined,
         skills: selectedSkills.length > 0 ? selectedSkills : undefined,
         driversLicense: driversLicense || undefined,
         vehicleAccess: vehicleAccess || undefined,
@@ -82,6 +86,17 @@ export function BrowseWorkersPage() {
       setLoading(false);
     }
   }, [api, query, selectedSkills, driversLicense, vehicleAccess, verifiedOnly, geoLocation, radiusKm]);
+
+  useEffect(() => {
+    if (!api) return;
+    search();
+  }, [api, selectedSkills, driversLicense, vehicleAccess, verifiedOnly, geoLocation, radiusKm]);
+
+  useEffect(() => {
+    if (!api) return;
+    const t = setTimeout(() => search(), 400);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
@@ -130,10 +145,10 @@ export function BrowseWorkersPage() {
               placeholder="Search by name, location, qualifications…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && search()}
+              onKeyDown={(e) => e.key === "Enter" && search(e.currentTarget.value)}
             />
           </div>
-          <Button onClick={search} disabled={loading}>
+          <Button onClick={() => search()} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
           </Button>
         </div>
