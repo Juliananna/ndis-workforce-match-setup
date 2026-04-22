@@ -183,6 +183,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           )
           AND (${!req.driversLicense} OR w.drivers_license = TRUE)
           AND (${!req.vehicleAccess} OR w.vehicle_access = TRUE)
+          AND u.is_demo = FALSE
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
@@ -257,6 +258,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           )
           AND (${!req.driversLicense} OR w.drivers_license = TRUE)
           AND (${!req.vehicleAccess} OR w.vehicle_access = TRUE)
+          AND u.is_demo = FALSE
         GROUP BY w.worker_id, wa.available_days, wa.minimum_pay_rate, u.last_login_at
         ORDER BY w.priority_boost DESC, avg_rating DESC NULLS LAST, w.name ASC
         LIMIT ${limit} OFFSET ${offset}

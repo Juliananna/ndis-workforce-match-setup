@@ -182,9 +182,11 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
           ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
         FROM workers w
+        JOIN users u ON u.user_id = w.user_id
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE
-          (
+          u.is_demo = FALSE
+          AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
               POWER(SIN(RADIANS(w.latitude - ${lat}) / 2), 2) +
@@ -210,8 +212,10 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
           ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
         FROM workers w
+        JOIN users u ON u.user_id = w.user_id
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
-        WHERE (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
+        WHERE u.is_demo = FALSE
+          AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
         ORDER BY w.priority_boost DESC, w.updated_at DESC
         LIMIT ${limit}
       `;

@@ -106,7 +106,9 @@ export const listJobInterest = api<ListJobInterestRequest, ListJobInterestRespon
       SELECT ji.id, ji.job_id, ji.worker_id, w.name, ji.note, ji.created_at
       FROM job_interest ji
       JOIN workers w ON w.worker_id = ji.worker_id
+      JOIN users u ON u.user_id = w.user_id
       WHERE ji.job_id = ${req.jobId}
+        AND u.is_demo = FALSE
       ORDER BY ji.created_at ASC
     `;
 
