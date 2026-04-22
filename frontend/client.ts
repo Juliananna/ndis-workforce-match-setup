@@ -152,6 +152,10 @@ import {
     adminRevokeSubscription as api_admin_employers_adminRevokeSubscription
 } from "~backend/admin/employers";
 import {
+    impersonateUser as api_admin_impersonate_impersonateUser,
+    listImpersonatableUsers as api_admin_impersonate_listImpersonatableUsers
+} from "~backend/admin/impersonate";
+import {
     adminArchiveUser as api_admin_platform_adminArchiveUser,
     adminDeleteUser as api_admin_platform_adminDeleteUser,
     adminGetPlatformStats as api_admin_platform_adminGetPlatformStats,
@@ -246,8 +250,10 @@ export namespace admin {
             this.createComplianceOfficer = this.createComplianceOfficer.bind(this)
             this.deleteComplianceOfficer = this.deleteComplianceOfficer.bind(this)
             this.getPrivacyPolicy = this.getPrivacyPolicy.bind(this)
+            this.impersonateUser = this.impersonateUser.bind(this)
             this.listComplianceOfficers = this.listComplianceOfficers.bind(this)
             this.listDemoLeads = this.listDemoLeads.bind(this)
+            this.listImpersonatableUsers = this.listImpersonatableUsers.bind(this)
             this.seed = this.seed.bind(this)
             this.updatePrivacyPolicy = this.updatePrivacyPolicy.bind(this)
         }
@@ -590,6 +596,12 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_privacy_policy_getPrivacyPolicy>
         }
 
+        public async impersonateUser(params: RequestType<typeof api_admin_impersonate_impersonateUser>): Promise<ResponseType<typeof api_admin_impersonate_impersonateUser>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/impersonate`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_impersonate_impersonateUser>
+        }
+
         public async listComplianceOfficers(): Promise<ResponseType<typeof api_admin_compliance_officers_listComplianceOfficers>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers`, {method: "GET", body: undefined})
@@ -600,6 +612,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/demo-leads`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_demo_leads_listDemoLeads>
+        }
+
+        public async listImpersonatableUsers(): Promise<ResponseType<typeof api_admin_impersonate_listImpersonatableUsers>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/impersonate/users`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_impersonate_listImpersonatableUsers>
         }
 
         public async seed(): Promise<ResponseType<typeof api_admin_seed_seed>> {

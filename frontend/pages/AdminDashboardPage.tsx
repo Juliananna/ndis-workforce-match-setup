@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Users, Building2, Briefcase, UserCheck, ShieldCheck,
-  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal,
+  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, Eye,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AdminDashboardHome } from "../components/admin/AdminDashboardHome";
@@ -12,10 +12,11 @@ const AdminPage = lazy(() => import("./AdminPage"));
 const SalesPortalInner = lazy(() => import("../components/sales/SalesPortalInner"));
 const PrivacyPolicyEditor = lazy(() => import("../components/admin/PrivacyPolicyEditor"));
 const PlatformSettingsTab = lazy(() => import("../components/admin/PlatformSettingsTab").then((m) => ({ default: m.PlatformSettingsTab })));
+const ViewAsTab = lazy(() => import("../components/admin/ViewAsTab").then((m) => ({ default: m.ViewAsTab })));
 
-type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform";
+type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas";
 
-const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean }[] = [
+const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean; sysadminOnly?: boolean }[] = [
   { id: "home",       label: "Dashboard",    Icon: LayoutDashboard },
   { id: "overview",   label: "Analytics",    Icon: BarChart3 },
   { id: "workers",    label: "Workers",      Icon: Users },
@@ -28,6 +29,7 @@ const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOn
   { id: "sales",      label: "Sales Portal", Icon: TrendingUp },
   { id: "privacy",    label: "Privacy Policy", Icon: FileText, adminOnly: true },
   { id: "platform",   label: "Platform Settings", Icon: SlidersHorizontal, adminOnly: true },
+  { id: "viewas",     label: "View As",           Icon: Eye, sysadminOnly: true },
 ];
 
 export default function AdminDashboardPage() {
@@ -38,11 +40,13 @@ export default function AdminDashboardPage() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.isAdmin === true;
+  const isSysAdmin = user?.isSysAdmin === true;
   const isSalesAgent = user?.isSalesAgent === true || isAdmin;
   const displayName = user?.email?.split("@")[0] ?? "Admin";
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && !isAdmin) return false;
+    if (item.sysadminOnly && !isSysAdmin) return false;
     if (item.id === "sales" && !isSalesAgent) return false;
     return true;
   });
@@ -151,7 +155,8 @@ export default function AdminDashboardPage() {
             {tab === "sales" && <SalesPortalInner />}
             {tab === "privacy" && <PrivacyPolicyEditor />}
             {tab === "platform" && <PlatformSettingsTab api={api} />}
-            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && (
+            {tab === "viewas" && <ViewAsTab />}
+            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "viewas" && (
               <AdminPage
                 initialTab={tab as "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support"}
                 onTabChange={(t) => setTab(t as AdminTab)}
