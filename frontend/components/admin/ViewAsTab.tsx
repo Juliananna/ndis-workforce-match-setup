@@ -40,7 +40,7 @@ export function ViewAsTab() {
       .finally(() => setLoading(false));
   }, [api]);
 
-  const handleViewAs = async (userId: string) => {
+  const handleViewAs = async (userId: string, label: string) => {
     if (!api) return;
     setImpersonating(userId);
     setError(null);
@@ -48,6 +48,7 @@ export function ViewAsTab() {
       const originalToken = localStorage.getItem("ndis_token");
       const res = await api.admin.impersonateUser({ userId });
       localStorage.setItem("ndis_impersonate_original_token", originalToken ?? "");
+      localStorage.setItem("ndis_impersonate_label", label);
       await login(res.token);
       window.location.href = "/dashboard";
     } catch {
@@ -142,7 +143,7 @@ export function ViewAsTab() {
                   icon={<Users className="h-4 w-4 text-indigo-500" />}
                   iconBg="bg-indigo-500/10"
                   loading={impersonating === w.userId}
-                  onViewAs={() => handleViewAs(w.userId)}
+                  onViewAs={() => handleViewAs(w.userId, w.name + ' (' + w.email + ')') }
                 />
               ))
             )
@@ -159,7 +160,7 @@ export function ViewAsTab() {
                   icon={<Building2 className="h-4 w-4 text-emerald-500" />}
                   iconBg="bg-emerald-500/10"
                   loading={impersonating === e.userId}
-                  onViewAs={() => handleViewAs(e.userId)}
+                  onViewAs={() => handleViewAs(e.userId, e.organisationName + ' (' + e.email + ')')}
                 />
               ))
             )

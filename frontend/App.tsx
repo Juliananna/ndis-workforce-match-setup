@@ -13,7 +13,7 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import LandingPage from "./pages/LandingPage";
-import { lazy, ReactNode, Suspense, useEffect } from "react";
+import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 
 function useMetaPixel() {
   useEffect(() => {
@@ -123,9 +123,46 @@ function GlobalSupportButton() {
   return <SupportButton />;
 }
 
+function ViewAsBanner() {
+  const { login } = useAuth();
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const orig = localStorage.getItem("ndis_impersonate_original_token");
+    if (orig) setLabel(localStorage.getItem("ndis_impersonate_label") ?? "user");
+    else setLabel(null);
+  }, []);
+
+  if (!label) return null;
+
+  const handleReturn = async () => {
+    const orig = localStorage.getItem("ndis_impersonate_original_token") ?? "";
+    localStorage.removeItem("ndis_impersonate_original_token");
+    localStorage.removeItem("ndis_impersonate_label");
+    await login(orig);
+    window.location.href = "/dashboard";
+  };
+
+  return (
+    <div className="fixed top-0 inset-x-0 z-[9999] flex items-center justify-between gap-4 bg-violet-600 px-4 py-2 text-white text-sm shadow-lg">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="font-bold shrink-0">👁 Viewing as:</span>
+        <span className="truncate opacity-90">{label}</span>
+      </div>
+      <button
+        onClick={handleReturn}
+        className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 font-semibold transition-colors text-xs whitespace-nowrap"
+      >
+        ← Return to Admin
+      </button>
+    </div>
+  );
+}
+
 function AppInner() {
   return (
     <BrowserRouter>
+      <ViewAsBanner />
       <Routes>
         <Route path="/" element={<PublicOnlyRoute><LandingPage /></PublicOnlyRoute>} />
         <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
