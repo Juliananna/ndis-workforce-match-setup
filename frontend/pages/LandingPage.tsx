@@ -461,7 +461,7 @@ export default function LandingPage() {
       >
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.92) 50%, rgba(255,255,255,0.75) 100%)" }}
+          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0.30) 100%)" }}
         />
         <div className="relative mx-auto max-w-6xl px-6">
           <div className="mb-14 max-w-2xl">
