@@ -9,7 +9,6 @@ import {
   Calendar,
   DollarSign,
   Compass,
-  HeartHandshake,
   BadgeCheck,
   Clock3,
   Sparkles,
@@ -148,13 +147,12 @@ export default function LandingPage() {
         style={{ borderColor: "var(--brand-border)", backgroundColor: "rgba(255,255,255,0.88)" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-lg"
-              style={{ backgroundColor: "var(--brand-teal)", boxShadow: "0 4px 14px rgba(8,127,117,0.28)" }}
-            >
-              <HeartHandshake className="h-4.5 w-4.5" />
-            </span>
+          <Link to="/" className="flex items-center gap-2">
+            <img
+              src="/KIZAZI HIRE (400 x 400 px).png"
+              alt="KizaziHire logo"
+              className="h-9 w-9 rounded-xl object-cover"
+            />
             <span className="text-[1.1rem] font-black tracking-tight" style={{ color: "var(--brand-ink)" }}>
               KizaziHire
             </span>
@@ -401,7 +399,7 @@ export default function LandingPage() {
                       <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Screening verified
                     </p>
                     <p className="flex items-center gap-2">
-                      <HeartHandshake className="h-3.5 w-3.5 shrink-0" /> Complex care exp.
+                      <BadgeCheck className="h-3.5 w-3.5 shrink-0" /> Complex care exp.
                     </p>
                   </div>
                 </div>
@@ -721,13 +719,12 @@ export default function LandingPage() {
         style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
       >
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 md:flex-row">
-          <div className="flex items-center gap-2.5">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-              style={{ backgroundColor: "var(--brand-teal)" }}
-            >
-              <HeartHandshake className="h-4 w-4" />
-            </span>
+          <div className="flex items-center gap-2">
+            <img
+              src="/KIZAZI HIRE (400 x 400 px).png"
+              alt="KizaziHire logo"
+              className="h-8 w-8 rounded-lg object-cover"
+            />
             <span className="font-black" style={{ color: "var(--brand-ink)" }}>
               KizaziHire
             </span>

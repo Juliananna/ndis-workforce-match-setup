@@ -112,9 +112,11 @@ export default function JobSharePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
-                <ShieldCheck className="h-4 w-4 text-white" />
-              </div>
+              <img
+                src="/KIZAZI HIRE (400 x 400 px).png"
+                alt="KizaziHire logo"
+                className="h-8 w-8 rounded-lg object-cover"
+              />
               <span className="text-lg font-bold text-gray-900">Kizazi<span className="text-indigo-600">Hire</span></span>
             </div>
             <div className="hidden sm:flex items-center gap-6 text-sm text-gray-600">

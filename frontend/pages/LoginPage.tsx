@@ -113,8 +113,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-8 text-white/30 text-sm font-bold tracking-widest">
-          KIZAZIHIRE
+        <div className="absolute bottom-8 flex items-center gap-2">
+          <img
+            src="/KIZAZI HIRE (400 x 400 px).png"
+            alt="KizaziHire logo"
+            className="h-8 w-8 rounded-lg object-cover opacity-60"
+          />
+          <span className="text-white/40 text-sm font-bold tracking-widest">KIZAZIHIRE</span>
         </div>
       </div>
 
