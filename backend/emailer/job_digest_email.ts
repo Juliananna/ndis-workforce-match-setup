@@ -90,7 +90,7 @@ async function isEnabled(key: string): Promise<boolean> {
   return row?.value === "true";
 }
 
-export async function fetchDigestJobs(sinceInterval: string): Promise<DigestJob[]> {
+export async function fetchDigestJobs(since: Date): Promise<DigestJob[]> {
   return db.queryAll<DigestJob>`
     SELECT
       j.job_id,
@@ -109,15 +109,15 @@ export async function fetchDigestJobs(sinceInterval: string): Promise<DigestJob[
     JOIN users eu ON eu.user_id = e.user_id
     WHERE
       j.status = 'Open'
-      AND j.created_at >= NOW() - ${sinceInterval}::interval
+      AND j.created_at >= ${since}
       AND eu.is_demo = FALSE
     ORDER BY j.is_emergency DESC, j.created_at DESC
     LIMIT 20
   `;
 }
 
-async function sendDigest(sinceInterval: string, periodLabel: string): Promise<{ sent: number; skipped: number }> {
-  const jobs = await fetchDigestJobs(sinceInterval);
+async function sendDigest(since: Date, periodLabel: string): Promise<{ sent: number; skipped: number }> {
+  const jobs = await fetchDigestJobs(since);
 
   if (jobs.length === 0) return { sent: 0, skipped: 0 };
 
@@ -161,7 +161,8 @@ export const workerJobDigestWeekly = api(
   { expose: false, method: "POST", path: "/emailer/internal/job-digest-weekly" },
   async (): Promise<void> => {
     if (!(await isEnabled("job_digest_weekly_enabled"))) return;
-    await sendDigest("7 days", "week");
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await sendDigest(since, "week");
   }
 );
 
@@ -169,7 +170,8 @@ export const workerJobDigestDaily = api(
   { expose: false, method: "POST", path: "/emailer/internal/job-digest-daily" },
   async (): Promise<void> => {
     if (!(await isEnabled("job_digest_daily_enabled"))) return;
-    await sendDigest("1 day", "day");
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await sendDigest(since, "day");
   }
 );
 
@@ -201,10 +203,10 @@ export const adminPreviewJobDigest = api<DigestPreviewRequest, DigestPreviewResp
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    const interval = req.period === "daily" ? "1 day" : "7 days";
     const periodLabel = req.period === "daily" ? "day" : "week";
+    const since = new Date(Date.now() - (req.period === "daily" ? 1 : 7) * 24 * 60 * 60 * 1000);
 
-    const jobs = await fetchDigestJobs(interval);
+    const jobs = await fetchDigestJobs(since);
 
     const workerCount = await db.queryRow<{ count: number }>`
       SELECT COUNT(*)::int AS count
@@ -244,15 +246,15 @@ export const adminSendJobDigest = api<AdminSendDigestRequest, AdminSendDigestRes
     const auth = getAuthData()!;
     await assertAdmin(auth.userID);
 
-    const interval = req.period === "daily" ? "1 day" : "7 days";
     const periodLabel = req.period === "daily" ? "day" : "week";
+    const since = new Date(Date.now() - (req.period === "daily" ? 1 : 7) * 24 * 60 * 60 * 1000);
 
-    const jobs = await fetchDigestJobs(interval);
+    const jobs = await fetchDigestJobs(since);
     if (jobs.length === 0) {
       return { sent: 0, skipped: 0, jobCount: 0 };
     }
 
-    const result = await sendDigest(interval, periodLabel);
+    const result = await sendDigest(since, periodLabel);
     return { ...result, jobCount: jobs.length };
   }
 );
