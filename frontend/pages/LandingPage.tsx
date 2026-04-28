@@ -453,7 +453,7 @@ export default function LandingPage() {
         id="employers"
         className="relative py-20 md:py-28"
         style={{
-          backgroundImage: "url('/hero%20image.png')",
+          backgroundImage: "url('/hero-image.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
