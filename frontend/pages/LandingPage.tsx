@@ -199,7 +199,7 @@ export default function LandingPage() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: "url('/hero image1.png')",
+            backgroundImage: "url('/hero%20image1.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
@@ -453,7 +453,7 @@ export default function LandingPage() {
         id="employers"
         className="relative py-20 md:py-28"
         style={{
-          backgroundImage: "url('/hero image.png')",
+          backgroundImage: "url('/hero%20image.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
