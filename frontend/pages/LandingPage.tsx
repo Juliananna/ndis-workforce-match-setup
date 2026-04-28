@@ -154,7 +154,7 @@ export default function LandingPage() {
           }}
         />
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-10"
+          className="absolute inset-0 bg-cover bg-center opacity-40"
           style={{ backgroundImage: "url('/hero-image.png')" }}
         />
         {/* Decorative blobs */}
