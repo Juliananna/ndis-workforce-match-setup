@@ -160,7 +160,7 @@ export default function LandingPage() {
         {/* Decorative blobs */}
         <div
           className="pointer-events-none absolute -right-32 -top-32 h-[600px] w-[600px] rounded-full opacity-20"
-          style={{ background: "radial-gradient(circle, #3ED4E2 0%, transparent 70%)" }}
+         
         />
         <div
           className="pointer-events-none absolute -bottom-24 -left-24 h-[400px] w-[400px] rounded-full opacity-15"
