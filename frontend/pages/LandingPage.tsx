@@ -449,8 +449,21 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOR EMPLOYERS ── */}
-      <section id="employers" className="py-20 md:py-28" style={{ backgroundColor: "white" }}>
-        <div className="mx-auto max-w-6xl px-6">
+      <section
+        id="employers"
+        className="relative py-20 md:py-28"
+        style={{
+          backgroundImage: "url('/hero image.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.92) 50%, rgba(255,255,255,0.75) 100%)" }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6">
           <div className="mb-14 max-w-2xl">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
