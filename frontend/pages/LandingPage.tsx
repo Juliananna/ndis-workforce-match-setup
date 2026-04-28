@@ -199,7 +199,7 @@ export default function LandingPage() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: "url('/hero%20image1.png')",
+            backgroundImage: "url('/hero-image1.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
