@@ -521,7 +521,7 @@ export default function LandingPage() {
        
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.15]"
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.05]"
           style={{ backgroundImage: "url('/hero-image1.png')" }}
         />
         <div className="relative mx-auto max-w-6xl px-6">
