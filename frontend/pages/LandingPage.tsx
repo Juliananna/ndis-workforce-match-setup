@@ -517,10 +517,14 @@ export default function LandingPage() {
       {/* ── VALUE / FEATURE CARDS ── */}
       <section
         id="features"
-        className="py-20 md:py-28"
+        className="relative overflow-hidden py-20 md:py-28"
         style={{ backgroundColor: "white" }}
       >
-        <div className="mx-auto max-w-6xl px-6">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.06]"
+          style={{ backgroundImage: "url('/hero-image1.png')" }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6">
           <div className="mb-14 max-w-2xl">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
