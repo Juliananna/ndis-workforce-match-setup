@@ -153,6 +153,10 @@ export default function LandingPage() {
             background: "linear-gradient(135deg, #f0fbfe 0%, #f5f0fc 50%, #eef6ff 100%)",
           }}
         />
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-10"
+          style={{ backgroundImage: "url('/hero-image.png')" }}
+        />
         {/* Decorative blobs */}
         <div
           className="pointer-events-none absolute -right-32 -top-32 h-[600px] w-[600px] rounded-full opacity-20"
