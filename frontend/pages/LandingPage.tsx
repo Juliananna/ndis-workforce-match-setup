@@ -199,12 +199,19 @@ export default function LandingPage() {
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "radial-gradient(ellipse 65% 55% at 5% 0%, rgba(62,212,226,0.12) 0%, transparent 55%), radial-gradient(ellipse 55% 50% at 95% 5%, rgba(151,100,199,0.10) 0%, transparent 50%), linear-gradient(160deg, #ffffff 0%, #F8FAFC 60%, #F1F5F9 100%)",
+            backgroundImage: "url('/hero image1.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
           }}
         />
-        <div className="absolute right-4 top-4 h-80 w-80 rounded-full opacity-30 blur-3xl" style={{ backgroundColor: "#E0F7FD" }} />
-        <div className="absolute -bottom-16 left-8 h-72 w-72 rounded-full opacity-25 blur-3xl" style={{ backgroundColor: "#F3EDFB" }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(100deg, rgba(255,255,255,0.97) 0%, rgba(248,250,252,0.92) 45%, rgba(248,250,252,0.55) 70%, rgba(248,250,252,0.10) 100%)",
+          }}
+        />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-6 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-28">
           {/* Left copy */}
