@@ -518,7 +518,7 @@ export default function LandingPage() {
       <section
         id="features"
         className="relative overflow-hidden py-20 md:py-28"
-        style={{ backgroundColor: "white" }}
+       
       >
         <div
           className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.06]"
