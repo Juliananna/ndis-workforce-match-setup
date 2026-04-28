@@ -524,7 +524,7 @@ export default function LandingPage() {
           backgroundPosition: "center",
         }}
       >
-        <div className="pointer-events-none absolute inset-0" style={{ background: "rgba(255,255,255,0.82)" }} />
+
         <div className="relative mx-auto max-w-6xl px-6">
           <div className="mb-14 max-w-2xl">
             <span
