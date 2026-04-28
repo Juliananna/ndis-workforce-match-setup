@@ -115,7 +115,7 @@ export default function LoginPage() {
 
         <div className="absolute bottom-8 flex items-center gap-2">
           <img
-            src="/KIZAZI HIRE (400 x 400 px).png"
+            src="/kizazi-hire-logo.png"
             alt="KizaziHire logo"
             className="h-8 w-8 rounded-lg object-cover opacity-60"
           />

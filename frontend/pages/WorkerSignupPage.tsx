@@ -198,7 +198,7 @@ export default function WorkerSignupPage() {
 
         <div className="relative z-10">
           <img
-            src="/create account image 1.png"
+            src="/create-account-image.png"
             alt="Support workers"
             className="w-full rounded-2xl object-cover opacity-90"
           />

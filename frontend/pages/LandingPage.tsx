@@ -146,7 +146,7 @@ export default function LandingPage() {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <img src="/KIZAZI HIRE (400 x 400 px).png" alt="KizaziHire" className="h-9 w-9 rounded-xl object-cover" />
+            <img src="/kizazi-hire-logo.png" alt="KizaziHire" className="h-9 w-9 rounded-xl object-cover" />
             <span className="text-[1.1rem] font-black tracking-tight" style={{ color: "var(--brand-ink)" }}>
               KizaziHire
             </span>
@@ -638,7 +638,7 @@ export default function LandingPage() {
       <footer className="border-t py-10" style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}>
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 md:flex-row">
           <div className="flex items-center gap-2">
-            <img src="/KIZAZI HIRE (400 x 400 px).png" alt="KizaziHire" className="h-8 w-8 rounded-lg object-cover" />
+            <img src="/kizazi-hire-logo.png" alt="KizaziHire" className="h-8 w-8 rounded-lg object-cover" />
             <span className="font-black" style={{ color: "var(--brand-ink)" }}>KizaziHire</span>
           </div>
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--brand-muted)" }}>

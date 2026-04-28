@@ -123,7 +123,7 @@ export default function RegisterPage() {
 
           <div className="mt-8 relative">
             <img
-              src="/create account image 1.png"
+              src="/create-account-image.png"
               alt="NDIS workforce team"
               className="w-full rounded-2xl object-cover"
             />
