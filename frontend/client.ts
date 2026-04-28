@@ -37,6 +37,7 @@ export class Client {
     public readonly auth: auth.ServiceClient
     public readonly config: config.ServiceClient
     public readonly demo: demo.ServiceClient
+    public readonly emailer: emailer.ServiceClient
     public readonly employers: employers.ServiceClient
     public readonly ghl: ghl.ServiceClient
     public readonly jobs: jobs.ServiceClient
@@ -69,6 +70,7 @@ export class Client {
         this.auth = new auth.ServiceClient(base)
         this.config = new config.ServiceClient(base)
         this.demo = new demo.ServiceClient(base)
+        this.emailer = new emailer.ServiceClient(base)
         this.employers = new employers.ServiceClient(base)
         this.ghl = new ghl.ServiceClient(base)
         this.jobs = new jobs.ServiceClient(base)
@@ -768,6 +770,44 @@ export namespace demo {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/demo/seed`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_demo_seed_seedDemo>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import {
+    adminPreviewJobDigest as api_emailer_job_digest_email_adminPreviewJobDigest,
+    adminSendJobDigest as api_emailer_job_digest_email_adminSendJobDigest
+} from "~backend/emailer/job_digest_email";
+
+export namespace emailer {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.adminPreviewJobDigest = this.adminPreviewJobDigest.bind(this)
+            this.adminSendJobDigest = this.adminSendJobDigest.bind(this)
+        }
+
+        public async adminPreviewJobDigest(params: RequestType<typeof api_emailer_job_digest_email_adminPreviewJobDigest>): Promise<ResponseType<typeof api_emailer_job_digest_email_adminPreviewJobDigest>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                period: String(params.period),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/emailer/admin/job-digest/preview`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_emailer_job_digest_email_adminPreviewJobDigest>
+        }
+
+        public async adminSendJobDigest(params: RequestType<typeof api_emailer_job_digest_email_adminSendJobDigest>): Promise<ResponseType<typeof api_emailer_job_digest_email_adminSendJobDigest>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/emailer/admin/job-digest/send`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_emailer_job_digest_email_adminSendJobDigest>
         }
     }
 }

@@ -19,6 +19,8 @@ const BOOL_KEYS = new Set([
   "reengagement_email_enabled",
   "profile_reminder_email_enabled",
   "subscription_expiry_reminder_enabled",
+  "job_digest_weekly_enabled",
+  "job_digest_daily_enabled",
 ]);
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
@@ -154,7 +156,7 @@ function SettingsPanel({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
     setSettings((prev) => prev.map((s) => s.key === key ? updated : s));
   };
 
-  const emailSettings = settings.filter((s) => s.key.includes("email") || s.key.includes("expiry_warn") || s.key.includes("reengagement") || s.key.includes("profile_reminder") || s.key.includes("subscription_expiry"));
+  const emailSettings = settings.filter((s) => s.key.includes("email") || s.key.includes("expiry_warn") || s.key.includes("reengagement") || s.key.includes("profile_reminder") || s.key.includes("subscription_expiry") || s.key.includes("job_digest"));
   const platformSettings = settings.filter((s) => !emailSettings.includes(s));
 
   if (loading) {
