@@ -1,9 +1,11 @@
-import { api } from "encore.dev/api";
+import { api, APIError } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import { CronJob } from "encore.dev/cron";
 import db from "../db";
 import { sendEmailsBulk } from "./sender";
+import { assertAdmin } from "../admin/guard";
 
-interface DigestJob {
+export interface DigestJob {
   job_id: string;
   employer_name: string;
   job_title: string | null;
@@ -21,9 +23,6 @@ interface DigestWorker {
   user_id: string;
   email: string;
   name: string;
-  latitude: number | null;
-  longitude: number | null;
-  travel_radius_km: number | null;
   minimum_pay_rate: number | null;
 }
 
@@ -60,7 +59,7 @@ function buildJobCard(job: DigestJob): string {
     </div>`;
 }
 
-function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: string): string {
+export function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: string): string {
   const jobCards = jobs.map(buildJobCard).join("");
   const count = jobs.length;
   const heading = `${count} new NDIS job${count !== 1 ? "s" : ""} available this ${periodLabel}`;
@@ -91,8 +90,8 @@ async function isEnabled(key: string): Promise<boolean> {
   return row?.value === "true";
 }
 
-async function sendDigest(sinceInterval: string, periodLabel: string): Promise<void> {
-  const jobs = await db.queryAll<DigestJob>`
+export async function fetchDigestJobs(sinceInterval: string): Promise<DigestJob[]> {
+  return db.queryAll<DigestJob>`
     SELECT
       j.job_id,
       e.organisation_name AS employer_name,
@@ -115,17 +114,18 @@ async function sendDigest(sinceInterval: string, periodLabel: string): Promise<v
     ORDER BY j.is_emergency DESC, j.created_at DESC
     LIMIT 20
   `;
+}
 
-  if (jobs.length === 0) return;
+async function sendDigest(sinceInterval: string, periodLabel: string): Promise<{ sent: number; skipped: number }> {
+  const jobs = await fetchDigestJobs(sinceInterval);
+
+  if (jobs.length === 0) return { sent: 0, skipped: 0 };
 
   const workers = await db.queryAll<DigestWorker>`
     SELECT
       u.user_id,
       u.email,
       w.name,
-      w.latitude,
-      w.longitude,
-      w.travel_radius_km,
       wa.minimum_pay_rate
     FROM workers w
     JOIN users u ON u.user_id = w.user_id
@@ -138,15 +138,12 @@ async function sendDigest(sinceInterval: string, periodLabel: string): Promise<v
     LIMIT 2000
   `;
 
-  if (workers.length === 0) return;
-
-  const avgRate = jobs.reduce((sum, j) => sum + j.weekday_rate, 0) / jobs.length;
+  if (workers.length === 0) return { sent: 0, skipped: 0 };
 
   const payloads = workers.map((w) => {
-    const workerJobs = jobs.filter((j) => {
-      if (w.minimum_pay_rate !== null && j.weekday_rate < w.minimum_pay_rate) return false;
-      return true;
-    });
+    const workerJobs = jobs.filter((j) =>
+      w.minimum_pay_rate === null || j.weekday_rate >= w.minimum_pay_rate
+    );
     const displayJobs = workerJobs.length > 0 ? workerJobs : jobs;
 
     return {
@@ -156,7 +153,8 @@ async function sendDigest(sinceInterval: string, periodLabel: string): Promise<v
     };
   });
 
-  await sendEmailsBulk(payloads);
+  const result = await sendEmailsBulk(payloads);
+  return { sent: result.sent, skipped: result.failed };
 }
 
 export const workerJobDigestWeekly = api(
@@ -186,3 +184,75 @@ export const _jobDigestDailyCron = new CronJob("worker-job-digest-daily", {
   schedule: "0 7 * * 1-5",
   endpoint: workerJobDigestDaily,
 });
+
+export interface DigestPreviewRequest {
+  period: "daily" | "weekly";
+}
+
+export interface DigestPreviewResponse {
+  html: string;
+  jobCount: number;
+  workerCount: number;
+}
+
+export const adminPreviewJobDigest = api<DigestPreviewRequest, DigestPreviewResponse>(
+  { expose: true, auth: true, method: "GET", path: "/emailer/admin/job-digest/preview" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const interval = req.period === "daily" ? "1 day" : "7 days";
+    const periodLabel = req.period === "daily" ? "day" : "week";
+
+    const jobs = await fetchDigestJobs(interval);
+
+    const workerCount = await db.queryRow<{ count: number }>`
+      SELECT COUNT(*)::int AS count
+      FROM workers w
+      JOIN users u ON u.user_id = w.user_id
+      WHERE u.is_verified = true AND u.is_suspended = false
+        AND COALESCE(u.is_archived, false) = false AND u.is_demo = false
+    `;
+
+    const html = jobs.length > 0
+      ? buildDigestEmail("[Worker Name]", jobs.slice(0, 8), periodLabel)
+      : `<div style="font-family:Arial,sans-serif;padding:40px;text-align:center;color:#6b7280;">
+          <p>No open jobs found in the last ${periodLabel} to include in the digest.</p>
+        </div>`;
+
+    return {
+      html,
+      jobCount: jobs.length,
+      workerCount: workerCount?.count ?? 0,
+    };
+  }
+);
+
+export interface AdminSendDigestRequest {
+  period: "daily" | "weekly";
+}
+
+export interface AdminSendDigestResponse {
+  sent: number;
+  skipped: number;
+  jobCount: number;
+}
+
+export const adminSendJobDigest = api<AdminSendDigestRequest, AdminSendDigestResponse>(
+  { expose: true, auth: true, method: "POST", path: "/emailer/admin/job-digest/send" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const interval = req.period === "daily" ? "1 day" : "7 days";
+    const periodLabel = req.period === "daily" ? "day" : "week";
+
+    const jobs = await fetchDigestJobs(interval);
+    if (jobs.length === 0) {
+      return { sent: 0, skipped: 0, jobCount: 0 };
+    }
+
+    const result = await sendDigest(interval, periodLabel);
+    return { ...result, jobCount: jobs.length };
+  }
+);
