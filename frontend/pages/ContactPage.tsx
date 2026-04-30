@@ -29,8 +29,8 @@ const CONTACT_CHANNELS = [
     fg: "#9764C7",
     title: "Call us",
     desc: "Mon–Fri, 9am–5pm AEST",
-    value: "+61 2 1234 5678",
-    href: "tel:+61212345678",
+    value: "0485 041 315",
+    href: "tel:+61485041315",
   },
   {
     icon: MapPin,
@@ -38,7 +38,7 @@ const CONTACT_CHANNELS = [
     fg: "#10B981",
     title: "Our location",
     desc: "Registered in Australia",
-    value: "Sydney, NSW, Australia",
+    value: "Melbourne, VIC, Australia",
     href: undefined,
   },
 ];
