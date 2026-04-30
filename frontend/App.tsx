@@ -58,6 +58,7 @@ const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPa
 const SalesPortalPage = lazy(() => import("./pages/SalesPortalPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const JobSharePage = lazy(() => import("./pages/JobSharePage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { token, loading } = useAuth();
@@ -113,7 +114,7 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/forgot-password", "/reset-password", "/demo"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 
 function GlobalSupportButton() {
@@ -188,6 +189,14 @@ function AppInner() {
           element={
             <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /></div>}>
               <PrivacyPolicyPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /></div>}>
+              <ContactPage />
             </Suspense>
           }
         />

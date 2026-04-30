@@ -847,8 +847,8 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--brand-muted)" }}>
             <Link to="/privacy-policy" className="transition-colors hover:text-[var(--brand-ink)]">Privacy Policy</Link>
+            <Link to="/contact" className="transition-colors hover:text-[var(--brand-ink)]">Contact</Link>
             <a href="#" className="transition-colors hover:text-[var(--brand-ink)]">Terms of Service</a>
-            <a href="#" className="transition-colors hover:text-[var(--brand-ink)]">Support</a>
           </div>
           <p className="text-xs" style={{ color: "var(--brand-muted)" }}>
             © 2025 KizaziHire · Built for the NDIS community
