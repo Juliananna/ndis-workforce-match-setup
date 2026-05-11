@@ -41,6 +41,18 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
         throw APIError.invalidArgument("please enter a valid Australian phone number");
       }
     }
+    if (req.fullName !== undefined && req.fullName.trim() === "") {
+      throw APIError.invalidArgument("full name is required");
+    }
+    if (req.location !== undefined && req.location.trim() === "") {
+      throw APIError.invalidArgument("location is required");
+    }
+    if (req.bio !== undefined && req.bio.trim() === "") {
+      throw APIError.invalidArgument("bio is required");
+    }
+    if (req.experienceYears !== undefined && req.experienceYears < 0) {
+      throw APIError.invalidArgument("experience years must be 0 or greater");
+    }
 
     const existing = await db.queryRow<{ worker_id: string }>`
       SELECT worker_id FROM workers WHERE user_id = ${auth.userID}

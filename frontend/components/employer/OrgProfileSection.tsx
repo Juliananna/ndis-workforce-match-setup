@@ -41,9 +41,13 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
   const [newArea, setNewArea] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const emailErr = emailTouched ? emailError(form.email ?? "") : null;
   const phoneErr = phoneTouched ? phoneError(form.phone ?? "") : null;
+  const orgSizeErr = submitted && !(form.organisationSize ?? "").trim() ? "Organisation size is required" : null;
+  const serviceAreasErr = submitted && (form.serviceAreas ?? []).length === 0 ? "At least one service area is required" : null;
+  const servicesProvidedErr = submitted && (form.servicesProvided ?? []).length === 0 ? "At least one service provided is required" : null;
 
   const startEdit = () => {
     setForm({
@@ -68,15 +72,21 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
   const cancel = () => {
     setEditing(false);
     setError(null);
+    setSubmitted(false);
   };
 
   const save = async () => {
     setEmailTouched(true);
     setPhoneTouched(true);
+    setSubmitted(true);
     const eErr = emailError(form.email ?? "");
     const pErr = phoneError(form.phone ?? "");
-    if (eErr || pErr) {
-      setError(eErr ?? pErr);
+    const hasRequired =
+      (form.organisationSize ?? "").trim() &&
+      (form.serviceAreas ?? []).length > 0 &&
+      (form.servicesProvided ?? []).length > 0;
+    if (eErr || pErr || !hasRequired) {
+      setError("Please fill in all required fields");
       return;
     }
     setSaving(true);
@@ -246,11 +256,20 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
             placeholder="Search suburb or address…"
           />
         </div>
-        <FormField label="Organisation Size (optional)" value={form.organisationSize ?? ""} onChange={(v) => setForm((f) => ({ ...f, organisationSize: v }))} placeholder="e.g. 1-10, 11-50" />
+        <div className="space-y-1">
+          <Label className="text-xs">Organisation Size <span className="text-destructive">*</span></Label>
+          <Input
+            value={form.organisationSize ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, organisationSize: e.target.value }))}
+            placeholder="e.g. 1-10, 11-50, 51-200"
+            className={`h-8 text-sm ${orgSizeErr ? "border-red-400 focus:ring-red-400" : ""}`}
+          />
+          {orgSizeErr && <p className="text-xs text-destructive">{orgSizeErr}</p>}
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs">Service Areas</Label>
+        <Label className="text-xs">Service Areas <span className="text-destructive">*</span></Label>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {SERVICE_AREAS_SUGGESTIONS.map((a) => (
             <button
@@ -283,17 +302,19 @@ export function OrgProfileSection({ profile, onSave, onUploadLogo }: Props) {
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
+        {serviceAreasErr && <p className="text-xs text-destructive">{serviceAreasErr}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs">Services Provided (optional, one per line)</Label>
+        <Label className="text-xs">Services Provided <span className="text-destructive">*</span> (one per line)</Label>
         <textarea
           rows={3}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className={`w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring ${servicesProvidedErr ? "border-red-400 focus:ring-red-400" : "border-input"}`}
           placeholder={"e.g.\nComplex care\nCommunity access"}
           value={(form.servicesProvided ?? []).join("\n")}
           onChange={(e) => setForm((f) => ({ ...f, servicesProvided: e.target.value.split("\n").filter((s) => s.trim()) }))}
         />
+        {servicesProvidedErr && <p className="text-xs text-destructive">{servicesProvidedErr}</p>}
       </div>
     </Card>
   );

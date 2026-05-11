@@ -46,17 +46,29 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
     }
   }, [profile]);
 
+  const [submitted, setSubmitted] = useState(false);
+
   const emailErr = emailTouched ? emailError(form.email as string ?? "") : null;
   const phoneErr = phoneTouched ? phoneError(form.phone as string ?? "") : null;
+  const fullNameErr = submitted && !(form.fullName as string ?? "").trim() ? "Full legal name is required" : null;
+  const locationErr = submitted && !(form.location as string ?? "").trim() ? "Location is required" : null;
+  const bioErr = submitted && !(form.bio as string ?? "").trim() ? "Bio is required" : null;
+  const experienceErr = submitted && (form.experienceYears === undefined || form.experienceYears === null) ? "Years of experience is required" : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailTouched(true);
     setPhoneTouched(true);
+    setSubmitted(true);
     const eErr = emailError(form.email as string ?? "");
     const pErr = phoneError(form.phone as string ?? "");
-    if (eErr || pErr) {
-      setError(eErr ?? pErr);
+    const hasRequired =
+      (form.fullName as string ?? "").trim() &&
+      (form.location as string ?? "").trim() &&
+      (form.bio as string ?? "").trim() &&
+      form.experienceYears !== undefined && form.experienceYears !== null;
+    if (eErr || pErr || !hasRequired) {
+      setError("Please fill in all required fields");
       return;
     }
     setSaving(true);
@@ -196,7 +208,17 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {field("Display Name", "name")}
-              {field("Full Legal Name", "fullName")}
+
+              <div className="space-y-1.5">
+                <Label className="text-gray-600 text-xs font-medium">Full Legal Name <span className="text-red-500">*</span></Label>
+                <Input
+                  type="text"
+                  value={(form.fullName as string) ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
+                  className={`bg-gray-50 text-gray-900 text-sm rounded-lg ${fullNameErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"}`}
+                />
+                {fullNameErr && <p className="text-xs text-red-600">{fullNameErr}</p>}
+              </div>
 
               <div className="space-y-1.5">
                 <Label className="text-gray-600 text-xs font-medium">Email Address</Label>
@@ -223,32 +245,46 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
                 {phoneErr && <p className="text-xs text-red-600">{phoneErr}</p>}
               </div>
 
-              <LocationAutocomplete
-                label="Location / Suburb"
-                value={(form.location as string) ?? ""}
-                onChange={(result) =>
-                  setForm((f) => ({
-                    ...f,
-                    location: result.address,
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                  }))
-                }
-              />
+              <div className="space-y-1.5">
+                <LocationAutocomplete
+                  label="Location / Suburb *"
+                  value={(form.location as string) ?? ""}
+                  onChange={(result) =>
+                    setForm((f) => ({
+                      ...f,
+                      location: result.address,
+                      latitude: result.latitude,
+                      longitude: result.longitude,
+                    }))
+                  }
+                />
+                {locationErr && <p className="text-xs text-red-600">{locationErr}</p>}
+              </div>
               {field("Travel Radius (km)", "travelRadiusKm", "number")}
-              {field("Years of Experience", "experienceYears", "number")}
+
+              <div className="space-y-1.5">
+                <Label className="text-gray-600 text-xs font-medium">Years of Experience <span className="text-red-500">*</span></Label>
+                <Input
+                  type="number"
+                  value={(form.experienceYears as number | undefined) ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, experienceYears: e.target.value === "" ? undefined : Number(e.target.value) }))}
+                  className={`bg-gray-50 text-gray-900 text-sm rounded-lg ${experienceErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500 focus:border-blue-500"}`}
+                />
+                {experienceErr && <p className="text-xs text-red-600">{experienceErr}</p>}
+              </div>
               {field("NDIS Worker Screening Number", "ndisScreeningNumber")}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-gray-600 text-xs font-medium">Bio</Label>
+              <Label className="text-gray-600 text-xs font-medium">Bio <span className="text-red-500">*</span></Label>
               <textarea
                 value={(form.bio as string) ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
                 rows={3}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full rounded-lg border bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:border-transparent ${bioErr ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
                 placeholder="Tell participants and employers about yourself..."
               />
+              {bioErr && <p className="text-xs text-red-600">{bioErr}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -291,7 +327,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
               </button>
               <button
                 type="button"
-                onClick={onCancel}
+                onClick={() => { setSubmitted(false); onCancel(); }}
                 className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors"
               >
                 <X className="h-3.5 w-3.5" />

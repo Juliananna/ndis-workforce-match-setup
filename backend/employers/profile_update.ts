@@ -40,6 +40,15 @@ export const updateEmployerProfile = api<UpdateEmployerProfileRequest, EmployerP
     if (req.abn !== undefined && req.abn.trim() === "") {
       throw APIError.invalidArgument("abn cannot be empty");
     }
+    if (req.organisationSize !== undefined && req.organisationSize.trim() === "") {
+      throw APIError.invalidArgument("organisation size is required");
+    }
+    if (req.serviceAreas !== undefined && req.serviceAreas.length === 0) {
+      throw APIError.invalidArgument("at least one service area is required");
+    }
+    if (req.servicesProvided !== undefined && req.servicesProvided.length === 0) {
+      throw APIError.invalidArgument("at least one service provided is required");
+    }
 
     const existing = await db.queryRow<{ employer_id: string }>`
       SELECT employer_id FROM employers WHERE user_id = ${auth.userID}
