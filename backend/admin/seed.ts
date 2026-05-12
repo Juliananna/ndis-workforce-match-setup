@@ -296,8 +296,8 @@ export const seed = api(
 
       const verificationToken = randomUUID();
       const user = await db.queryRow<{ user_id: string }>`
-        INSERT INTO users (email, password_hash, role, is_verified, verification_token)
-        VALUES (${email}, ${passwordHash}, 'EMPLOYER', TRUE, ${verificationToken})
+        INSERT INTO users (email, password_hash, role, is_verified, verification_token, is_demo)
+        VALUES (${email}, ${passwordHash}, 'EMPLOYER', TRUE, ${verificationToken}, TRUE)
         RETURNING user_id
       `;
       if (!user) continue;
@@ -334,8 +334,8 @@ export const seed = api(
 
       const verificationToken = randomUUID();
       const user = await db.queryRow<{ user_id: string }>`
-        INSERT INTO users (email, password_hash, role, is_verified, verification_token)
-        VALUES (${email}, ${passwordHash}, 'WORKER', TRUE, ${verificationToken})
+        INSERT INTO users (email, password_hash, role, is_verified, verification_token, is_demo)
+        VALUES (${email}, ${passwordHash}, 'WORKER', TRUE, ${verificationToken}, TRUE)
         RETURNING user_id
       `;
       if (!user) continue;
