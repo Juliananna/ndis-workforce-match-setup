@@ -148,6 +148,28 @@ export function WorkerProfileDrawer({ worker, onClose }: Props) {
         {view === "profile" && (
           <div className="flex-1 p-5 space-y-5">
 
+            <div className="flex items-center gap-3">
+              {worker.avatarUrl ? (
+                <img
+                  src={worker.avatarUrl}
+                  alt={worker.fullName ?? worker.name}
+                  className="h-14 w-14 rounded-full object-cover shrink-0 border border-border"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border">
+                  <span className="text-xl font-semibold text-muted-foreground">
+                    {(worker.fullName ?? worker.name).charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground truncate">{worker.fullName ?? worker.name}</p>
+                {worker.location && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{worker.location}</p>
+                )}
+              </div>
+            </div>
+
             {worker.isFullyVerified ? (
               <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
                 <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
