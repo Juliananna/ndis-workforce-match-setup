@@ -27,10 +27,12 @@ export const scanDocumentExpiry = api(
         EXTRACT(DAY FROM wd.expiry_date - NOW())::int AS days_until
       FROM worker_documents wd
       JOIN workers w ON w.worker_id = wd.worker_id
+      JOIN users u ON u.user_id = w.user_id
       WHERE
         wd.expiry_date IS NOT NULL
         AND wd.expiry_date >= (NOW() - INTERVAL '1 day')
         AND wd.expiry_date <= (NOW() + INTERVAL '61 days')
+        AND u.is_demo = FALSE
     `;
 
     for await (const row of rows) {

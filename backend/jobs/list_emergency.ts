@@ -41,16 +41,19 @@ export const listEmergencyJobs = api<void, ListEmergencyJobsResponse>(
       created_at: Date;
       updated_at: Date;
     }>`
-      SELECT job_id, employer_id, job_type, job_title, location, shift_date::text, shift_start_time,
-             shift_duration_hours, support_type_tags, client_notes, gender_preference,
-             age_range_preference, behavioural_considerations, medical_requirements,
-             weekday_rate, weekend_rate, public_holiday_rate, status,
-             is_emergency, response_deadline, latitude, longitude, created_at, updated_at
-      FROM job_requests
-      WHERE is_emergency = TRUE
-        AND status = 'Open'
-        AND (response_deadline IS NULL OR response_deadline > NOW())
-      ORDER BY created_at DESC
+      SELECT j.job_id, j.employer_id, j.job_type, j.job_title, j.location, j.shift_date::text, j.shift_start_time,
+             j.shift_duration_hours, j.support_type_tags, j.client_notes, j.gender_preference,
+             j.age_range_preference, j.behavioural_considerations, j.medical_requirements,
+             j.weekday_rate, j.weekend_rate, j.public_holiday_rate, j.status,
+             j.is_emergency, j.response_deadline, j.latitude, j.longitude, j.created_at, j.updated_at
+      FROM job_requests j
+      JOIN employers e ON e.employer_id = j.employer_id
+      JOIN users u ON u.user_id = e.user_id
+      WHERE j.is_emergency = TRUE
+        AND j.status = 'Open'
+        AND u.is_demo = FALSE
+        AND (j.response_deadline IS NULL OR j.response_deadline > NOW())
+      ORDER BY j.created_at DESC
       LIMIT 50
     `;
 

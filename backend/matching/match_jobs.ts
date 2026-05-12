@@ -87,30 +87,33 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
       const lon = workerRow.longitude!;
       jobs = await db.queryAll<JobRow>`
         SELECT
-          job_id, employer_id, job_type, job_title, location, shift_date::text, shift_start_time,
-          shift_duration_hours, support_type_tags, client_notes, gender_preference,
-          age_range_preference, behavioural_considerations, medical_requirements,
-          weekday_rate, weekend_rate, public_holiday_rate, status,
-          is_emergency, response_deadline, latitude, longitude, created_at, updated_at,
+          j.job_id, j.employer_id, j.job_type, j.job_title, j.location, j.shift_date::text, j.shift_start_time,
+          j.shift_duration_hours, j.support_type_tags, j.client_notes, j.gender_preference,
+          j.age_range_preference, j.behavioural_considerations, j.medical_requirements,
+          j.weekday_rate, j.weekend_rate, j.public_holiday_rate, j.status,
+          j.is_emergency, j.response_deadline, j.latitude, j.longitude, j.created_at, j.updated_at,
           CASE
-            WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN
+            WHEN j.latitude IS NOT NULL AND j.longitude IS NOT NULL THEN
               6371 * 2 * ASIN(SQRT(
-                POWER(SIN(RADIANS(latitude - ${lat}) / 2), 2) +
-                COS(RADIANS(${lat})) * COS(RADIANS(latitude)) *
-                POWER(SIN(RADIANS(longitude - ${lon}) / 2), 2)
+                POWER(SIN(RADIANS(j.latitude - ${lat}) / 2), 2) +
+                COS(RADIANS(${lat})) * COS(RADIANS(j.latitude)) *
+                POWER(SIN(RADIANS(j.longitude - ${lon}) / 2), 2)
               ))
             ELSE NULL
           END AS distance_km
-        FROM job_requests
+        FROM job_requests j
+        JOIN employers e ON e.employer_id = j.employer_id
+        JOIN users u ON u.user_id = e.user_id
         WHERE
-          status = 'Open'
-          AND weekday_rate >= ${minPay}
+          j.status = 'Open'
+          AND j.weekday_rate >= ${minPay}
+          AND u.is_demo = FALSE
           AND (
-            latitude IS NULL OR longitude IS NULL OR
+            j.latitude IS NULL OR j.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
-              POWER(SIN(RADIANS(latitude - ${lat}) / 2), 2) +
-              COS(RADIANS(${lat})) * COS(RADIANS(latitude)) *
-              POWER(SIN(RADIANS(longitude - ${lon}) / 2), 2)
+              POWER(SIN(RADIANS(j.latitude - ${lat}) / 2), 2) +
+              COS(RADIANS(${lat})) * COS(RADIANS(j.latitude)) *
+              POWER(SIN(RADIANS(j.longitude - ${lon}) / 2), 2)
             )) <= ${maxDist}
           )
         ORDER BY distance_km ASC NULLS LAST
@@ -119,15 +122,17 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
     } else {
       jobs = await db.queryAll<JobRow>`
         SELECT
-          job_id, employer_id, job_type, job_title, location, shift_date::text, shift_start_time,
-          shift_duration_hours, support_type_tags, client_notes, gender_preference,
-          age_range_preference, behavioural_considerations, medical_requirements,
-          weekday_rate, weekend_rate, public_holiday_rate, status,
-          is_emergency, response_deadline, latitude, longitude, created_at, updated_at,
+          j.job_id, j.employer_id, j.job_type, j.job_title, j.location, j.shift_date::text, j.shift_start_time,
+          j.shift_duration_hours, j.support_type_tags, j.client_notes, j.gender_preference,
+          j.age_range_preference, j.behavioural_considerations, j.medical_requirements,
+          j.weekday_rate, j.weekend_rate, j.public_holiday_rate, j.status,
+          j.is_emergency, j.response_deadline, j.latitude, j.longitude, j.created_at, j.updated_at,
           NULL::double precision AS distance_km
-        FROM job_requests
-        WHERE status = 'Open' AND weekday_rate >= ${minPay}
-        ORDER BY created_at DESC
+        FROM job_requests j
+        JOIN employers e ON e.employer_id = j.employer_id
+        JOIN users u ON u.user_id = e.user_id
+        WHERE j.status = 'Open' AND j.weekday_rate >= ${minPay} AND u.is_demo = FALSE
+        ORDER BY j.created_at DESC
         LIMIT 50
       `;
     }

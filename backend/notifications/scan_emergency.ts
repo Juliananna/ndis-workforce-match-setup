@@ -19,13 +19,16 @@ export const scanEmergencyShifts = api(
     };
 
     const jobs = db.query<JobRow>`
-      SELECT job_id, employer_id, location, shift_date::text, shift_start_time,
-             shift_duration_hours, weekday_rate, support_type_tags, response_deadline
-      FROM job_requests
-      WHERE is_emergency = TRUE
-        AND status = 'Open'
-        AND (response_deadline IS NULL OR response_deadline > NOW())
-        AND created_at > NOW() - INTERVAL '2 hours'
+      SELECT j.job_id, j.employer_id, j.location, j.shift_date::text, j.shift_start_time,
+             j.shift_duration_hours, j.weekday_rate, j.support_type_tags, j.response_deadline
+      FROM job_requests j
+      JOIN employers e ON e.employer_id = j.employer_id
+      JOIN users u ON u.user_id = e.user_id
+      WHERE j.is_emergency = TRUE
+        AND j.status = 'Open'
+        AND u.is_demo = FALSE
+        AND (j.response_deadline IS NULL OR j.response_deadline > NOW())
+        AND j.created_at > NOW() - INTERVAL '2 hours'
     `;
 
     for await (const job of jobs) {
@@ -40,6 +43,7 @@ export const scanEmergencyShifts = api(
           AND n.type = 'EMERGENCY_SHIFT_AVAILABLE'
           AND n.body LIKE ${"%" + job.job_id + "%"}
         WHERE n.id IS NULL
+          AND u.is_demo = FALSE
         LIMIT 200
       `;
 

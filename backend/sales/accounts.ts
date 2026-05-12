@@ -58,6 +58,7 @@ export const listAccounts = api<void, ListAccountsResponse>(
       LEFT JOIN workers w ON w.user_id = u.user_id
       LEFT JOIN employers e ON e.user_id = u.user_id
       WHERE u.role IN ('WORKER', 'EMPLOYER')
+        AND u.is_demo = FALSE
       ORDER BY u.created_at DESC
     `;
 
