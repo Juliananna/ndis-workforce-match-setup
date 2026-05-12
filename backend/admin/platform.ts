@@ -53,16 +53,16 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employers e JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM users WHERE role IN ('WORKER','EMPLOYER') AND is_demo = FALSE`,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employer_subscriptions WHERE status = 'active'`,
-      db.queryRow<{ total: number }>`SELECT COALESCE(SUM(amount_aud_cents),0)::int AS total FROM employer_subscriptions WHERE status = 'active'`,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_documents WHERE verification_status = 'Pending'`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employer_subscriptions es JOIN employers e ON e.employer_id = es.employer_id JOIN users u ON u.user_id = e.user_id WHERE es.status = 'active' AND u.is_demo = FALSE`,
+      db.queryRow<{ total: number }>`SELECT COALESCE(SUM(es.amount_aud_cents),0)::int AS total FROM employer_subscriptions es JOIN employers e ON e.employer_id = es.employer_id JOIN users u ON u.user_id = e.user_id WHERE es.status = 'active' AND u.is_demo = FALSE`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_documents wd JOIN workers w ON w.worker_id = wd.worker_id JOIN users u ON u.user_id = w.user_id WHERE wd.verification_status = 'Pending' AND u.is_demo = FALSE`,
       db.queryRow<{ active: number; total: number }>`
-        SELECT COUNT(*) FILTER (WHERE status='Open')::int AS active, COUNT(*)::int AS total FROM job_requests
+        SELECT COUNT(*) FILTER (WHERE j.status='Open')::int AS active, COUNT(*)::int AS total FROM job_requests j JOIN employers e ON e.employer_id = j.employer_id JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE
       `,
       db.queryRow<{ total: number; accepted: number }>`
-        SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='Accepted')::int AS accepted FROM offers
+        SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE o.status='Accepted')::int AS accepted FROM offers o JOIN job_requests j ON j.job_id = o.job_id JOIN employers e ON e.employer_id = j.employer_id JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE
       `,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM messages`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM messages m JOIN users u ON u.user_id = m.sender_user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`
         SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id
         WHERE u.created_at >= date_trunc('month', NOW()) AND u.is_demo = FALSE
@@ -77,7 +77,7 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       db.queryRow<{ count: number }>`
         SELECT COUNT(*)::int AS count FROM users WHERE is_verified = false AND role IN ('WORKER','EMPLOYER') AND is_demo = FALSE
       `,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references WHERE status IN ('Pending', 'Contacted')`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references wr JOIN workers w ON w.worker_id = wr.worker_id JOIN users u ON u.user_id = w.user_id WHERE wr.status IN ('Pending', 'Contacted') AND u.is_demo = FALSE`,
       db.queryRow<{ avg_pct: number; fully_complete: number; mostly_complete: number; incomplete: number }>`
         WITH completion AS (
           SELECT

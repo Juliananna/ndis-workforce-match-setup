@@ -44,27 +44,27 @@ export const getSalesDashboard = api<void, SalesDashboardStats>(
     ] = await Promise.all([
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employers e JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE`,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employer_subscriptions WHERE status = 'active'`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employer_subscriptions es JOIN employers e ON e.employer_id = es.employer_id JOIN users u ON u.user_id = e.user_id WHERE es.status = 'active' AND u.is_demo = FALSE`,
       db.queryRow<{ total: number }>`
-        SELECT COALESCE(SUM(amount_aud_cents), 0)::int AS total
-        FROM employer_subscriptions WHERE status = 'active'
+        SELECT COALESCE(SUM(es.amount_aud_cents), 0)::int AS total
+        FROM employer_subscriptions es JOIN employers e ON e.employer_id = es.employer_id JOIN users u ON u.user_id = e.user_id WHERE es.status = 'active' AND u.is_demo = FALSE
       `,
       db.queryRow<{ total: number }>`
-        SELECT COALESCE(SUM(amount_aud_cents), 0)::int AS total
-        FROM employer_subscriptions
-        WHERE status = 'active' AND created_at >= date_trunc('month', NOW())
+        SELECT COALESCE(SUM(es.amount_aud_cents), 0)::int AS total
+        FROM employer_subscriptions es JOIN employers e ON e.employer_id = es.employer_id JOIN users u ON u.user_id = e.user_id
+        WHERE es.status = 'active' AND es.created_at >= date_trunc('month', NOW()) AND u.is_demo = FALSE
       `,
       db.queryRow<{ count: number }>`
-        SELECT COUNT(*)::int AS count FROM worker_documents WHERE verification_status = 'Pending'
+        SELECT COUNT(*)::int AS count FROM worker_documents wd JOIN workers w ON w.worker_id = wd.worker_id JOIN users u ON u.user_id = w.user_id WHERE wd.verification_status = 'Pending' AND u.is_demo = FALSE
       `,
       db.queryRow<{ count: number }>`
-        SELECT COUNT(*)::int AS count FROM job_requests WHERE status = 'Open'
+        SELECT COUNT(*)::int AS count FROM job_requests j JOIN employers e ON e.employer_id = j.employer_id JOIN users u ON u.user_id = e.user_id WHERE j.status = 'Open' AND u.is_demo = FALSE
       `,
       db.queryRow<{ total: number; accepted: number }>`
         SELECT
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE status = 'Accepted')::int AS accepted
-        FROM offers
+          COUNT(*) FILTER (WHERE o.status = 'Accepted')::int AS accepted
+        FROM offers o JOIN job_requests j ON j.job_id = o.job_id JOIN employers e ON e.employer_id = j.employer_id JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE
       `,
       db.queryRow<{ scheduled: number; completed: number }>`
         SELECT
@@ -83,7 +83,7 @@ export const getSalesDashboard = api<void, SalesDashboardStats>(
         JOIN users u ON u.user_id = e.user_id
         WHERE u.created_at >= date_trunc('month', NOW()) AND u.is_demo = FALSE
       `,
-      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references WHERE status IN ('Pending', 'Contacted')`,
+      db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM worker_references wr JOIN workers w ON w.worker_id = wr.worker_id JOIN users u ON u.user_id = w.user_id WHERE wr.status IN ('Pending', 'Contacted') AND u.is_demo = FALSE`,
     ]);
 
     return {
