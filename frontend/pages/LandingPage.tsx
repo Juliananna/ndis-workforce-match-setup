@@ -199,7 +199,7 @@ export default function LandingPage() {
               className="mb-5 text-[2.5rem] font-black leading-[1.06] tracking-[-0.025em] md:text-[3.5rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Find the right
+              Skip the Job Ads
               <br />
               <span
                 style={{
@@ -209,7 +209,7 @@ export default function LandingPage() {
                   backgroundClip: "text",
                 }}
               >
-                support worker
+                Hire pre-vetted NDIS workers faster.
               </span>
               <br />
               <span style={{ fontWeight: 500 }}>not just any worker.</span>
@@ -219,7 +219,7 @@ export default function LandingPage() {
               className="mb-9 max-w-lg text-[1.07rem] leading-[1.75]"
               style={{ color: "var(--brand-muted)" }}
             >
-              Built for NDIS providers and participants who need reliable, verified, and compatible support. Intelligent matching meets rigorous credential screening.
+              Built for NDIS providers who need reliable, verified, and compatible support without the Agency Fees. Intelligent matching meets rigorous credential screening.
             </p>
 
             <div className="mb-9 flex flex-col gap-3 sm:flex-row">
