@@ -38,6 +38,7 @@ export interface WorkerSummary {
   vehicleAccess: boolean;
   travelRadiusKm: number | null;
   skills: string[];
+  avatarUrl: string | null;
   introVideoUrl: string | null;
   distanceKm: number | null;
   averageRating: number | null;
@@ -85,6 +86,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       drivers_license: boolean;
       vehicle_access: boolean;
       travel_radius_km: number | null;
+      avatar_url: string | null;
       intro_video_url: string | null;
       distance_km: number | null;
       avg_rating: number | null;
@@ -118,7 +120,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         SELECT
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
-          w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
+          w.avatar_url, w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
           wa.available_days, wa.minimum_pay_rate, u.last_login_at,
           CASE
             WHEN w.latitude IS NOT NULL AND w.longitude IS NOT NULL THEN
@@ -201,7 +203,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         SELECT
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
-          w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
+          w.avatar_url, w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
           wa.available_days, wa.minimum_pay_rate, u.last_login_at,
           NULL::double precision AS distance_km,
           AVG(r.rating) AS avg_rating,
@@ -324,6 +326,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       driversLicense: r.drivers_license,
       vehicleAccess: r.vehicle_access,
       travelRadiusKm: r.travel_radius_km,
+      avatarUrl: r.avatar_url ?? null,
       introVideoUrl: r.intro_video_url,
       distanceKm: r.distance_km != null ? Math.round(r.distance_km * 10) / 10 : null,
       averageRating: r.avg_rating != null ? Math.round(r.avg_rating * 10) / 10 : null,

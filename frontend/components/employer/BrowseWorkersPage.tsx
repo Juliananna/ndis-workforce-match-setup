@@ -386,17 +386,32 @@ function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () =>
       </div>
 
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-sm text-foreground truncate">
-            {worker.fullName ?? worker.name}
-          </p>
-          {worker.location && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <MapPin className="h-3 w-3 shrink-0" />
-              {worker.location}
-              {worker.distanceKm != null && ` · ${worker.distanceKm}km`}
-            </p>
+        <div className="flex items-center gap-2.5 min-w-0">
+          {worker.avatarUrl ? (
+            <img
+              src={worker.avatarUrl}
+              alt={worker.fullName ?? worker.name}
+              className="h-9 w-9 rounded-full object-cover shrink-0 border border-border"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border">
+              <span className="text-sm font-semibold text-muted-foreground">
+                {(worker.fullName ?? worker.name).charAt(0).toUpperCase()}
+              </span>
+            </div>
           )}
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-foreground truncate">
+              {worker.fullName ?? worker.name}
+            </p>
+            {worker.location && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {worker.location}
+                {worker.distanceKm != null && ` · ${worker.distanceKm}km`}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           {worker.averageRating != null && (
