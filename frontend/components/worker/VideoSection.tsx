@@ -9,11 +9,42 @@ interface Props {
   onVideoChange: (url: string | null) => void;
 }
 
+function generateThumbnail(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.currentTime = 1;
+    video.addEventListener("seeked", () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 360;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("canvas context unavailable"));
+        return;
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    });
+    video.addEventListener("error", () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("could not load video for thumbnail"));
+    });
+  });
+}
+
 export function VideoSection({ videoUrl, workerName, onUpload, onDelete, onVideoChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -27,11 +58,14 @@ export function VideoSection({ videoUrl, workerName, onUpload, onDelete, onVideo
     setUploading(true);
     setError(null);
     try {
+      const thumb = await generateThumbnail(file).catch(() => null);
+      if (thumb) setThumbnail(thumb);
       const { videoUrl: url } = await onUpload(file);
       onVideoChange(url);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err: unknown) {
       console.error(err);
+      setThumbnail(null);
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
@@ -43,6 +77,7 @@ export function VideoSection({ videoUrl, workerName, onUpload, onDelete, onVideo
     try {
       await onDelete();
       onVideoChange(null);
+      setThumbnail(null);
       setPlaying(false);
     } catch (err: unknown) {
       console.error(err);
@@ -62,7 +97,16 @@ export function VideoSection({ videoUrl, workerName, onUpload, onDelete, onVideo
         <>
           {!playing ? (
             <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center gap-4 p-8 relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 to-indigo-900/20" />
+              {thumbnail ? (
+                <img
+                  src={thumbnail}
+                  alt="Video thumbnail"
+                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 to-indigo-900/20" />
+              )}
+              <div className="absolute inset-0 bg-black/30" />
               <button
                 onClick={handlePlay}
                 className="relative z-10 h-16 w-16 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-xl transition-transform hover:scale-105"
@@ -70,8 +114,8 @@ export function VideoSection({ videoUrl, workerName, onUpload, onDelete, onVideo
                 <Play className="h-7 w-7 text-gray-900 ml-1" />
               </button>
               <div className="relative z-10 text-center">
-                <p className="text-white font-semibold text-lg">Video Introduction</p>
-                <p className="text-white/60 text-sm mt-1">
+                <p className="text-white font-semibold text-lg drop-shadow">Video Introduction</p>
+                <p className="text-white/70 text-sm mt-1 drop-shadow">
                   See why participants love working with {workerName || "this provider"}.
                 </p>
               </div>
