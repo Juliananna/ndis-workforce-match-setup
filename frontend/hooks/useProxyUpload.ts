@@ -1,16 +1,10 @@
-import { useCallback, useMemo } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useCallback } from "react";
+import { useAuthedBackend } from "./useAuthedBackend";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { WorkerResume } from "~backend/workers/resume";
-import backend from "~backend/client";
 
 export function useProxyUpload() {
-  const { token } = useAuth();
-
-  const client = useMemo(() => {
-    if (!token) return null;
-    return backend.with({ auth: async () => ({ authorization: `Bearer ${token}` }) });
-  }, [token]);
+  const client = useAuthedBackend();
 
   async function putToSignedUrl(uploadUrl: string, file: File): Promise<void> {
     const resp = await fetch(uploadUrl, {
@@ -18,7 +12,10 @@ export function useProxyUpload() {
       body: file,
       headers: { "Content-Type": file.type || "application/octet-stream" },
     });
-    if (!resp.ok) throw new Error("File upload failed");
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error(`Storage upload failed (${resp.status})${text ? ": " + text : ""}`);
+    }
   }
 
   const uploadDocument = useCallback(async (
