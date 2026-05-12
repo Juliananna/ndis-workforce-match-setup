@@ -219,7 +219,7 @@ export default function LandingPage() {
               className="mb-9 max-w-lg text-[1.07rem] leading-[1.75]"
               style={{ color: "var(--brand-muted)" }}
             >
-              Built for NDIS providers who need reliable, verified, and compatible support without the Agency Fees. Intelligent matching meets rigorous credential screening.
+              Browse experienced support workers with required qualifications collected, 2 references completed, and files ready to review. Book interviews, choose the right worker, and get started sooner.
             </p>
 
             <div className="mb-9 flex flex-col gap-3 sm:flex-row">
