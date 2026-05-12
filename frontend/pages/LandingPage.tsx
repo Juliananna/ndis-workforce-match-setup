@@ -209,10 +209,10 @@ export default function LandingPage() {
                   backgroundClip: "text",
                 }}
               >
-                Hire pre-vetted NDIS workers faster.
+                Hire pre-vetted NDIS workers 
               </span>
               <br />
-              <span style={{ fontWeight: 500 }}>not just any worker.</span>
+              <span style={{ fontWeight: 500 }}>faster.</span>
             </h1>
 
             <p
