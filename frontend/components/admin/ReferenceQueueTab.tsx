@@ -265,6 +265,76 @@ function Section({
   );
 }
 
+const MESSAGE_TEMPLATES: { label: string; category: string; body: string }[] = [
+  {
+    category: "Missing Details",
+    label: "Missing contact details",
+    body: `Hi {FirstName},
+
+We're in the process of completing your reference check with {RefereeName} from {RefereeOrganisation}, however we noticed their contact details are incomplete.
+
+Could you please log in to your profile and update your referee's phone number and/or email address so we can proceed?
+
+Thank you for your prompt attention to this.`,
+  },
+  {
+    category: "Missing Details",
+    label: "Missing referee phone number",
+    body: `Hi {FirstName},
+
+We attempted to contact your referee {RefereeName} at {RefereeOrganisation} but no phone number has been provided.
+
+Please update your reference details with a valid phone number at your earliest convenience so we can complete your verification.`,
+  },
+  {
+    category: "Wrong Contact",
+    label: "Phone number not working",
+    body: `Hi {FirstName},
+
+We've been unable to reach your referee {RefereeName} at {RefereeOrganisation} on the number provided. The call was not connecting or went to an unrecognised service.
+
+Please check the number and update it in your profile, or provide an alternative contact method for your referee.`,
+  },
+  {
+    category: "Wrong Contact",
+    label: "Wrong person answered",
+    body: `Hi {FirstName},
+
+When we called the number listed for your referee {RefereeName} at {RefereeOrganisation}, we reached someone who was unable to assist with a reference check.
+
+Could you please confirm their direct contact number or email address so we can reach the right person?`,
+  },
+  {
+    category: "Refusal",
+    label: "Referee declined to provide a reference",
+    body: `Hi {FirstName},
+
+We contacted {RefereeName} at {RefereeOrganisation} to complete your reference check, however they have advised they are unable to provide a reference at this time.
+
+To keep your verification on track, please consider adding an alternative referee who can speak to your work history and performance. You can update your references from your profile.`,
+  },
+  {
+    category: "Refusal",
+    label: "Referee no longer at the organisation",
+    body: `Hi {FirstName},
+
+We attempted to reach {RefereeName} at {RefereeOrganisation} but were informed they are no longer working there and we were unable to obtain a forwarding contact.
+
+Please update your referee details with a current contact for this person, or provide an alternative referee if needed.`,
+  },
+  {
+    category: "Refusal",
+    label: "Organisation policy – no references given",
+    body: `Hi {FirstName},
+
+We contacted {RefereeOrganisation} to complete your reference check with {RefereeName}, however their organisation has a policy of not providing employment references.
+
+Please provide an alternative referee — ideally a direct supervisor or manager from another role — so we can continue with your verification.`,
+  },
+];
+
+const TEMPLATE_CATEGORIES = Array.from(new Set(MESSAGE_TEMPLATES.map((t) => t.category)));
+
 function ReferenceMessageModal({
   modal,
   onSend,
@@ -277,6 +347,14 @@ function ReferenceMessageModal({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>(TEMPLATE_CATEGORIES[0]);
+
+  const applyTemplate = (body: string) => {
+    const resolved = body
+      .replace(/\{RefereeName\}/g, modal.refereeName)
+      .replace(/\{RefereeOrganisation\}/g, modal.refereeOrganisation);
+    setMessage(resolved);
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -292,13 +370,15 @@ function ReferenceMessageModal({
     }
   };
 
+  const categoryTemplates = MESSAGE_TEMPLATES.filter((t) => t.category === activeCategory);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="relative z-10 w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-2.5">
-            <MessageSquare className="h-4.5 w-4.5 text-indigo-600" />
+            <MessageSquare className="h-4 w-4 text-indigo-600" />
             <div>
               <p className="font-semibold text-sm text-gray-900">Message Worker</p>
               <p className="text-xs text-gray-500">Re: {modal.refereeName} · {modal.refereeOrganisation}</p>
@@ -308,27 +388,59 @@ function ReferenceMessageModal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-5 space-y-4">
-          <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
-            Sending to <span className="font-semibold">{modal.workerName}</span> regarding their reference from <span className="font-semibold">{modal.refereeName}</span>.
-            Use <code className="bg-indigo-100 px-1 rounded">{'{FirstName}'}</code> to personalise.
+
+        <div className="flex flex-1 min-h-0 divide-x divide-gray-100">
+          <div className="w-56 shrink-0 flex flex-col overflow-hidden">
+            <p className="px-4 pt-4 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">Templates</p>
+            <div className="flex gap-1 px-3 pb-2 flex-wrap">
+              {TEMPLATE_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    activeCategory === cat
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1.5">
+              {categoryTemplates.map((t) => (
+                <button
+                  key={t.label}
+                  onClick={() => applyTemplate(t.body)}
+                  className="w-full text-left rounded-lg border border-gray-200 px-3 py-2.5 text-xs text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-colors leading-snug"
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-gray-700">Message</label>
-            <textarea
-              rows={5}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="e.g. We were unable to reach your referee. Please provide an updated contact number..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-            <p className="text-xs text-gray-400 text-right">{message.length}/2000</p>
+
+          <div className="flex-1 flex flex-col p-4 space-y-3 overflow-hidden">
+            <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-3 py-2.5 text-xs text-indigo-700">
+              Sending to <span className="font-semibold">{modal.workerName}</span>.
+              Use <code className="bg-indigo-100 px-1 rounded">{'{FirstName}'}</code> to personalise.
+              Templates auto-fill referee details.
+            </div>
+            <div className="flex-1 flex flex-col space-y-1.5 min-h-0">
+              <label className="text-sm font-medium text-gray-700 shrink-0">Message</label>
+              <textarea
+                className="flex-1 min-h-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Select a template or write your own message..."
+              />
+              <p className="text-xs text-gray-400 text-right shrink-0">{message.length}/2000</p>
+            </div>
+            {error && <p className="text-xs text-red-600 shrink-0">{error}</p>}
           </div>
-          {error && (
-            <p className="text-xs text-red-600">{error}</p>
-          )}
         </div>
-        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
+
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100 shrink-0">
           <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-xs">
             Cancel
           </Button>
