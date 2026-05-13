@@ -8,8 +8,20 @@ import {
   Loader2, Users, FileText, CheckCircle, X, ChevronRight, ArrowLeft, AlertTriangle,
   PhoneCall, Clock, UserCheck, Eye, ClipboardList, TrendingUp, ShieldAlert, ShieldCheck,
   Trash2, Plus, BarChart3, Briefcase, Building2, DollarSign, MessageSquare, Zap,
-  Mail, Search, ChevronDown, Activity, HelpCircle,
+  Mail, Search, ChevronDown, Activity, HelpCircle, RefreshCw, Copy,
 } from "lucide-react";
+
+function generatePassword(): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const special = "!@#$%^&*";
+  const all = upper + lower + digits + special;
+  const rand = (s: string) => s[Math.floor(Math.random() * s.length)];
+  const core = [rand(upper), rand(lower), rand(digits), rand(special)];
+  for (let i = 0; i < 8; i++) core.push(rand(all));
+  return core.sort(() => Math.random() - 0.5).join("");
+}
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { useAuth } from "../contexts/AuthContext";
 import type { AdminWorkerSummary, AdminWorkerDocumentView, AdminReferenceView } from "~backend/admin/workers";
@@ -1058,6 +1070,14 @@ function StaffEditPanel({
   saving: boolean;
   error: string | null;
 }) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const handleCopy = (val: string, key: string) => {
+    navigator.clipboard.writeText(val).catch(() => {});
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   return (
     <div className="border-t border-border pt-3 mt-1 space-y-3">
       <p className="text-xs font-semibold text-foreground">{label}</p>
@@ -1065,13 +1085,41 @@ function StaffEditPanel({
         {fields.map((f) => (
           <div key={f.key} className="space-y-1">
             <Label className="text-xs">{f.label}</Label>
-            <Input
-              type={f.type ?? "text"}
-              value={f.value}
-              onChange={(e) => f.onChange(e.target.value)}
-              placeholder={f.placeholder}
-              className="h-8 text-sm"
-            />
+            <div className="flex gap-1.5">
+              <Input
+                type={f.type ?? "text"}
+                value={f.value}
+                onChange={(e) => f.onChange(e.target.value)}
+                placeholder={f.placeholder}
+                className="h-8 text-sm flex-1"
+              />
+              {f.type === "password" && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs shrink-0"
+                    title="Generate password"
+                    onClick={() => f.onChange(generatePassword())}
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                  {f.value && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2 text-xs shrink-0"
+                      title="Copy password"
+                      onClick={() => handleCopy(f.value, f.key)}
+                    >
+                      {copied === f.key ? <CheckCircle className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -1100,6 +1148,7 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [newAgentPassword, setNewAgentPassword] = useState("");
   const [newAgentNotes, setNewAgentNotes] = useState("");
+  const [agentPwCopied, setAgentPwCopied] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1350,7 +1399,41 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Password</Label>
-              <Input type="password" placeholder="Min. 8 characters" value={newAgentPassword} onChange={(e) => setNewAgentPassword(e.target.value)} className="h-8 text-sm" />
+              <div className="flex gap-1.5">
+                <Input
+                  type="text"
+                  placeholder="Min. 8 characters"
+                  value={newAgentPassword}
+                  onChange={(e) => setNewAgentPassword(e.target.value)}
+                  className="h-8 text-sm flex-1 font-mono"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 shrink-0"
+                  title="Generate password"
+                  onClick={() => { setNewAgentPassword(generatePassword()); setAgentPwCopied(false); }}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+                {newAgentPassword && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 shrink-0"
+                    title="Copy password"
+                    onClick={() => {
+                      navigator.clipboard.writeText(newAgentPassword).catch(() => {});
+                      setAgentPwCopied(true);
+                      setTimeout(() => setAgentPwCopied(false), 2000);
+                    }}
+                  >
+                    {agentPwCopied ? <CheckCircle className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Notes (optional)</Label>
