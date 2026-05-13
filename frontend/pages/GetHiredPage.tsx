@@ -129,6 +129,74 @@ const FAQS = [
   },
 ];
 
+function BenefitCard({
+  icon: Icon, color, tint, title, desc, index,
+}: {
+  icon: React.ElementType; color: string; tint: string; title: string; desc: string; index: number;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const rotateX = ((y - cy) / cy) * -8;
+    const rotateY = ((x - cx) / cx) * 8;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.03)`;
+    card.style.boxShadow = `${(x - cx) * 0.04}px ${(y - cy) * 0.04 + 16}px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)`;
+  };
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0px) scale(1)";
+    card.style.boxShadow = "";
+  };
+
+  const accentColors = [
+    "var(--brand-purple-grad)",
+    "var(--brand-cyan-grad)",
+    "linear-gradient(135deg,#10B981,#059669)",
+    "linear-gradient(135deg,#F59E0B,#D97706)",
+  ];
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="group relative overflow-hidden rounded-3xl border p-7 cursor-default"
+      style={{
+        borderColor: "var(--brand-border)",
+        backgroundColor: "white",
+        transition: "transform 0.15s ease, box-shadow 0.15s ease",
+        willChange: "transform",
+      }}
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1 rounded-t-3xl"
+        style={{ background: accentColors[index % accentColors.length] }}
+      />
+      <div
+        className="mb-5 flex h-13 w-13 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110"
+        style={{ backgroundColor: tint, width: "3.25rem", height: "3.25rem" }}
+      >
+        <Icon className="h-6 w-6" style={{ color }} />
+      </div>
+      <h3 className="mb-2 text-[0.95rem] font-black" style={{ color: "var(--brand-ink)" }}>{title}</h3>
+      <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{desc}</p>
+      <div
+        className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `radial-gradient(circle, ${tint} 0%, transparent 70%)` }}
+      />
+    </div>
+  );
+}
+
 export default function GetHiredPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -474,28 +542,55 @@ export default function GetHiredPage() {
         </div>
       </section>
 
-      {/* TRUST STRIP */}
-      <div className="border-y" style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}>
-        <div className="mx-auto max-w-5xl px-6 py-6">
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 md:justify-between">
-            {[
-              { icon: UserCheck, label: "One profile" },
-              { icon: FileText, label: "Qualifications uploaded" },
-              { icon: Users, label: "References completed" },
-              { icon: Star, label: "Seen by providers" },
-              { icon: Clock, label: "Interview faster" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2.5">
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: "var(--brand-mint)" }}
-                >
-                  <Icon className="h-4 w-4" style={{ color: "var(--brand-green)" }} />
-                </span>
-                <p className="text-sm font-bold" style={{ color: "var(--brand-ink)" }}>{label}</p>
-              </div>
-            ))}
-          </div>
+      {/* TRUST STRIP — infinite marquee */}
+      <div className="border-y overflow-hidden" style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}>
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .marquee-track {
+            display: flex;
+            width: max-content;
+            animation: marquee 28s linear infinite;
+          }
+          .marquee-track:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
+        <div className="marquee-track py-5">
+          {[
+            { icon: UserCheck, label: "One profile", color: "var(--brand-purple)", tint: "var(--brand-purple-tint)" },
+            { icon: FileText, label: "Qualifications uploaded", color: "var(--brand-cyan-deep)", tint: "var(--brand-cyan-tint)" },
+            { icon: Users, label: "References completed", color: "#10B981", tint: "#D1FAE5" },
+            { icon: Star, label: "Seen by providers", color: "#F59E0B", tint: "#FFF7ED" },
+            { icon: Clock, label: "Interview faster", color: "var(--brand-purple)", tint: "var(--brand-purple-tint)" },
+            { icon: BadgeCheck, label: "NDIS compliant", color: "var(--brand-cyan-deep)", tint: "var(--brand-cyan-tint)" },
+            { icon: MapPin, label: "Location matched", color: "#10B981", tint: "#D1FAE5" },
+            { icon: Shield, label: "Document verified", color: "#F59E0B", tint: "#FFF7ED" },
+            { icon: UserCheck, label: "One profile", color: "var(--brand-purple)", tint: "var(--brand-purple-tint)" },
+            { icon: FileText, label: "Qualifications uploaded", color: "var(--brand-cyan-deep)", tint: "var(--brand-cyan-tint)" },
+            { icon: Users, label: "References completed", color: "#10B981", tint: "#D1FAE5" },
+            { icon: Star, label: "Seen by providers", color: "#F59E0B", tint: "#FFF7ED" },
+            { icon: Clock, label: "Interview faster", color: "var(--brand-purple)", tint: "var(--brand-purple-tint)" },
+            { icon: BadgeCheck, label: "NDIS compliant", color: "var(--brand-cyan-deep)", tint: "var(--brand-cyan-tint)" },
+            { icon: MapPin, label: "Location matched", color: "#10B981", tint: "#D1FAE5" },
+            { icon: Shield, label: "Document verified", color: "#F59E0B", tint: "#FFF7ED" },
+          ].map(({ icon: Icon, label, color, tint }, i) => (
+            <div
+              key={i}
+              className="mx-3 flex items-center gap-4 rounded-2xl border px-6 py-4 shrink-0"
+              style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)", minWidth: "220px" }}
+            >
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                style={{ backgroundColor: tint }}
+              >
+                <Icon className="h-5 w-5" style={{ color }} />
+              </span>
+              <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>{label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -563,21 +658,8 @@ export default function GetHiredPage() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {BENEFITS.map(({ icon: Icon, color, tint, title, desc }) => (
-              <div
-                key={title}
-                className="group rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl"
-                style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)" }}
-              >
-                <div
-                  className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: tint }}
-                >
-                  <Icon className="h-5 w-5" style={{ color }} />
-                </div>
-                <h3 className="mb-2 text-[0.95rem] font-black" style={{ color: "var(--brand-ink)" }}>{title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{desc}</p>
-              </div>
+            {BENEFITS.map(({ icon: Icon, color, tint, title, desc }, i) => (
+              <BenefitCard key={title} icon={Icon} color={color} tint={tint} title={title} desc={desc} index={i} />
             ))}
           </div>
         </div>
