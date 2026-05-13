@@ -134,6 +134,7 @@ import { bootstrap as api_admin_bootstrap_bootstrap } from "~backend/admin/boots
 import {
     createComplianceOfficer as api_admin_compliance_officers_createComplianceOfficer,
     deleteComplianceOfficer as api_admin_compliance_officers_deleteComplianceOfficer,
+    listComplianceOfficerStats as api_admin_compliance_officers_listComplianceOfficerStats,
     listComplianceOfficers as api_admin_compliance_officers_listComplianceOfficers,
     updateComplianceOfficer as api_admin_compliance_officers_updateComplianceOfficer
 } from "~backend/admin/compliance_officers";
@@ -270,6 +271,7 @@ export namespace admin {
             this.deleteComplianceOfficer = this.deleteComplianceOfficer.bind(this)
             this.getPrivacyPolicy = this.getPrivacyPolicy.bind(this)
             this.impersonateUser = this.impersonateUser.bind(this)
+            this.listComplianceOfficerStats = this.listComplianceOfficerStats.bind(this)
             this.listComplianceOfficers = this.listComplianceOfficers.bind(this)
             this.listDemoLeads = this.listDemoLeads.bind(this)
             this.listImpersonatableUsers = this.listImpersonatableUsers.bind(this)
@@ -674,6 +676,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/impersonate`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_impersonate_impersonateUser>
+        }
+
+        public async listComplianceOfficerStats(): Promise<ResponseType<typeof api_admin_compliance_officers_listComplianceOfficerStats>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers/stats`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_officers_listComplianceOfficerStats>
         }
 
         public async listComplianceOfficers(): Promise<ResponseType<typeof api_admin_compliance_officers_listComplianceOfficers>> {

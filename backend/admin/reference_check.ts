@@ -172,14 +172,14 @@ export const adminSubmitReferenceCheck = api<SubmitReferenceCheckRequest, Refere
       total_score: number; risk_level: string; recommendation: string; created_at: Date;
     }>`
       INSERT INTO reference_checks (
-        reference_id, conducted_by, relationship, capacity, employment_dates, reason_for_leaving,
+        reference_id, conducted_by, verified_by_user_id, relationship, capacity, employment_dates, reason_for_leaving,
         score_work_performance, score_reliability, score_punctuality, score_professionalism,
         score_quality_of_care, score_documentation, score_teamwork, score_initiative,
         score_concerns, score_rehire,
         strengths, development_areas, additional_comments,
         total_score, risk_level, recommendation
       ) VALUES (
-        ${req.referenceId}, ${req.conductedBy}, ${req.relationship}, ${req.capacity},
+        ${req.referenceId}, ${req.conductedBy}, ${auth.userID}, ${req.relationship}, ${req.capacity},
         ${req.employmentDates}, ${req.reasonForLeaving},
         ${req.scores.workPerformance}, ${req.scores.reliability}, ${req.scores.punctuality},
         ${req.scores.professionalism}, ${req.scores.qualityOfCare}, ${req.scores.documentation},

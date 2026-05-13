@@ -161,6 +161,72 @@ export const updateComplianceOfficer = api<UpdateComplianceOfficerRequest, Updat
   }
 );
 
+export interface ComplianceOfficerStat {
+  userId: string;
+  email: string;
+  fullName: string;
+  createdAt: Date;
+  docsVerified: number;
+  docsRejected: number;
+  referenceChecksCompleted: number;
+  lastActivityAt: Date | null;
+}
+
+export interface ListComplianceOfficerStatsResponse {
+  officers: ComplianceOfficerStat[];
+}
+
+export const listComplianceOfficerStats = api<void, ListComplianceOfficerStatsResponse>(
+  { expose: true, auth: true, method: "GET", path: "/admin/compliance-officers/stats" },
+  async () => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const rows = await db.queryAll<{
+      user_id: string;
+      email: string;
+      full_name: string;
+      created_at: Date;
+      docs_verified: number;
+      docs_rejected: number;
+      reference_checks: number;
+      last_activity_at: Date | null;
+    }>`
+      SELECT
+        co.user_id,
+        u.email,
+        co.full_name,
+        co.created_at,
+        COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Verified')::int AS docs_verified,
+        COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Pending' AND wd.rejection_reason IS NOT NULL)::int AS docs_rejected,
+        COUNT(DISTINCT rc.id)::int AS reference_checks,
+        GREATEST(
+          MAX(wd.verified_at),
+          MAX(rc.created_at)
+        ) AS last_activity_at
+      FROM compliance_officers co
+      JOIN users u ON u.user_id = co.user_id
+      LEFT JOIN worker_documents wd ON wd.verified_by = co.user_id
+      LEFT JOIN reference_checks rc ON rc.verified_by_user_id = co.user_id
+      GROUP BY co.user_id, u.email, co.full_name, co.created_at
+      ORDER BY last_activity_at DESC NULLS LAST, co.created_at DESC
+    `;
+
+    return {
+      officers: rows.map((r) => ({
+        userId: r.user_id,
+        email: r.email,
+        fullName: r.full_name,
+        createdAt: r.created_at,
+        docsVerified: r.docs_verified,
+        docsRejected: r.docs_rejected,
+        referenceChecksCompleted: r.reference_checks,
+        lastActivityAt: r.last_activity_at,
+      })),
+    };
+  }
+);
+
 export interface DeleteComplianceOfficerRequest {
   userId: string;
 }

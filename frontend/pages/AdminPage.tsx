@@ -17,6 +17,7 @@ import type { EmailLogEntry } from "~backend/admin/email_comms";
 import type { ReferenceCheckResult, SubmitReferenceCheckRequest } from "~backend/admin/reference_check";
 import type { AdminEmployerSummary } from "~backend/admin/employers";
 import type { PlatformStats, AdminJobSummary } from "~backend/admin/platform";
+import type { ComplianceOfficerStat } from "~backend/admin/compliance_officers";
 import { DocumentPreviewModal, type PreviewDoc } from "../components/DocumentPreviewModal";
 import { ProfileCompletionBar, workerItemLabels, employerItemLabels } from "../components/ProfileCompletionBar";
 import { ReferenceCheckWizard } from "../components/admin/ReferenceCheckWizard";
@@ -1087,6 +1088,7 @@ function StaffEditPanel({
 
 function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [officers, setOfficers] = useState<Array<{ userId: string; email: string; fullName: string; createdAt: Date }>>([]);
+  const [officerStats, setOfficerStats] = useState<Record<string, ComplianceOfficerStat>>({});
   const [agents, setAgents] = useState<Array<{ userId: string; email: string; grantedAt: Date; notes: string | null }>>([]);
   const [loading, setLoading] = useState(false);
 
@@ -1113,12 +1115,16 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
     if (!api) return;
     setLoading(true);
     try {
-      const [officersRes, agentsRes] = await Promise.all([
+      const [officersRes, agentsRes, statsRes] = await Promise.all([
         api.admin.listComplianceOfficers(),
         api.sales.listSalesAgents(),
+        api.admin.listComplianceOfficerStats(),
       ]);
       setOfficers(officersRes.officers);
       setAgents(agentsRes.agents);
+      const statsMap: Record<string, ComplianceOfficerStat> = {};
+      for (const s of statsRes.officers) statsMap[s.userId] = s;
+      setOfficerStats(statsMap);
     } catch (e: unknown) {
       console.error(e);
     } finally { setLoading(false); }
@@ -1269,9 +1275,31 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
             {officers.map((o) => (
               <Card key={o.userId} className="p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground">{o.fullName}</p>
                     <p className="text-xs text-muted-foreground">{o.email} · Added {new Date(o.createdAt).toLocaleDateString()}</p>
+                    {officerStats[o.userId] && (
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-medium">
+                          <CheckCircle className="h-3 w-3" />
+                          {officerStats[o.userId].docsVerified} docs verified
+                        </span>
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 font-medium">
+                          <X className="h-3 w-3" />
+                          {officerStats[o.userId].docsRejected} docs rejected
+                        </span>
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-medium">
+                          <ClipboardList className="h-3 w-3" />
+                          {officerStats[o.userId].referenceChecksCompleted} ref checks
+                        </span>
+                        {officerStats[o.userId].lastActivityAt && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                            <Activity className="h-3 w-3" />
+                            Last active {new Date(officerStats[o.userId].lastActivityAt!).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-1.5 shrink-0">
                     <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => editingId === o.userId ? setEditingId(null) : startEdit("officer", o.userId)}>
