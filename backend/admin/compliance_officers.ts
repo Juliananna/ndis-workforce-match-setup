@@ -1,33 +1,33 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
+import { secret } from "encore.dev/config";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import db from "../db";
-import { assertAdmin } from "./guard";
+import { assertAdmin, assertSysAdmin } from "./guard";
+import { sendComplianceOfficerInviteEmail } from "../emailer/compliance_invite_email";
 
-export interface CreateComplianceOfficerRequest {
+const appBaseUrl = secret("AppBaseUrl");
+
+export interface InviteComplianceOfficerRequest {
   email: string;
-  password: string;
   fullName: string;
 }
 
-export interface CreateComplianceOfficerResponse {
+export interface InviteComplianceOfficerResponse {
   userId: string;
   email: string;
   fullName: string;
 }
 
-export const createComplianceOfficer = api<CreateComplianceOfficerRequest, CreateComplianceOfficerResponse>(
-  { expose: true, auth: true, method: "POST", path: "/admin/compliance-officers" },
+export const inviteComplianceOfficer = api<InviteComplianceOfficerRequest, InviteComplianceOfficerResponse>(
+  { expose: true, auth: true, method: "POST", path: "/admin/compliance-officers/invite" },
   async (req) => {
     const auth = getAuthData()!;
-    await assertAdmin(auth.userID);
+    await assertSysAdmin(auth.userID);
 
     if (!req.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) {
       throw APIError.invalidArgument("valid email is required");
-    }
-    if (!req.password || req.password.length < 8) {
-      throw APIError.invalidArgument("password must be at least 8 characters");
     }
     if (!req.fullName?.trim()) {
       throw APIError.invalidArgument("fullName is required");
@@ -40,12 +40,12 @@ export const createComplianceOfficer = api<CreateComplianceOfficerRequest, Creat
       throw APIError.alreadyExists("email already registered");
     }
 
-    const passwordHash = await bcrypt.hash(req.password, 12);
+    const tempPasswordHash = await bcrypt.hash(randomUUID(), 12);
     const verificationToken = randomUUID();
 
     const user = await db.queryRow<{ user_id: string }>`
       INSERT INTO users (email, password_hash, role, is_verified, verification_token)
-      VALUES (${req.email.toLowerCase()}, ${passwordHash}, 'COMPLIANCE', TRUE, ${verificationToken})
+      VALUES (${req.email.toLowerCase()}, ${tempPasswordHash}, 'COMPLIANCE', TRUE, ${verificationToken})
       RETURNING user_id
     `;
 
@@ -57,6 +57,20 @@ export const createComplianceOfficer = api<CreateComplianceOfficerRequest, Creat
       INSERT INTO compliance_officers (user_id, full_name, created_by)
       VALUES (${user.user_id}, ${req.fullName.trim()}, ${auth.userID})
     `;
+
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await db.exec`
+      INSERT INTO password_reset_tokens (user_id, token, expires_at)
+      VALUES (${user.user_id}, ${token}, ${expiresAt})
+    `;
+
+    try {
+      const baseUrl = appBaseUrl();
+      await sendComplianceOfficerInviteEmail(req.email.toLowerCase(), req.fullName.trim(), token, baseUrl);
+    } catch {
+    }
 
     return {
       userId: user.user_id,

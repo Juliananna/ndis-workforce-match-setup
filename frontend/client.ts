@@ -132,12 +132,16 @@ export interface ClientOptions {
  */
 import { bootstrap as api_admin_bootstrap_bootstrap } from "~backend/admin/bootstrap";
 import {
-    createComplianceOfficer as api_admin_compliance_officers_createComplianceOfficer,
     deleteComplianceOfficer as api_admin_compliance_officers_deleteComplianceOfficer,
+    inviteComplianceOfficer as api_admin_compliance_officers_inviteComplianceOfficer,
     listComplianceOfficerStats as api_admin_compliance_officers_listComplianceOfficerStats,
     listComplianceOfficers as api_admin_compliance_officers_listComplianceOfficers,
     updateComplianceOfficer as api_admin_compliance_officers_updateComplianceOfficer
 } from "~backend/admin/compliance_officers";
+import {
+    getComplianceProfile as api_admin_compliance_profile_getComplianceProfile,
+    updateComplianceProfile as api_admin_compliance_profile_updateComplianceProfile
+} from "~backend/admin/compliance_profile";
 import { listDemoLeads as api_admin_demo_leads_listDemoLeads } from "~backend/admin/demo_leads";
 import {
     adminListComplianceMessageLog as api_admin_document_message_adminListComplianceMessageLog,
@@ -267,16 +271,18 @@ export namespace admin {
             this.adminVerifyReference = this.adminVerifyReference.bind(this)
             this.adminVerifyUserEmail = this.adminVerifyUserEmail.bind(this)
             this.bootstrap = this.bootstrap.bind(this)
-            this.createComplianceOfficer = this.createComplianceOfficer.bind(this)
             this.deleteComplianceOfficer = this.deleteComplianceOfficer.bind(this)
+            this.getComplianceProfile = this.getComplianceProfile.bind(this)
             this.getPrivacyPolicy = this.getPrivacyPolicy.bind(this)
             this.impersonateUser = this.impersonateUser.bind(this)
+            this.inviteComplianceOfficer = this.inviteComplianceOfficer.bind(this)
             this.listComplianceOfficerStats = this.listComplianceOfficerStats.bind(this)
             this.listComplianceOfficers = this.listComplianceOfficers.bind(this)
             this.listDemoLeads = this.listDemoLeads.bind(this)
             this.listImpersonatableUsers = this.listImpersonatableUsers.bind(this)
             this.seed = this.seed.bind(this)
             this.updateComplianceOfficer = this.updateComplianceOfficer.bind(this)
+            this.updateComplianceProfile = this.updateComplianceProfile.bind(this)
             this.updatePrivacyPolicy = this.updatePrivacyPolicy.bind(this)
         }
 
@@ -656,14 +662,14 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_bootstrap_bootstrap>
         }
 
-        public async createComplianceOfficer(params: RequestType<typeof api_admin_compliance_officers_createComplianceOfficer>): Promise<ResponseType<typeof api_admin_compliance_officers_createComplianceOfficer>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers`, {method: "POST", body: JSON.stringify(params)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_officers_createComplianceOfficer>
-        }
-
         public async deleteComplianceOfficer(params: { userId: string }): Promise<void> {
             await this.baseClient.callTypedAPI(`/admin/compliance-officers/${encodeURIComponent(params.userId)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async getComplianceProfile(): Promise<ResponseType<typeof api_admin_compliance_profile_getComplianceProfile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/compliance/profile`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_profile_getComplianceProfile>
         }
 
         public async getPrivacyPolicy(): Promise<ResponseType<typeof api_admin_privacy_policy_getPrivacyPolicy>> {
@@ -676,6 +682,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/impersonate`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_impersonate_impersonateUser>
+        }
+
+        public async inviteComplianceOfficer(params: RequestType<typeof api_admin_compliance_officers_inviteComplianceOfficer>): Promise<ResponseType<typeof api_admin_compliance_officers_inviteComplianceOfficer>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers/invite`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_officers_inviteComplianceOfficer>
         }
 
         public async listComplianceOfficerStats(): Promise<ResponseType<typeof api_admin_compliance_officers_listComplianceOfficerStats>> {
@@ -719,6 +731,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers/${encodeURIComponent(params.userId)}`, {method: "PATCH", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_officers_updateComplianceOfficer>
+        }
+
+        public async updateComplianceProfile(params: RequestType<typeof api_admin_compliance_profile_updateComplianceProfile>): Promise<ResponseType<typeof api_admin_compliance_profile_updateComplianceProfile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/compliance/profile`, {method: "PATCH", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_profile_updateComplianceProfile>
         }
 
         public async updatePrivacyPolicy(params: RequestType<typeof api_admin_privacy_policy_updatePrivacyPolicy>): Promise<void> {

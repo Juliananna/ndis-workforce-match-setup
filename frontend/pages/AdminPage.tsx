@@ -1094,8 +1094,8 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
 
   const [newOfficerEmail, setNewOfficerEmail] = useState("");
   const [newOfficerName, setNewOfficerName] = useState("");
-  const [newOfficerPassword, setNewOfficerPassword] = useState("");
   const [creatingOfficer, setCreatingOfficer] = useState(false);
+  const [inviteSent, setInviteSent] = useState<string | null>(null);
 
   const [newAgentEmail, setNewAgentEmail] = useState("");
   const [newAgentPassword, setNewAgentPassword] = useState("");
@@ -1187,18 +1187,20 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
     } finally { setSaving(false); }
   };
 
-  const handleCreateOfficer = async () => {
+  const handleInviteOfficer = async () => {
     if (!api) return;
     setError(null);
-    if (!newOfficerEmail.trim() || !newOfficerName.trim() || !newOfficerPassword.trim()) { setError("All fields are required"); return; }
+    setInviteSent(null);
+    if (!newOfficerEmail.trim() || !newOfficerName.trim()) { setError("Name and email are required"); return; }
     setCreatingOfficer(true);
     try {
-      const res = await api.admin.createComplianceOfficer({ email: newOfficerEmail.trim(), password: newOfficerPassword, fullName: newOfficerName.trim() });
+      const res = await api.admin.inviteComplianceOfficer({ email: newOfficerEmail.trim(), fullName: newOfficerName.trim() });
       setOfficers((prev) => [{ userId: res.userId, email: res.email, fullName: res.fullName, createdAt: new Date() }, ...prev]);
-      setNewOfficerEmail(""); setNewOfficerName(""); setNewOfficerPassword("");
+      setInviteSent(res.email);
+      setNewOfficerEmail(""); setNewOfficerName("");
     } catch (e: unknown) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "Failed to create officer");
+      setError(e instanceof Error ? e.message : "Failed to send invitation");
     } finally { setCreatingOfficer(false); }
   };
 
@@ -1247,8 +1249,11 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
         </h3>
 
         <Card className="p-5 space-y-4">
-          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add Compliance Officer</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Invite Compliance Officer</p>
+            <p className="text-xs text-muted-foreground mt-0.5">An invitation email with a set-password link will be sent to the officer.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Full Name</Label>
               <Input placeholder="Jane Smith" value={newOfficerName} onChange={(e) => setNewOfficerName(e.target.value)} className="h-8 text-sm" />
@@ -1257,14 +1262,15 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
               <Label className="text-xs">Email</Label>
               <Input type="email" placeholder="compliance@org.com" value={newOfficerEmail} onChange={(e) => setNewOfficerEmail(e.target.value)} className="h-8 text-sm" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Password</Label>
-              <Input type="password" placeholder="Min. 8 characters" value={newOfficerPassword} onChange={(e) => setNewOfficerPassword(e.target.value)} className="h-8 text-sm" />
-            </div>
           </div>
           {error && !editingId && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />{error}</p>}
-          <Button size="sm" onClick={handleCreateOfficer} disabled={creatingOfficer} className="h-8 text-xs">
-            {creatingOfficer ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <ShieldCheck className="h-3.5 w-3.5 mr-1" />}Create Officer
+          {inviteSent && !error && (
+            <p className="text-xs text-green-500 flex items-center gap-1">
+              <CheckCircle className="h-3.5 w-3.5" />Invitation sent to {inviteSent}
+            </p>
+          )}
+          <Button size="sm" onClick={handleInviteOfficer} disabled={creatingOfficer} className="h-8 text-xs">
+            {creatingOfficer ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Mail className="h-3.5 w-3.5 mr-1" />}Send Invitation
           </Button>
         </Card>
 

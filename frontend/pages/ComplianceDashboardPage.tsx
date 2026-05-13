@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2, Menu, X } from "lucide-react";
+import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2, Menu, X, User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import AdminPage from "./AdminPage";
 import { ReferenceQueueTab } from "../components/admin/ReferenceQueueTab";
 import { DocVerificationTab } from "../components/admin/DocVerificationTab";
+import { ComplianceProfilePanel } from "../components/compliance/ComplianceProfilePanel";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import type { AdminWorkerSummary } from "~backend/admin/workers";
 
-type Section = "verification" | "overview" | "references" | "docs";
+type Section = "verification" | "overview" | "references" | "docs" | "profile";
 
 export default function ComplianceDashboardPage() {
   const { user, logout } = useAuth();
@@ -100,6 +101,18 @@ export default function ComplianceDashboardPage() {
               <span className="text-xs text-indigo-400 bg-indigo-100 px-1.5 py-0.5 rounded-full font-medium">Compliance</span>
             </div>
             <button
+              onClick={() => setSection("profile")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                section === "profile"
+                  ? "text-indigo-700 bg-indigo-50 font-medium"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              }`}
+              title="My Profile"
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </button>
+            <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               title="Sign out"
@@ -123,6 +136,7 @@ export default function ComplianceDashboardPage() {
               { label: "Doc Verification", key: "docs" as Section, badge: pendingDocs > 0 ? pendingDocs : undefined },
               { label: "Worker Verification", key: "verification" as Section },
               { label: "Reference Checks", key: "references" as Section, badge: pendingRefs > 0 ? pendingRefs : undefined },
+              { label: "My Profile", key: "profile" as Section },
             ] as { label: string; key: Section; badge?: number }[]).map((item) => (
               <button
                 key={item.key}
@@ -257,6 +271,11 @@ export default function ComplianceDashboardPage() {
               <p className="text-sm text-gray-500 mt-0.5">Review and verify documents uploaded by workers across the platform.</p>
             </div>
             <DocVerificationTab />
+          </div>
+        )}
+        {section === "profile" && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <ComplianceProfilePanel />
           </div>
         )}
         {section === "verification" && <AdminPage />}
