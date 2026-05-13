@@ -1042,22 +1042,83 @@ function JobsTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   );
 }
 
+function StaffEditPanel({
+  label,
+  fields,
+  onSave,
+  onCancel,
+  saving,
+  error,
+}: {
+  label: string;
+  fields: { key: string; label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }[];
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="border-t border-border pt-3 mt-1 space-y-3">
+      <p className="text-xs font-semibold text-foreground">{label}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {fields.map((f) => (
+          <div key={f.key} className="space-y-1">
+            <Label className="text-xs">{f.label}</Label>
+            <Input
+              type={f.type ?? "text"}
+              value={f.value}
+              onChange={(e) => f.onChange(e.target.value)}
+              placeholder={f.placeholder}
+              className="h-8 text-sm"
+            />
+          </div>
+        ))}
+      </div>
+      {error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />{error}</p>}
+      <div className="flex gap-2">
+        <Button size="sm" className="h-7 text-xs" onClick={onSave} disabled={saving}>
+          {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}Save Changes
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onCancel}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
 function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
   const [officers, setOfficers] = useState<Array<{ userId: string; email: string; fullName: string; createdAt: Date }>>([]);
+  const [agents, setAgents] = useState<Array<{ userId: string; email: string; grantedAt: Date; notes: string | null }>>([]);
   const [loading, setLoading] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const [newOfficerEmail, setNewOfficerEmail] = useState("");
+  const [newOfficerName, setNewOfficerName] = useState("");
+  const [newOfficerPassword, setNewOfficerPassword] = useState("");
+  const [creatingOfficer, setCreatingOfficer] = useState(false);
+
+  const [newAgentEmail, setNewAgentEmail] = useState("");
+  const [newAgentPassword, setNewAgentPassword] = useState("");
+  const [newAgentNotes, setNewAgentNotes] = useState("");
+  const [creatingAgent, setCreatingAgent] = useState(false);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
     setLoading(true);
     try {
-      const res = await api.admin.listComplianceOfficers();
-      setOfficers(res.officers);
+      const [officersRes, agentsRes] = await Promise.all([
+        api.admin.listComplianceOfficers(),
+        api.sales.listSalesAgents(),
+      ]);
+      setOfficers(officersRes.officers);
+      setAgents(agentsRes.agents);
     } catch (e: unknown) {
       console.error(e);
     } finally { setLoading(false); }
@@ -1065,77 +1126,251 @@ function ComplianceTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleCreate = async () => {
+  const startEdit = (type: "officer" | "agent", id: string) => {
+    setError(null);
+    setEditPassword("");
+    if (type === "officer") {
+      const o = officers.find((x) => x.userId === id)!;
+      setEditEmail(o.email);
+      setEditName(o.fullName);
+      setEditNotes("");
+    } else {
+      const a = agents.find((x) => x.userId === id)!;
+      setEditEmail(a.email);
+      setEditName("");
+      setEditNotes(a.notes ?? "");
+    }
+    setEditingId(id);
+  };
+
+  const handleSaveOfficer = async (userId: string) => {
+    if (!api) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.admin.updateComplianceOfficer({
+        userId,
+        email: editEmail.trim() || undefined,
+        fullName: editName.trim() || undefined,
+        password: editPassword.trim() || undefined,
+      });
+      setOfficers((prev) => prev.map((o) => o.userId === userId ? { ...o, email: res.email, fullName: res.fullName } : o));
+      setEditingId(null);
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to update");
+    } finally { setSaving(false); }
+  };
+
+  const handleSaveAgent = async (userId: string) => {
+    if (!api) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.sales.updateSalesAgent({
+        userId,
+        email: editEmail.trim() || undefined,
+        password: editPassword.trim() || undefined,
+        notes: editNotes,
+      });
+      setAgents((prev) => prev.map((a) => a.userId === userId ? { ...a, email: res.email, notes: res.notes } : a));
+      setEditingId(null);
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to update");
+    } finally { setSaving(false); }
+  };
+
+  const handleCreateOfficer = async () => {
     if (!api) return;
     setError(null);
-    if (!newEmail.trim() || !newName.trim() || !newPassword.trim()) { setError("All fields are required"); return; }
-    setCreating(true);
+    if (!newOfficerEmail.trim() || !newOfficerName.trim() || !newOfficerPassword.trim()) { setError("All fields are required"); return; }
+    setCreatingOfficer(true);
     try {
-      const res = await api.admin.createComplianceOfficer({ email: newEmail.trim(), password: newPassword, fullName: newName.trim() });
+      const res = await api.admin.createComplianceOfficer({ email: newOfficerEmail.trim(), password: newOfficerPassword, fullName: newOfficerName.trim() });
       setOfficers((prev) => [{ userId: res.userId, email: res.email, fullName: res.fullName, createdAt: new Date() }, ...prev]);
-      setNewEmail(""); setNewName(""); setNewPassword("");
+      setNewOfficerEmail(""); setNewOfficerName(""); setNewOfficerPassword("");
     } catch (e: unknown) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Failed to create officer");
-    } finally { setCreating(false); }
+    } finally { setCreatingOfficer(false); }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleCreateAgent = async () => {
+    if (!api) return;
+    setError(null);
+    if (!newAgentEmail.trim() || !newAgentPassword.trim()) { setError("Email and password are required"); return; }
+    setCreatingAgent(true);
+    try {
+      const res = await api.sales.createSalesAgent({ email: newAgentEmail.trim(), password: newAgentPassword, notes: newAgentNotes.trim() || undefined });
+      setAgents((prev) => [{ userId: res.userId, email: res.email, grantedAt: new Date(), notes: null }, ...prev]);
+      setNewAgentEmail(""); setNewAgentPassword(""); setNewAgentNotes("");
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to create agent");
+    } finally { setCreatingAgent(false); }
+  };
+
+  const handleDeleteOfficer = async (userId: string) => {
     if (!api) return;
     setDeleting(userId);
     try {
       await api.admin.deleteComplianceOfficer({ userId });
       setOfficers((prev) => prev.filter((o) => o.userId !== userId));
-    } catch (e: unknown) {
-      console.error(e);
-    } finally { setDeleting(null); }
+    } catch (e: unknown) { console.error(e); }
+    finally { setDeleting(null); }
   };
 
-  return (
-    <div className="space-y-4">
-      <Card className="p-5 space-y-4">
-        <p className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Plus className="h-4 w-4" />Create Compliance Officer</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Full Name</Label>
-            <Input placeholder="Jane Smith" value={newName} onChange={(e) => setNewName(e.target.value)} className="h-8 text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Email</Label>
-            <Input type="email" placeholder="compliance@org.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="h-8 text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Password</Label>
-            <Input type="password" placeholder="Min. 8 characters" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-8 text-sm" />
-          </div>
-        </div>
-        {error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />{error}</p>}
-        <Button size="sm" onClick={handleCreate} disabled={creating} className="h-8 text-xs">
-          {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <ShieldCheck className="h-3.5 w-3.5 mr-1" />}Create Officer
-        </Button>
-      </Card>
+  const handleDeleteAgent = async (userId: string) => {
+    if (!api) return;
+    setDeleting(userId);
+    try {
+      await api.sales.deleteSalesAgent({ userId });
+      setAgents((prev) => prev.filter((a) => a.userId !== userId));
+    } catch (e: unknown) { console.error(e); }
+    finally { setDeleting(null); }
+  };
 
-      {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-      ) : officers.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic py-4 text-center">No compliance officers yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {officers.map((o) => (
-            <Card key={o.userId} className="p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">{o.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{o.email} · Created {new Date(o.createdAt).toLocaleDateString()}</p>
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-indigo-400" />Compliance Officers
+        </h3>
+
+        <Card className="p-5 space-y-4">
+          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add Compliance Officer</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Full Name</Label>
+              <Input placeholder="Jane Smith" value={newOfficerName} onChange={(e) => setNewOfficerName(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input type="email" placeholder="compliance@org.com" value={newOfficerEmail} onChange={(e) => setNewOfficerEmail(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Password</Label>
+              <Input type="password" placeholder="Min. 8 characters" value={newOfficerPassword} onChange={(e) => setNewOfficerPassword(e.target.value)} className="h-8 text-sm" />
+            </div>
+          </div>
+          {error && !editingId && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />{error}</p>}
+          <Button size="sm" onClick={handleCreateOfficer} disabled={creatingOfficer} className="h-8 text-xs">
+            {creatingOfficer ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <ShieldCheck className="h-3.5 w-3.5 mr-1" />}Create Officer
+          </Button>
+        </Card>
+
+        {officers.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic py-2 text-center">No compliance officers yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {officers.map((o) => (
+              <Card key={o.userId} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{o.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{o.email} · Added {new Date(o.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => editingId === o.userId ? setEditingId(null) : startEdit("officer", o.userId)}>
+                      <Plus className="h-3 w-3" />Edit
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-destructive border-destructive/30" disabled={deleting === o.userId} onClick={() => handleDeleteOfficer(o.userId)}>
+                      {deleting === o.userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    </Button>
+                  </div>
                 </div>
-                <Button size="sm" variant="outline" className="h-7 text-xs text-destructive border-destructive/30 shrink-0" disabled={deleting === o.userId} onClick={() => handleDelete(o.userId)}>
-                  {deleting === o.userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Trash2 className="h-3 w-3 mr-1" />Remove</>}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+                {editingId === o.userId && (
+                  <StaffEditPanel
+                    label="Edit Compliance Officer"
+                    fields={[
+                      { key: "name", label: "Full Name", value: editName, onChange: setEditName, placeholder: o.fullName },
+                      { key: "email", label: "Email", value: editEmail, onChange: setEditEmail, type: "email", placeholder: o.email },
+                      { key: "password", label: "New Password", value: editPassword, onChange: setEditPassword, type: "password", placeholder: "Leave blank to keep current" },
+                    ]}
+                    onSave={() => handleSaveOfficer(o.userId)}
+                    onCancel={() => setEditingId(null)}
+                    saving={saving}
+                    error={error}
+                  />
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-purple-400" />Sales Agents
+        </h3>
+
+        <Card className="p-5 space-y-4">
+          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" />Add Sales Agent</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input type="email" placeholder="agent@org.com" value={newAgentEmail} onChange={(e) => setNewAgentEmail(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Password</Label>
+              <Input type="password" placeholder="Min. 8 characters" value={newAgentPassword} onChange={(e) => setNewAgentPassword(e.target.value)} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Notes (optional)</Label>
+              <Input placeholder="e.g. Melbourne territory" value={newAgentNotes} onChange={(e) => setNewAgentNotes(e.target.value)} className="h-8 text-sm" />
+            </div>
+          </div>
+          {error && !editingId && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" />{error}</p>}
+          <Button size="sm" onClick={handleCreateAgent} disabled={creatingAgent} className="h-8 text-xs">
+            {creatingAgent ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Plus className="h-3.5 w-3.5 mr-1" />}Create Agent
+          </Button>
+        </Card>
+
+        {agents.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic py-2 text-center">No sales agents yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {agents.map((a) => (
+              <Card key={a.userId} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{a.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Added {new Date(a.grantedAt).toLocaleDateString()}
+                      {a.notes && ` · ${a.notes}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => editingId === a.userId ? setEditingId(null) : startEdit("agent", a.userId)}>
+                      <Plus className="h-3 w-3" />Edit
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs text-destructive border-destructive/30" disabled={deleting === a.userId} onClick={() => handleDeleteAgent(a.userId)}>
+                      {deleting === a.userId ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                </div>
+                {editingId === a.userId && (
+                  <StaffEditPanel
+                    label="Edit Sales Agent"
+                    fields={[
+                      { key: "email", label: "Email", value: editEmail, onChange: setEditEmail, type: "email", placeholder: a.email },
+                      { key: "password", label: "New Password", value: editPassword, onChange: setEditPassword, type: "password", placeholder: "Leave blank to keep current" },
+                      { key: "notes", label: "Notes", value: editNotes, onChange: setEditNotes, placeholder: "e.g. Territory or role notes" },
+                    ]}
+                    onSave={() => handleSaveAgent(a.userId)}
+                    onCancel={() => setEditingId(null)}
+                    saving={saving}
+                    error={error}
+                  />
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

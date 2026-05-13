@@ -86,6 +86,60 @@ export const createSalesAgent = api<CreateSalesAgentRequest, CreateSalesAgentRes
   }
 );
 
+export interface UpdateSalesAgentRequest {
+  userId: string;
+  email?: string;
+  password?: string;
+  notes?: string;
+}
+
+export interface UpdateSalesAgentResponse {
+  userId: string;
+  email: string;
+  notes: string | null;
+}
+
+export const updateSalesAgent = api<UpdateSalesAgentRequest, UpdateSalesAgentResponse>(
+  { expose: true, auth: true, method: "PATCH", path: "/sales/agents/:userId" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const existing = await db.queryRow<{ user_id: string; email: string; notes: string | null }>`
+      SELECT sa.user_id, u.email, sa.notes
+      FROM sales_agents sa
+      JOIN users u ON u.user_id = sa.user_id
+      WHERE sa.user_id = ${req.userId}
+    `;
+    if (!existing) throw APIError.notFound("sales agent not found");
+
+    if (req.email !== undefined) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) throw APIError.invalidArgument("valid email is required");
+      const conflict = await db.queryRow<{ user_id: string }>`
+        SELECT user_id FROM users WHERE email = ${req.email.trim().toLowerCase()} AND user_id != ${req.userId}
+      `;
+      if (conflict) throw APIError.alreadyExists("email already in use");
+      await db.exec`UPDATE users SET email = ${req.email.trim().toLowerCase()} WHERE user_id = ${req.userId}`;
+    }
+
+    if (req.password !== undefined) {
+      if (req.password.length < 8) throw APIError.invalidArgument("password must be at least 8 characters");
+      const hash = await bcrypt.hash(req.password, 12);
+      await db.exec`UPDATE users SET password_hash = ${hash} WHERE user_id = ${req.userId}`;
+    }
+
+    if (req.notes !== undefined) {
+      await db.exec`UPDATE sales_agents SET notes = ${req.notes || null} WHERE user_id = ${req.userId}`;
+    }
+
+    const updated = await db.queryRow<{ email: string; notes: string | null }>`
+      SELECT u.email, sa.notes FROM sales_agents sa JOIN users u ON u.user_id = sa.user_id WHERE sa.user_id = ${req.userId}
+    `;
+
+    return { userId: req.userId, email: updated!.email, notes: updated!.notes };
+  }
+);
+
 export interface DeleteSalesAgentRequest {
   userId: string;
 }

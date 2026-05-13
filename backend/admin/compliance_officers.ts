@@ -104,6 +104,63 @@ export const listComplianceOfficers = api<void, ListComplianceOfficersResponse>(
   }
 );
 
+export interface UpdateComplianceOfficerRequest {
+  userId: string;
+  email?: string;
+  fullName?: string;
+  password?: string;
+}
+
+export interface UpdateComplianceOfficerResponse {
+  userId: string;
+  email: string;
+  fullName: string;
+}
+
+export const updateComplianceOfficer = api<UpdateComplianceOfficerRequest, UpdateComplianceOfficerResponse>(
+  { expose: true, auth: true, method: "PATCH", path: "/admin/compliance-officers/:userId" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdmin(auth.userID);
+
+    const existing = await db.queryRow<{ user_id: string; email: string; full_name: string }>`
+      SELECT co.user_id, u.email, co.full_name
+      FROM compliance_officers co
+      JOIN users u ON u.user_id = co.user_id
+      WHERE co.user_id = ${req.userId}
+    `;
+    if (!existing) throw APIError.notFound("compliance officer not found");
+
+    if (req.email !== undefined) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.email)) throw APIError.invalidArgument("valid email is required");
+      const conflict = await db.queryRow<{ user_id: string }>`
+        SELECT user_id FROM users WHERE email = ${req.email.toLowerCase()} AND user_id != ${req.userId}
+      `;
+      if (conflict) throw APIError.alreadyExists("email already in use");
+      await db.exec`UPDATE users SET email = ${req.email.toLowerCase()} WHERE user_id = ${req.userId}`;
+    }
+
+    if (req.fullName !== undefined) {
+      if (!req.fullName.trim()) throw APIError.invalidArgument("fullName cannot be empty");
+      await db.exec`UPDATE compliance_officers SET full_name = ${req.fullName.trim()} WHERE user_id = ${req.userId}`;
+    }
+
+    if (req.password !== undefined) {
+      if (req.password.length < 8) throw APIError.invalidArgument("password must be at least 8 characters");
+      const hash = await bcrypt.hash(req.password, 12);
+      await db.exec`UPDATE users SET password_hash = ${hash} WHERE user_id = ${req.userId}`;
+    }
+
+    const updated = await db.queryRow<{ email: string; full_name: string }>`
+      SELECT u.email, co.full_name
+      FROM compliance_officers co JOIN users u ON u.user_id = co.user_id
+      WHERE co.user_id = ${req.userId}
+    `;
+
+    return { userId: req.userId, email: updated!.email, fullName: updated!.full_name };
+  }
+);
+
 export interface DeleteComplianceOfficerRequest {
   userId: string;
 }
