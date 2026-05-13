@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Calendar, Clock, Phone, User, Building2, CheckCircle2,
-  CalendarClock, AlertCircle, ChevronRight, RefreshCw, X, Search,
+  CalendarClock, AlertCircle, ChevronRight, RefreshCw, X, Search, MessageSquare, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,14 @@ import { useToast } from "@/components/ui/use-toast";
 
 type Tab = "queue" | "calendar";
 
+interface MessageModalState {
+  workerId: string;
+  referenceId: string;
+  workerName: string;
+  refereeName: string;
+  refereeOrganisation: string;
+}
+
 export function ReferenceQueueTab() {
   const api = useAuthedBackend();
   const { toast } = useToast();
@@ -25,6 +33,7 @@ export function ReferenceQueueTab() {
   const [search, setSearch] = useState("");
   const [bookingItem, setBookingItem] = useState<PendingReferenceItem | null>(null);
   const [wizardRef, setWizardRef] = useState<{ item: PendingReferenceItem; existing: ReferenceCheckResult | null } | null>(null);
+  const [messageModal, setMessageModal] = useState<MessageModalState | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
@@ -62,6 +71,17 @@ export function ReferenceQueueTab() {
       console.error("Cancel failed:", e);
       toast({ title: "Failed to cancel booking", variant: "destructive" });
     }
+  };
+
+  const handleSendMessage = async (message: string) => {
+    if (!api || !messageModal) throw new Error("Not authenticated");
+    await api.admin.adminSendReferenceMessage({
+      workerId: messageModal.workerId,
+      referenceId: messageModal.referenceId,
+      message,
+    });
+    toast({ title: "Message sent", description: "The worker has been notified by email." });
+    setMessageModal(null);
   };
 
   const handleWizardSubmit = async (req: SubmitReferenceCheckRequest): Promise<ReferenceCheckResult> => {
@@ -141,6 +161,7 @@ export function ReferenceQueueTab() {
                       item={item}
                       onSchedule={() => setBookingItem(item)}
                       onConduct={() => setWizardRef({ item, existing: null })}
+                      onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
                     />
                   ))}
                 </Section>
@@ -161,6 +182,7 @@ export function ReferenceQueueTab() {
                       onSchedule={() => setBookingItem(item)}
                       onCancelBooking={() => item.booking && handleCancelBooking(item.booking.id)}
                       onConduct={() => setWizardRef({ item, existing: null })}
+                      onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
                     />
                   ))}
                 </Section>
@@ -189,6 +211,14 @@ export function ReferenceQueueTab() {
           existingCheck={wizardRef.existing}
           onSubmit={handleWizardSubmit}
           onClose={() => setWizardRef(null)}
+        />
+      )}
+
+      {messageModal && (
+        <ReferenceMessageModal
+          modal={messageModal}
+          onSend={handleSendMessage}
+          onClose={() => setMessageModal(null)}
         />
       )}
     </div>
@@ -235,16 +265,100 @@ function Section({
   );
 }
 
+function ReferenceMessageModal({
+  modal,
+  onSend,
+  onClose,
+}: {
+  modal: MessageModalState;
+  onSend: (message: string) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSend = async () => {
+    if (!message.trim()) return;
+    setSending(true);
+    setError(null);
+    try {
+      await onSend(message);
+    } catch (e: unknown) {
+      console.error("Failed to send reference message:", e);
+      setError(e instanceof Error ? e.message : "Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <MessageSquare className="h-4.5 w-4.5 text-indigo-600" />
+            <div>
+              <p className="font-semibold text-sm text-gray-900">Message Worker</p>
+              <p className="text-xs text-gray-500">Re: {modal.refereeName} · {modal.refereeOrganisation}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+            Sending to <span className="font-semibold">{modal.workerName}</span> regarding their reference from <span className="font-semibold">{modal.refereeName}</span>.
+            Use <code className="bg-indigo-100 px-1 rounded">{'{FirstName}'}</code> to personalise.
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-gray-700">Message</label>
+            <textarea
+              rows={5}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="e.g. We were unable to reach your referee. Please provide an updated contact number..."
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+            <p className="text-xs text-gray-400 text-right">{message.length}/2000</p>
+          </div>
+          {error && (
+            <p className="text-xs text-red-600">{error}</p>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100">
+          <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-xs">
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSend}
+            disabled={sending || !message.trim() || message.length > 2000}
+            className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+          >
+            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5" />}
+            Send Message
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReferenceCard({
   item,
   onSchedule,
   onCancelBooking,
   onConduct,
+  onMessage,
 }: {
   item: PendingReferenceItem;
   onSchedule: () => void;
   onCancelBooking?: () => void;
   onConduct: () => void;
+  onMessage: () => void;
 }) {
   const daysWaiting = Math.floor(
     (Date.now() - new Date(item.referenceCreatedAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -311,6 +425,15 @@ function ReferenceCard({
       </div>
 
       <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onMessage}
+          className="h-7 text-xs gap-1"
+        >
+          <MessageSquare className="h-3 w-3" />
+          Message Worker
+        </Button>
         <Button
           size="sm"
           variant="outline"

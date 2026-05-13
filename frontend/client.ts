@@ -182,6 +182,7 @@ import {
     adminGetReferenceCheck as api_admin_reference_check_adminGetReferenceCheck,
     adminSubmitReferenceCheck as api_admin_reference_check_adminSubmitReferenceCheck
 } from "~backend/admin/reference_check";
+import { adminSendReferenceMessage as api_admin_reference_message_adminSendReferenceMessage } from "~backend/admin/reference_message";
 import { adminResetUserPassword as api_admin_reset_user_password_adminResetUserPassword } from "~backend/admin/reset_user_password";
 import { seed as api_admin_seed_seed } from "~backend/admin/seed";
 import {
@@ -249,6 +250,7 @@ export namespace admin {
             this.adminSendBulkSMS = this.adminSendBulkSMS.bind(this)
             this.adminSendDocumentMessage = this.adminSendDocumentMessage.bind(this)
             this.adminSendEmailToUser = this.adminSendEmailToUser.bind(this)
+            this.adminSendReferenceMessage = this.adminSendReferenceMessage.bind(this)
             this.adminSendSMSToUser = this.adminSendSMSToUser.bind(this)
             this.adminSubmitReferenceCheck = this.adminSubmitReferenceCheck.bind(this)
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
@@ -504,6 +506,17 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/email-comms/send-to-user`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminSendEmailToUser>
+        }
+
+        public async adminSendReferenceMessage(params: RequestType<typeof api_admin_reference_message_adminSendReferenceMessage>): Promise<ResponseType<typeof api_admin_reference_message_adminSendReferenceMessage>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                message: params.message,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/references/${encodeURIComponent(params.referenceId)}/message`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_message_adminSendReferenceMessage>
         }
 
         public async adminSendSMSToUser(params: RequestType<typeof api_admin_sms_comms_adminSendSMSToUser>): Promise<ResponseType<typeof api_admin_sms_comms_adminSendSMSToUser>> {
