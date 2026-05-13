@@ -399,7 +399,7 @@ export default function GetHiredPage() {
               className="mb-5 text-[2.4rem] font-black leading-[1.06] tracking-[-0.025em] md:text-[3.25rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Get hired faster by{" "}
+              Get Hired Faster By{" "}
               <span
                 style={{
                   background: "var(--brand-purple-grad)",
@@ -408,7 +408,7 @@ export default function GetHiredPage() {
                   backgroundClip: "text",
                 }}
               >
-                NDIS providers
+                NDIS Providers
               </span>
             </h1>
 
