@@ -8,6 +8,7 @@ export interface SendDocumentMessageRequest {
   workerId: string;
   documentId: string;
   message: string;
+  templateLabel?: string;
 }
 
 export interface SendDocumentMessageResponse {
@@ -65,6 +66,13 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
     `;
     if (!row) throw APIError.internal("failed to create notification");
 
+    await db.exec`
+      INSERT INTO compliance_message_log
+        (sent_by, worker_id, document_id, document_type, template_label, message)
+      VALUES
+        (${auth.userID}, ${req.workerId}, ${req.documentId}, ${docLabel}, ${req.templateLabel ?? null}, ${notifBody})
+    `;
+
     await sendEmail({
       to: workerUser.email,
       subject: `Message about your document: ${docLabel}`,
@@ -88,5 +96,100 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
     }).catch(() => {});
 
     return { notificationId: row.id };
+  }
+);
+
+export interface ComplianceMessageLogEntry {
+  id: string;
+  sentByUserId: string | null;
+  sentByName: string | null;
+  workerId: string;
+  workerName: string | null;
+  documentId: string | null;
+  documentType: string;
+  templateLabel: string | null;
+  message: string;
+  sentAt: Date;
+}
+
+export interface ListComplianceMessageLogRequest {
+  workerId?: string;
+  documentId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListComplianceMessageLogResponse {
+  entries: ComplianceMessageLogEntry[];
+  total: number;
+}
+
+export const adminListComplianceMessageLog = api<ListComplianceMessageLogRequest, ListComplianceMessageLogResponse>(
+  { expose: true, auth: true, method: "GET", path: "/admin/compliance-message-log" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdminOrCompliance(auth.userID);
+
+    const limit = Math.min(req.limit ?? 50, 200);
+    const offset = req.offset ?? 0;
+    const workerFilter = req.workerId ?? null;
+    const docFilter = req.documentId ?? null;
+
+    const [rows, countRow] = await Promise.all([
+      db.queryAll<{
+        id: string;
+        sent_by: string | null;
+        sent_by_name: string | null;
+        worker_id: string;
+        worker_name: string | null;
+        document_id: string | null;
+        document_type: string;
+        template_label: string | null;
+        message: string;
+        sent_at: Date;
+      }>`
+        SELECT
+          l.id,
+          l.sent_by,
+          COALESCE(sw.name, su.email) AS sent_by_name,
+          l.worker_id,
+          w.name AS worker_name,
+          l.document_id,
+          l.document_type,
+          l.template_label,
+          l.message,
+          l.sent_at
+        FROM compliance_message_log l
+        LEFT JOIN users su ON su.user_id = l.sent_by
+        LEFT JOIN workers sw ON sw.user_id = su.user_id
+        LEFT JOIN workers w ON w.worker_id = l.worker_id
+        WHERE (${workerFilter}::uuid IS NULL OR l.worker_id = ${workerFilter}::uuid)
+          AND (${docFilter}::uuid IS NULL OR l.document_id = ${docFilter}::uuid)
+        ORDER BY l.sent_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      db.queryRow<{ count: number }>`
+        SELECT COUNT(*)::int AS count
+        FROM compliance_message_log l
+        WHERE (${workerFilter}::uuid IS NULL OR l.worker_id = ${workerFilter}::uuid)
+          AND (${docFilter}::uuid IS NULL OR l.document_id = ${docFilter}::uuid)
+      `,
+    ]);
+
+    return {
+      entries: rows.map((r) => ({
+        id: r.id,
+        sentByUserId: r.sent_by,
+        sentByName: r.sent_by_name,
+        workerId: r.worker_id,
+        workerName: r.worker_name,
+        documentId: r.document_id,
+        documentType: r.document_type,
+        templateLabel: r.template_label,
+        message: r.message,
+        sentAt: r.sent_at,
+      })),
+      total: countRow?.count ?? 0,
+    };
   }
 );

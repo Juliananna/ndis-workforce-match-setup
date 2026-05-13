@@ -138,7 +138,10 @@ import {
     updateComplianceOfficer as api_admin_compliance_officers_updateComplianceOfficer
 } from "~backend/admin/compliance_officers";
 import { listDemoLeads as api_admin_demo_leads_listDemoLeads } from "~backend/admin/demo_leads";
-import { adminSendDocumentMessage as api_admin_document_message_adminSendDocumentMessage } from "~backend/admin/document_message";
+import {
+    adminListComplianceMessageLog as api_admin_document_message_adminListComplianceMessageLog,
+    adminSendDocumentMessage as api_admin_document_message_adminSendDocumentMessage
+} from "~backend/admin/document_message";
 import {
     adminCreateEmailTemplate as api_admin_email_comms_adminCreateEmailTemplate,
     adminDeleteEmailTemplate as api_admin_email_comms_adminDeleteEmailTemplate,
@@ -232,6 +235,7 @@ export namespace admin {
             this.adminGetWorkerReferences = this.adminGetWorkerReferences.bind(this)
             this.adminGrantSubscription = this.adminGrantSubscription.bind(this)
             this.adminListAuditLog = this.adminListAuditLog.bind(this)
+            this.adminListComplianceMessageLog = this.adminListComplianceMessageLog.bind(this)
             this.adminListEmailLog = this.adminListEmailLog.bind(this)
             this.adminListEmailTemplates = this.adminListEmailTemplates.bind(this)
             this.adminListEmployers = this.adminListEmployers.bind(this)
@@ -379,6 +383,20 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_settings_adminListAuditLog>
         }
 
+        public async adminListComplianceMessageLog(params: RequestType<typeof api_admin_document_message_adminListComplianceMessageLog>): Promise<ResponseType<typeof api_admin_document_message_adminListComplianceMessageLog>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                documentId: params.documentId,
+                limit:      params.limit === undefined ? undefined : String(params.limit),
+                offset:     params.offset === undefined ? undefined : String(params.offset),
+                workerId:   params.workerId,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/compliance-message-log`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_document_message_adminListComplianceMessageLog>
+        }
+
         public async adminListEmailLog(params: RequestType<typeof api_admin_email_comms_adminListEmailLog>): Promise<ResponseType<typeof api_admin_email_comms_adminListEmailLog>> {
             // Convert our params into the objects we need for the request
             const query = makeRecord<string, string | string[]>({
@@ -494,7 +512,8 @@ export namespace admin {
         public async adminSendDocumentMessage(params: RequestType<typeof api_admin_document_message_adminSendDocumentMessage>): Promise<ResponseType<typeof api_admin_document_message_adminSendDocumentMessage>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                message: params.message,
+                message:       params.message,
+                templateLabel: params.templateLabel,
             }
 
             // Now make the actual call to the API
