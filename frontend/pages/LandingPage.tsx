@@ -260,7 +260,7 @@ export default function LandingPage() {
               Faster.
             </h1>
 
-            <p className="mb-9 max-w-lg text-[1.07rem] leading-[1.8]" style={{ color: "var(--brand-muted)" }}>
+            <p className="mb-9 max-w-lg text-[1.07rem] leading-[1.8]" style={{ color: "var(--brand-ink)" }}>
               Access experienced support workers with required qualifications collected, 2 reference checks completed, and files ready to review before interview.
             </p>
 
