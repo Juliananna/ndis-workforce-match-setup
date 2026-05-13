@@ -50,6 +50,7 @@ export const listImpersonatableUsers = api<void, ListImpersonatableUsersResponse
       SELECT w.user_id, w.name, u.email
       FROM workers w
       JOIN users u ON u.user_id = w.user_id
+      WHERE u.is_demo = FALSE
       ORDER BY w.name ASC
       LIMIT 200
     `;
@@ -58,6 +59,7 @@ export const listImpersonatableUsers = api<void, ListImpersonatableUsersResponse
       SELECT e.user_id, e.organisation_name, u.email
       FROM employers e
       JOIN users u ON u.user_id = e.user_id
+      WHERE u.is_demo = FALSE
       ORDER BY e.organisation_name ASC
       LIMIT 200
     `;
