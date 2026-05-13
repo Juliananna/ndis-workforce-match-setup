@@ -1871,6 +1871,10 @@ import {
     getDocumentDownloadUrl as api_workers_employer_documents_getDocumentDownloadUrl,
     listWorkerDocumentsForEmployer as api_workers_employer_documents_listWorkerDocumentsForEmployer
 } from "~backend/workers/employer_documents";
+import {
+    getNdisCocStatus as api_workers_ndis_coc_sign_getNdisCocStatus,
+    signNdisCoc as api_workers_ndis_coc_sign_signNdisCoc
+} from "~backend/workers/ndis_coc_sign";
 import { getWorkerProfile as api_workers_profile_get_getWorkerProfile } from "~backend/workers/profile_get";
 import { updateWorkerProfile as api_workers_profile_update_updateWorkerProfile } from "~backend/workers/profile_update";
 import {
@@ -1919,6 +1923,7 @@ export namespace workers {
             this.getAvatarUploadUrl = this.getAvatarUploadUrl.bind(this)
             this.getDocumentDownloadUrl = this.getDocumentDownloadUrl.bind(this)
             this.getDocumentUploadUrl = this.getDocumentUploadUrl.bind(this)
+            this.getNdisCocStatus = this.getNdisCocStatus.bind(this)
             this.getReferencesForEmployer = this.getReferencesForEmployer.bind(this)
             this.getResumeUploadUrl = this.getResumeUploadUrl.bind(this)
             this.getVerificationScore = this.getVerificationScore.bind(this)
@@ -1934,6 +1939,7 @@ export namespace workers {
             this.listWorkerDocuments = this.listWorkerDocuments.bind(this)
             this.listWorkerDocumentsForEmployer = this.listWorkerDocumentsForEmployer.bind(this)
             this.listWorkerReferences = this.listWorkerReferences.bind(this)
+            this.signNdisCoc = this.signNdisCoc.bind(this)
             this.updateDocumentExpiry = this.updateDocumentExpiry.bind(this)
             this.updateWorkerProfile = this.updateWorkerProfile.bind(this)
             this.updateWorkerReference = this.updateWorkerReference.bind(this)
@@ -2040,6 +2046,12 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/documents/upload-url`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_documents_getDocumentUploadUrl>
+        }
+
+        public async getNdisCocStatus(): Promise<ResponseType<typeof api_workers_ndis_coc_sign_getNdisCocStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/ndis-coc/status`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_ndis_coc_sign_getNdisCocStatus>
         }
 
         public async getReferencesForEmployer(params: { workerId: string }): Promise<ResponseType<typeof api_workers_references_getReferencesForEmployer>> {
@@ -2158,6 +2170,12 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/references`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_references_listWorkerReferences>
+        }
+
+        public async signNdisCoc(params: RequestType<typeof api_workers_ndis_coc_sign_signNdisCoc>): Promise<ResponseType<typeof api_workers_ndis_coc_sign_signNdisCoc>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/ndis-coc/sign`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_ndis_coc_sign_signNdisCoc>
         }
 
         /**

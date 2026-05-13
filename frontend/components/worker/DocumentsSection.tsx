@@ -4,10 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   FileText, Upload, Trash2, Loader2, AlertTriangle,
-  CheckCircle, Clock, X, ShieldCheck, Pencil, Check, Eye,
+  CheckCircle, Clock, X, ShieldCheck, Pencil, Check, Eye, PenLine,
 } from "lucide-react";
 import { DocumentPreviewModal, type PreviewDoc } from "../DocumentPreviewModal";
+import { NdisCocSigningModal } from "./NdisCocSigningModal";
 import type { WorkerDocument } from "~backend/workers/documents";
+
+const NDIS_COC_TYPE = "NDIS Code of Conduct acknowledgement";
 
 const MANDATORY_DOCUMENT_TYPES = [
   "Driver's Licence",
@@ -16,7 +19,7 @@ const MANDATORY_DOCUMENT_TYPES = [
   "Police Clearance",
   "NDIS Worker Screening Check",
   "NDIS Worker Orientation Module",
-  "NDIS Code of Conduct acknowledgement",
+  NDIS_COC_TYPE,
   "Infection Control Certificate",
   "First Aid Certificate",
   "CPR Certificate",
@@ -39,6 +42,7 @@ interface Props {
   onUpload: (file: File, documentType: string, expiryDate?: string, title?: string) => Promise<WorkerDocument>;
   onDelete: (documentId: string) => Promise<void>;
   onUpdateExpiry: (documentId: string, expiryDate: string | null) => Promise<void>;
+  onRefreshDocuments?: () => void;
 }
 
 function StatusChip({ status }: { status: VerificationStatus }) {
@@ -190,7 +194,7 @@ function DocRow({ doc, onDelete, onUpdateExpiry, onQuickView }: DocRowProps) {
   );
 }
 
-export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry }: Props) {
+export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry, onRefreshDocuments }: Props) {
   const [uploading, setUploading] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
   const [trainingTitle, setTrainingTitle] = useState("");
@@ -198,6 +202,7 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
   const fileRef = useRef<HTMLInputElement>(null);
   const [previewDoc, setPreviewDoc] = useState<PreviewDoc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [cocModalOpen, setCocModalOpen] = useState(false);
 
   const handleQuickView = (doc: WorkerDocument) => {
     setPreviewDoc(doc as PreviewDoc);
@@ -217,6 +222,7 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
   );
 
   const availableTypes = ALL_DOCUMENT_TYPES.filter((t) => {
+    if (t === NDIS_COC_TYPE) return false;
     if (t === OTHER_TRAINING) return true;
     return !uploadedSingleTypes.has(t);
   });
@@ -237,7 +243,7 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
     return { type: t, docs: documents.filter((d) => d.documentType === t) };
   });
 
-  const mandatoryUploaded = mandatoryDocs.filter((r) => r.doc).length;
+  const mandatoryUploaded = mandatoryDocs.filter((r) => r.doc || (r.type === NDIS_COC_TYPE && cocSigned)).length;
   const progressPct = Math.round((mandatoryUploaded / MANDATORY_DOCUMENT_TYPES.length) * 100);
   const verifiedCount = documents.filter((d) => d.verificationStatus === "Verified").length;
 
@@ -274,7 +280,10 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
     }
   };
 
-  const allNonTrainingUploaded = availableTypes.filter((t) => t !== OTHER_TRAINING).length === 0;
+  const cocDoc = documents.find((d) => d.documentType === NDIS_COC_TYPE);
+  const cocSigned = cocDoc?.verificationStatus === "Verified";
+
+  const allNonTrainingUploaded = availableTypes.filter((t) => t !== OTHER_TRAINING && t !== NDIS_COC_TYPE).length === 0;
 
   return (
     <div>
@@ -316,10 +325,23 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
                   <span className={`text-xs flex-1 ${rowColor(doc?.verificationStatus as VerificationStatus | undefined)}`}>
                     {type}
                   </span>
-                  {doc && (
-                    <span className="text-xs text-muted-foreground/60 shrink-0">
-                      {doc.verificationStatus}
-                    </span>
+                  {type === NDIS_COC_TYPE ? (
+                    cocSigned ? (
+                      <span className="text-xs text-green-400 shrink-0">Signed</span>
+                    ) : (
+                      <button
+                        onClick={() => setCocModalOpen(true)}
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 shrink-0 font-medium"
+                      >
+                        <PenLine className="h-3 w-3" />Sign
+                      </button>
+                    )
+                  ) : (
+                    doc && (
+                      <span className="text-xs text-muted-foreground/60 shrink-0">
+                        {doc.verificationStatus}
+                      </span>
+                    )
                   )}
                 </div>
               ))}
@@ -371,7 +393,20 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
           </div>
         </div>
 
-        {allNonTrainingUploaded && availableTypes.length === 1 && availableTypes[0] === OTHER_TRAINING ? (
+        {!cocSigned && (
+          <button
+            onClick={() => setCocModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs text-primary hover:bg-primary/10 transition-colors w-full text-left"
+          >
+            <PenLine className="h-4 w-4 shrink-0" />
+            <span>
+              <span className="font-medium">Action required: </span>
+              Sign the NDIS Code of Conduct to complete your compliance profile.
+            </span>
+          </button>
+        )}
+
+        {allNonTrainingUploaded && availableTypes.filter((t) => t !== NDIS_COC_TYPE).length === 1 && availableTypes.filter((t) => t !== NDIS_COC_TYPE)[0] === OTHER_TRAINING ? (
           <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2.5 text-xs text-green-400">
             <CheckCircle className="h-4 w-4 shrink-0" />
             All required document types uploaded. You can still add more &ldquo;Other relevant training&rdquo; below.
@@ -465,6 +500,14 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
         onGetDownloadUrl={handleGetDownloadUrl}
+      />
+      <NdisCocSigningModal
+        open={cocModalOpen}
+        onClose={() => setCocModalOpen(false)}
+        onSigned={() => {
+          setCocModalOpen(false);
+          onRefreshDocuments?.();
+        }}
       />
     </div>
   );

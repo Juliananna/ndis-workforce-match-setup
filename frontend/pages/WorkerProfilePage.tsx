@@ -560,6 +560,12 @@ export default function WorkerProfilePage() {
               onUpload={handleUploadDocument}
               onDelete={handleDeleteDocument}
               onUpdateExpiry={handleUpdateDocumentExpiry}
+              onRefreshDocuments={async () => {
+                if (!api) return;
+                const docsRes = await api.workers.listWorkerDocuments();
+                setDocuments(docsRes.documents);
+                refreshCompletion();
+              }}
             />
           </div>
         </div>
