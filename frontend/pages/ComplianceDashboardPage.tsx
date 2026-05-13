@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2, CalendarClock } from "lucide-react";
+import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import AdminPage from "./AdminPage";
 import { ReferenceQueueTab } from "../components/admin/ReferenceQueueTab";
+import { DocVerificationTab } from "../components/admin/DocVerificationTab";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import type { AdminWorkerSummary } from "~backend/admin/workers";
 
-type Section = "verification" | "overview" | "references";
+type Section = "verification" | "overview" | "references" | "docs";
 
 export default function ComplianceDashboardPage() {
   const { user, logout } = useAuth();
@@ -71,10 +72,15 @@ export default function ComplianceDashboardPage() {
                 onClick={() => setSection("overview")}
               />
               <NavItem
+                label="Doc Verification"
+                active={section === "docs"}
+                onClick={() => setSection("docs")}
+                badge={pendingDocs > 0 ? pendingDocs : undefined}
+              />
+              <NavItem
                 label="Worker Verification"
                 active={section === "verification"}
                 onClick={() => setSection("verification")}
-                badge={pendingDocs > 0 ? pendingDocs : undefined}
               />
               <NavItem
                 label="Reference Checks"
@@ -190,7 +196,7 @@ export default function ComplianceDashboardPage() {
                 cta="Review Documents"
                 badge={pendingDocs > 0 ? `${pendingDocs} pending` : undefined}
                 badgeColor="bg-yellow-100 text-yellow-700"
-                onClick={() => setSection("verification")}
+                onClick={() => setSection("docs")}
               />
               <ActionCard
                 icon={<UserCheck className="h-5 w-5 text-purple-600" />}
@@ -206,6 +212,18 @@ export default function ComplianceDashboardPage() {
           </div>
         )}
 
+        {section === "docs" && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="mb-5">
+              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <FileText className="h-4.5 w-4.5 text-indigo-600" />
+                Document Verification Queue
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">Review and verify documents uploaded by workers across the platform.</p>
+            </div>
+            <DocVerificationTab />
+          </div>
+        )}
         {section === "verification" && <AdminPage />}
         {section === "references" && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
