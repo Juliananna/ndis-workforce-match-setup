@@ -195,7 +195,16 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
             )) <= ${maxDist}
           )
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
-        ORDER BY w.priority_boost DESC, distance_km ASC NULLS LAST
+        ORDER BY
+          w.priority_boost DESC,
+          (
+            (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
+          ) DESC,
+          distance_km ASC NULLS LAST
         LIMIT ${limit}
       `;
     } else {
@@ -216,7 +225,16 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE u.is_demo = FALSE
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
-        ORDER BY w.priority_boost DESC, w.updated_at DESC
+        ORDER BY
+          w.priority_boost DESC,
+          (
+            (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
+          ) DESC,
+          w.updated_at DESC
         LIMIT ${limit}
       `;
     }
