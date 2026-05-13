@@ -134,7 +134,8 @@ import { bootstrap as api_admin_bootstrap_bootstrap } from "~backend/admin/boots
 import {
     createComplianceOfficer as api_admin_compliance_officers_createComplianceOfficer,
     deleteComplianceOfficer as api_admin_compliance_officers_deleteComplianceOfficer,
-    listComplianceOfficers as api_admin_compliance_officers_listComplianceOfficers
+    listComplianceOfficers as api_admin_compliance_officers_listComplianceOfficers,
+    updateComplianceOfficer as api_admin_compliance_officers_updateComplianceOfficer
 } from "~backend/admin/compliance_officers";
 import { listDemoLeads as api_admin_demo_leads_listDemoLeads } from "~backend/admin/demo_leads";
 import { adminSendDocumentMessage as api_admin_document_message_adminSendDocumentMessage } from "~backend/admin/document_message";
@@ -171,6 +172,12 @@ import {
     getPrivacyPolicy as api_admin_privacy_policy_getPrivacyPolicy,
     updatePrivacyPolicy as api_admin_privacy_policy_updatePrivacyPolicy
 } from "~backend/admin/privacy_policy";
+import {
+    adminCancelBooking as api_admin_reference_bookings_adminCancelBooking,
+    adminCreateBooking as api_admin_reference_bookings_adminCreateBooking,
+    adminListPendingReferences as api_admin_reference_bookings_adminListPendingReferences,
+    adminListUpcomingBookings as api_admin_reference_bookings_adminListUpcomingBookings
+} from "~backend/admin/reference_bookings";
 import {
     adminGetReferenceCheck as api_admin_reference_check_adminGetReferenceCheck,
     adminSubmitReferenceCheck as api_admin_reference_check_adminSubmitReferenceCheck
@@ -210,6 +217,8 @@ export namespace admin {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.adminArchiveUser = this.adminArchiveUser.bind(this)
+            this.adminCancelBooking = this.adminCancelBooking.bind(this)
+            this.adminCreateBooking = this.adminCreateBooking.bind(this)
             this.adminCreateEmailTemplate = this.adminCreateEmailTemplate.bind(this)
             this.adminCreateSMSTemplate = this.adminCreateSMSTemplate.bind(this)
             this.adminDeleteEmailTemplate = this.adminDeleteEmailTemplate.bind(this)
@@ -226,9 +235,11 @@ export namespace admin {
             this.adminListEmailTemplates = this.adminListEmailTemplates.bind(this)
             this.adminListEmployers = this.adminListEmployers.bind(this)
             this.adminListJobs = this.adminListJobs.bind(this)
+            this.adminListPendingReferences = this.adminListPendingReferences.bind(this)
             this.adminListSMSLog = this.adminListSMSLog.bind(this)
             this.adminListSMSTemplates = this.adminListSMSTemplates.bind(this)
             this.adminListSettings = this.adminListSettings.bind(this)
+            this.adminListUpcomingBookings = this.adminListUpcomingBookings.bind(this)
             this.adminListUserEmailLog = this.adminListUserEmailLog.bind(this)
             this.adminListUsers = this.adminListUsers.bind(this)
             this.adminListWorkers = this.adminListWorkers.bind(this)
@@ -257,6 +268,7 @@ export namespace admin {
             this.listDemoLeads = this.listDemoLeads.bind(this)
             this.listImpersonatableUsers = this.listImpersonatableUsers.bind(this)
             this.seed = this.seed.bind(this)
+            this.updateComplianceOfficer = this.updateComplianceOfficer.bind(this)
             this.updatePrivacyPolicy = this.updatePrivacyPolicy.bind(this)
         }
 
@@ -267,6 +279,22 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/users/${encodeURIComponent(params.userId)}/archive`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async adminCancelBooking(params: { bookingId: string }): Promise<void> {
+            await this.baseClient.callTypedAPI(`/admin/references/bookings/${encodeURIComponent(params.bookingId)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async adminCreateBooking(params: RequestType<typeof api_admin_reference_bookings_adminCreateBooking>): Promise<ResponseType<typeof api_admin_reference_bookings_adminCreateBooking>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                notes:       params.notes,
+                scheduledAt: params.scheduledAt,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/references/${encodeURIComponent(params.referenceId)}/bookings`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_bookings_adminCreateBooking>
         }
 
         public async adminCreateEmailTemplate(params: RequestType<typeof api_admin_email_comms_adminCreateEmailTemplate>): Promise<ResponseType<typeof api_admin_email_comms_adminCreateEmailTemplate>> {
@@ -379,6 +407,12 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_platform_adminListJobs>
         }
 
+        public async adminListPendingReferences(): Promise<ResponseType<typeof api_admin_reference_bookings_adminListPendingReferences>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/references/pending`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_bookings_adminListPendingReferences>
+        }
+
         public async adminListSMSLog(params: RequestType<typeof api_admin_sms_comms_adminListSMSLog>): Promise<ResponseType<typeof api_admin_sms_comms_adminListSMSLog>> {
             // Convert our params into the objects we need for the request
             const query = makeRecord<string, string | string[]>({
@@ -401,6 +435,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/settings`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_settings_adminListSettings>
+        }
+
+        public async adminListUpcomingBookings(): Promise<ResponseType<typeof api_admin_reference_bookings_adminListUpcomingBookings>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/references/bookings`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_bookings_adminListUpcomingBookings>
         }
 
         public async adminListUserEmailLog(params: RequestType<typeof api_admin_email_comms_adminListUserEmailLog>): Promise<ResponseType<typeof api_admin_email_comms_adminListUserEmailLog>> {
@@ -626,6 +666,19 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/seed`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_seed_seed>
+        }
+
+        public async updateComplianceOfficer(params: RequestType<typeof api_admin_compliance_officers_updateComplianceOfficer>): Promise<ResponseType<typeof api_admin_compliance_officers_updateComplianceOfficer>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                email:    params.email,
+                fullName: params.fullName,
+                password: params.password,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/compliance-officers/${encodeURIComponent(params.userId)}`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_compliance_officers_updateComplianceOfficer>
         }
 
         public async updatePrivacyPolicy(params: RequestType<typeof api_admin_privacy_policy_updatePrivacyPolicy>): Promise<void> {
@@ -1347,7 +1400,8 @@ import {
 import {
     createSalesAgent as api_sales_agents_createSalesAgent,
     deleteSalesAgent as api_sales_agents_deleteSalesAgent,
-    listSalesAgents as api_sales_agents_listSalesAgents
+    listSalesAgents as api_sales_agents_listSalesAgents,
+    updateSalesAgent as api_sales_agents_updateSalesAgent
 } from "~backend/sales/agents";
 import { getSalesDashboard as api_sales_dashboard_getSalesDashboard } from "~backend/sales/dashboard";
 import {
@@ -1398,6 +1452,7 @@ export namespace sales {
             this.salesUpdateWorker = this.salesUpdateWorker.bind(this)
             this.toggleDiscount = this.toggleDiscount.bind(this)
             this.updateDemoStatus = this.updateDemoStatus.bind(this)
+            this.updateSalesAgent = this.updateSalesAgent.bind(this)
             this.validatePromo = this.validatePromo.bind(this)
         }
 
@@ -1585,6 +1640,19 @@ export namespace sales {
             }
 
             await this.baseClient.callTypedAPI(`/sales/demos/${encodeURIComponent(params.demoId)}/status`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async updateSalesAgent(params: RequestType<typeof api_sales_agents_updateSalesAgent>): Promise<ResponseType<typeof api_sales_agents_updateSalesAgent>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                email:    params.email,
+                notes:    params.notes,
+                password: params.password,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/sales/agents/${encodeURIComponent(params.userId)}`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_sales_agents_updateSalesAgent>
         }
 
         public async validatePromo(params: RequestType<typeof api_sales_validate_promo_validatePromo>): Promise<ResponseType<typeof api_sales_validate_promo_validatePromo>> {

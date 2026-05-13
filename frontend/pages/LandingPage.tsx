@@ -244,7 +244,7 @@ export default function LandingPage() {
               className="mb-6 text-[2.6rem] font-black leading-[1.06] tracking-[-0.03em] md:text-[3.6rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Hire pre-vetted NDIS{" "}
+              Hire Pre-Vetted NDIS{" "}
               <span
                 style={{
                   background: "linear-gradient(90deg, #3ED4E2, #3A92DF, #9764C7, #3A92DF, #3ED4E2)",
@@ -255,9 +255,9 @@ export default function LandingPage() {
                   animation: "shimmer 5s linear infinite",
                 }}
               >
-                support workers
+                Support Workers
               </span>{" "}
-              faster.
+              Faster.
             </h1>
 
             <p className="mb-9 max-w-lg text-[1.07rem] leading-[1.8]" style={{ color: "var(--brand-muted)" }}>
