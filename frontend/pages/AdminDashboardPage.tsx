@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Users, Building2, Briefcase, UserCheck, ShieldCheck,
-  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, Eye, Rss,
+  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, Eye, Rss, ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AdminDashboardHome } from "../components/admin/AdminDashboardHome";
@@ -14,24 +14,26 @@ const PrivacyPolicyEditor = lazy(() => import("../components/admin/PrivacyPolicy
 const PlatformSettingsTab = lazy(() => import("../components/admin/PlatformSettingsTab").then((m) => ({ default: m.PlatformSettingsTab })));
 const ViewAsTab = lazy(() => import("../components/admin/ViewAsTab").then((m) => ({ default: m.ViewAsTab })));
 const JobDigestTab = lazy(() => import("../components/admin/JobDigestTab").then((m) => ({ default: m.JobDigestTab })));
+const ReferenceQueueTab = lazy(() => import("../components/admin/ReferenceQueueTab").then((m) => ({ default: m.ReferenceQueueTab })));
 
-type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas" | "jobdigest";
+type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas" | "jobdigest" | "compliance-portal";
 
 const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean; sysadminOnly?: boolean }[] = [
-  { id: "home",       label: "Dashboard",    Icon: LayoutDashboard },
-  { id: "overview",   label: "Analytics",    Icon: BarChart3 },
-  { id: "workers",    label: "Workers",      Icon: Users },
-  { id: "employers",  label: "Employers",    Icon: Building2 },
-  { id: "jobs",       label: "Jobs",         Icon: Briefcase },
-  { id: "users",      label: "Users",        Icon: UserCheck },
-  { id: "compliance", label: "Compliance Officers", Icon: ShieldCheck, adminOnly: true },
-  { id: "email",      label: "Email Comms",  Icon: Mail },
-  { id: "support",    label: "Support",      Icon: HelpCircle },
-  { id: "sales",      label: "Sales Portal", Icon: TrendingUp },
-  { id: "privacy",    label: "Privacy Policy", Icon: FileText, adminOnly: true },
-  { id: "platform",   label: "Platform Settings", Icon: SlidersHorizontal, adminOnly: true },
-  { id: "jobdigest",  label: "Job Digest",        Icon: Rss, adminOnly: true },
-  { id: "viewas",     label: "View As",           Icon: Eye, sysadminOnly: true },
+  { id: "home",             label: "Dashboard",          Icon: LayoutDashboard },
+  { id: "overview",         label: "Analytics",          Icon: BarChart3 },
+  { id: "workers",          label: "Workers",            Icon: Users },
+  { id: "employers",        label: "Employers",          Icon: Building2 },
+  { id: "jobs",             label: "Jobs",               Icon: Briefcase },
+  { id: "users",            label: "Users",              Icon: UserCheck },
+  { id: "compliance",       label: "Compliance Officers",Icon: ShieldCheck, adminOnly: true },
+  { id: "compliance-portal",label: "Compliance Portal",  Icon: ShieldAlert },
+  { id: "email",            label: "Email Comms",        Icon: Mail },
+  { id: "support",          label: "Support",            Icon: HelpCircle },
+  { id: "sales",            label: "Sales Portal",       Icon: TrendingUp },
+  { id: "privacy",          label: "Privacy Policy",     Icon: FileText, adminOnly: true },
+  { id: "platform",         label: "Platform Settings",  Icon: SlidersHorizontal, adminOnly: true },
+  { id: "jobdigest",        label: "Job Digest",         Icon: Rss, adminOnly: true },
+  { id: "viewas",           label: "View As",            Icon: Eye, sysadminOnly: true },
 ];
 
 export default function AdminDashboardPage() {
@@ -159,7 +161,18 @@ export default function AdminDashboardPage() {
             {tab === "platform" && <PlatformSettingsTab api={api} />}
             {tab === "jobdigest" && <JobDigestTab api={api} />}
             {tab === "viewas" && <ViewAsTab />}
-            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "jobdigest" && tab !== "viewas" && (
+            {tab === "compliance-portal" && (
+              <div className="space-y-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-foreground">Compliance Portal</h2>
+                  <p className="text-sm text-gray-500 dark:text-muted-foreground mt-0.5">
+                    Document verification, reference check queue, and compliance management.
+                  </p>
+                </div>
+                <ReferenceQueueTab />
+              </div>
+            )}
+            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "jobdigest" && tab !== "viewas" && tab !== "compliance-portal" && (
               <AdminPage
                 initialTab={tab as "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support"}
                 onTabChange={(t) => setTab(t as AdminTab)}
