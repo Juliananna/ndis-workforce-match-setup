@@ -15,6 +15,7 @@ const PlatformSettingsTab = lazy(() => import("../components/admin/PlatformSetti
 const ViewAsTab = lazy(() => import("../components/admin/ViewAsTab").then((m) => ({ default: m.ViewAsTab })));
 const JobDigestTab = lazy(() => import("../components/admin/JobDigestTab").then((m) => ({ default: m.JobDigestTab })));
 const ReferenceQueueTab = lazy(() => import("../components/admin/ReferenceQueueTab").then((m) => ({ default: m.ReferenceQueueTab })));
+const DocVerificationTab = lazy(() => import("../components/admin/DocVerificationTab").then((m) => ({ default: m.DocVerificationTab })));
 
 type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas" | "jobdigest" | "compliance-portal";
 
@@ -162,14 +163,25 @@ export default function AdminDashboardPage() {
             {tab === "jobdigest" && <JobDigestTab api={api} />}
             {tab === "viewas" && <ViewAsTab />}
             {tab === "compliance-portal" && (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 dark:text-foreground">Compliance Portal</h2>
                   <p className="text-sm text-gray-500 dark:text-muted-foreground mt-0.5">
                     Document verification, reference check queue, and compliance management.
                   </p>
                 </div>
-                <ReferenceQueueTab />
+                <div className="bg-card rounded-2xl border border-border p-6">
+                  <div className="mb-5">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      Document Verification Queue
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-0.5">Review and verify documents uploaded by workers across the platform.</p>
+                  </div>
+                  <DocVerificationTab />
+                </div>
+                <div className="bg-card rounded-2xl border border-border p-6">
+                  <ReferenceQueueTab />
+                </div>
               </div>
             )}
             {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "jobdigest" && tab !== "viewas" && tab !== "compliance-portal" && (
