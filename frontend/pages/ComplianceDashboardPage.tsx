@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2 } from "lucide-react";
+import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import AdminPage from "./AdminPage";
 import { ReferenceQueueTab } from "../components/admin/ReferenceQueueTab";
@@ -14,7 +14,8 @@ export default function ComplianceDashboardPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const api = useAuthedBackend();
-  const [section, setSection] = useState<Section>("verification");
+  const [section, setSection] = useState<Section>("docs");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [workers, setWorkers] = useState<AdminWorkerSummary[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -106,8 +107,42 @@ export default function ComplianceDashboardPage() {
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
             </button>
+            <button
+              className="md:hidden flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 px-4 py-2 flex flex-col gap-1">
+            {([
+              { label: "Overview", key: "overview" as Section },
+              { label: "Doc Verification", key: "docs" as Section, badge: pendingDocs > 0 ? pendingDocs : undefined },
+              { label: "Worker Verification", key: "verification" as Section },
+              { label: "Reference Checks", key: "references" as Section, badge: pendingRefs > 0 ? pendingRefs : undefined },
+            ] as { label: string; key: Section; badge?: number }[]).map((item) => (
+              <button
+                key={item.key}
+                onClick={() => { setSection(item.key); setMobileMenuOpen(false); }}
+                className={`flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  section === item.key
+                    ? "text-indigo-700 bg-indigo-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                }`}
+              >
+                <span>{item.label}</span>
+                {item.badge !== undefined && (
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-700 font-semibold">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
