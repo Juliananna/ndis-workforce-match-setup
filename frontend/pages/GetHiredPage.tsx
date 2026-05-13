@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertCircle, CheckCircle2, Loader2, X, ArrowRight, BadgeCheck,
-  DollarSign, Calendar, Compass, Star, ChevronDown,
-  Tag, Shield, ChevronRight, Sparkles, Heart, Zap,
+  ChevronDown, Tag, FileText, Users, Calendar, MapPin,
+  Briefcase, Star, Shield, ChevronRight, ClipboardCheck,
+  UserCheck, Building2, Clock, Plus, Minus,
 } from "lucide-react";
 import backend from "~backend/client";
 
@@ -29,65 +30,102 @@ const SKILLS = [
   "Allied Health Support",
 ];
 
-const FEATURES = [
+const HOW_IT_WORKS = [
   {
-    icon: DollarSign,
-    tint: "#E0F7FD",
-    fg: "#3A92DF",
-    title: "Set Your Own Rates",
-    desc: "You're in control. Average providers earn 20% more than industry standard benchmarks.",
+    step: "01",
+    icon: UserCheck,
+    color: "var(--brand-purple)",
+    tint: "var(--brand-purple-tint)",
+    title: "Create your profile",
+    desc: "Add your experience, location, availability, and preferred support work.",
   },
   {
-    icon: Calendar,
+    step: "02",
+    icon: FileText,
+    color: "var(--brand-cyan-deep)",
+    tint: "var(--brand-cyan-tint)",
+    title: "Upload your documents",
+    desc: "Add your qualifications, certifications, and required worker documents.",
+  },
+  {
+    step: "03",
+    icon: Users,
+    color: "#10B981",
     tint: "#D1FAE5",
-    fg: "#10B981",
-    title: "Total Flexibility",
-    desc: "Manage your schedule with ease. Work as much or as little as you want.",
+    title: "Complete reference checks",
+    desc: "Provide two references so providers can review your profile with confidence.",
   },
   {
-    icon: Compass,
-    tint: "#F3EDFB",
-    fg: "#9764C7",
-    title: "Smart Matching",
-    desc: "Our intelligent system connects you with participants based on skills, location, and care compatibility.",
-  },
-  {
-    icon: Zap,
+    step: "04",
+    icon: Building2,
+    color: "#F59E0B",
     tint: "#FFF7ED",
-    fg: "#F59E0B",
-    title: "Fast Onboarding",
-    desc: "Complete your profile and start getting matched in minutes — not days.",
+    title: "Get interview requests",
+    desc: "Providers review your profile and contact you directly when they think you're a good fit.",
   },
 ];
 
-const WHY_ITEMS = [
+const BENEFITS = [
   {
-    icon: Shield,
-    fg: "#3A92DF",
-    tint: "#E0F7FD",
-    title: "NDIS-aligned compliance",
-    desc: "Every credential, screening, and document check aligns with NDIS framework requirements.",
+    icon: ClipboardCheck,
+    color: "var(--brand-purple)",
+    tint: "var(--brand-purple-tint)",
+    title: "No endless applications",
+    desc: "Create one profile instead of applying again and again.",
   },
   {
-    icon: Heart,
-    fg: "#9764C7",
-    tint: "#F3EDFB",
-    title: "Purpose-built for care",
-    desc: "Designed specifically for support workers — not generic job boards.",
+    icon: Star,
+    color: "var(--brand-cyan-deep)",
+    tint: "var(--brand-cyan-tint)",
+    title: "Get seen by providers",
+    desc: "Your profile is visible to providers actively looking for support workers.",
   },
   {
     icon: BadgeCheck,
-    fg: "#10B981",
+    color: "#10B981",
     tint: "#D1FAE5",
-    title: "Verified & trusted",
-    desc: "Your credentials are verified and displayed to providers, building trust before first contact.",
+    title: "Show your experience upfront",
+    desc: "Qualifications, references, availability, and experience are clear from the start.",
   },
   {
-    icon: Sparkles,
-    fg: "#F59E0B",
+    icon: Calendar,
+    color: "#F59E0B",
     tint: "#FFF7ED",
-    title: "Better matches, better outcomes",
-    desc: "When the right worker meets the right participant, care quality and satisfaction improve.",
+    title: "More control over your work",
+    desc: "Choose opportunities that match your location, availability, and preferences.",
+  },
+];
+
+const PROFILE_FIELDS = [
+  { icon: Briefcase, label: "Experience", color: "var(--brand-purple)" },
+  { icon: FileText, label: "Qualifications", color: "var(--brand-cyan-deep)" },
+  { icon: BadgeCheck, label: "Certifications", color: "#10B981" },
+  { icon: Users, label: "References", color: "#F59E0B" },
+  { icon: Calendar, label: "Availability", color: "var(--brand-purple)" },
+  { icon: MapPin, label: "Preferred locations", color: "var(--brand-cyan-deep)" },
+  { icon: ClipboardCheck, label: "Support preferences", color: "#10B981" },
+];
+
+const FAQS = [
+  {
+    q: "Is KizaziHire free for support workers?",
+    a: "Yes. Creating a profile and being discovered by providers is completely free for support workers. There are no upfront fees or subscription costs.",
+  },
+  {
+    q: "Do I need qualifications?",
+    a: "You don't need every document to start, but uploading your certifications (such as First Aid, NDIS Worker Orientation, Police Check, and NDIS Worker Screening Check) makes your profile much stronger. Providers are more likely to request an interview when your documents are complete.",
+  },
+  {
+    q: "Do I get employed by KizaziHire?",
+    a: "No. KizaziHire is a matching platform. Providers and support workers agree on employment or contracting arrangements directly. We simply make it easier for the right people to find each other.",
+  },
+  {
+    q: "Can providers contact me directly?",
+    a: "Yes. When a provider finds your profile and thinks you're a good fit, they can send you an interview or offer request through the platform. You review it and decide whether to proceed.",
+  },
+  {
+    q: "How long does verification take?",
+    a: "Most document verifications are completed within 1–3 business days once you've uploaded your documents. You'll be notified as each document is reviewed.",
   },
 ];
 
@@ -95,6 +133,7 @@ export default function GetHiredPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const formRef = useRef<HTMLDivElement>(null);
+  const howItWorksRef = useRef<HTMLElement>(null);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -109,6 +148,7 @@ export default function GetHiredPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ email: string; promoGrants?: string[] } | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     const code = searchParams.get("promo");
@@ -171,9 +211,9 @@ export default function GetHiredPage() {
               <CheckCircle2 className="h-10 w-10" style={{ color: "var(--brand-green)" }} />
             </div>
           </div>
-          <h2 className="text-2xl font-black mb-2" style={{ color: "var(--brand-ink)" }}>You're in!</h2>
+          <h2 className="text-2xl font-black mb-2" style={{ color: "var(--brand-ink)" }}>Profile created!</h2>
           <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-            We sent a verification link to <strong style={{ color: "var(--brand-ink)" }}>{success.email}</strong>. Click the link to activate your account.
+            We sent a verification link to <strong style={{ color: "var(--brand-ink)" }}>{success.email}</strong>. Click the link to activate your account and complete your profile.
           </p>
           {success.promoGrants && success.promoGrants.length > 0 && (
             <div className="mb-5 rounded-2xl p-3 text-left border" style={{ backgroundColor: "var(--brand-mint)", borderColor: "#A7F3D0" }}>
@@ -219,9 +259,9 @@ export default function GetHiredPage() {
 
           <div className="hidden items-center gap-8 md:flex">
             {[
-              { href: "#features", label: "Benefits" },
-              { href: "#why", label: "Why join" },
-              { href: "#signup", label: "Sign up" },
+              { href: "#how-it-works", label: "How it works" },
+              { href: "#benefits", label: "Benefits" },
+              { href: "#faq", label: "FAQ" },
             ].map(({ href, label }) => (
               <a
                 key={href}
@@ -252,7 +292,7 @@ export default function GetHiredPage() {
                 boxShadow: "0 4px 14px rgba(151,100,199,0.30)",
               }}
             >
-              Get started <ChevronRight className="h-3.5 w-3.5" />
+              Create Worker Profile <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -272,38 +312,26 @@ export default function GetHiredPage() {
           className="pointer-events-none absolute -bottom-24 -left-24 h-[400px] w-[400px] rounded-full opacity-15"
           style={{ background: "radial-gradient(circle, #3ED4E2 0%, transparent 70%)" }}
         />
-        <svg
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.04]"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#9764C7" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-6 py-24 md:grid-cols-[1.05fr_0.95fr] md:py-32">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-28">
           <div>
             <span
-              className="mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-[0.18em]"
+              className="mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-black uppercase tracking-[0.18em]"
               style={{
                 borderColor: "rgba(151,100,199,0.22)",
                 backgroundColor: "rgba(243,237,251,0.75)",
                 color: "var(--brand-purple)",
               }}
             >
-              <BadgeCheck className="h-3 w-3" />
+              <Shield className="h-3 w-3" />
               For NDIS support workers · Australia
             </span>
 
             <h1
-              className="mb-5 text-[2.5rem] font-black leading-[1.06] tracking-[-0.025em] md:text-[3.5rem]"
+              className="mb-5 text-[2.4rem] font-black leading-[1.06] tracking-[-0.025em] md:text-[3.25rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Be the{" "}
+              Get hired faster by{" "}
               <span
                 style={{
                   background: "var(--brand-purple-grad)",
@@ -312,20 +340,18 @@ export default function GetHiredPage() {
                   backgroundClip: "text",
                 }}
               >
-                support
+                NDIS providers
               </span>
-              <br />
-              they deserve.
             </h1>
 
             <p
-              className="mb-9 max-w-lg text-[1.07rem] leading-[1.75]"
+              className="mb-8 max-w-lg text-[1.05rem] leading-[1.75]"
               style={{ color: "var(--brand-muted)" }}
             >
-              Join Australia's most trusted NDIS workforce. Set your rates, choose your hours, and match with participants who need your specific skills.
+              Create one profile, upload your qualifications, complete your references, and get seen by providers looking for support workers.
             </p>
 
-            <div className="mb-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mb-8 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
                 className="flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-sm font-black text-white transition-all hover:-translate-y-1"
@@ -334,10 +360,10 @@ export default function GetHiredPage() {
                   boxShadow: "0 8px 28px rgba(151,100,199,0.28)",
                 }}
               >
-                Create free account <ArrowRight className="h-4 w-4" />
+                Create Worker Profile <ArrowRight className="h-4 w-4" />
               </button>
-              <Link
-                to="/"
+              <button
+                onClick={() => howItWorksRef.current?.scrollIntoView({ behavior: "smooth" })}
                 className="flex items-center justify-center gap-2 rounded-2xl border px-7 py-4 text-sm font-bold transition-all hover:-translate-y-1 hover:shadow-md"
                 style={{
                   borderColor: "var(--brand-border)",
@@ -345,67 +371,48 @@ export default function GetHiredPage() {
                   color: "var(--brand-ink)",
                 }}
               >
-                I'm a provider →
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              {[
-                "Verified credentials",
-                "NDIS-aligned screening",
-                "Flexible scheduling",
-                "Smart matching",
-              ].map((label) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold"
-                  style={{
-                    borderColor: "var(--brand-border)",
-                    backgroundColor: "rgba(255,255,255,0.85)",
-                    color: "var(--brand-muted)",
-                  }}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--brand-green)" }} />
-                  {label}
-                </div>
-              ))}
+                How It Works
+              </button>
             </div>
           </div>
 
-          {/* Right: worker profile card mockup */}
-          <div className="relative mx-auto w-full max-w-[400px]">
+          {/* Hero mockup */}
+          <div className="relative mx-auto w-full max-w-[380px]">
+            {/* Interview request floating card */}
             <div
-              className="absolute -left-8 top-10 z-10 flex items-center gap-3 rounded-2xl px-4 py-3"
-              style={{ backgroundColor: "white", boxShadow: "0 10px 40px rgba(151,100,199,0.14)" }}
+              className="absolute -left-8 top-6 z-10 flex items-center gap-3 rounded-2xl px-4 py-3"
+              style={{ backgroundColor: "white", boxShadow: "0 10px 40px rgba(151,100,199,0.16)" }}
             >
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                style={{ backgroundColor: "var(--brand-purple-tint)" }}
+                style={{ backgroundColor: "var(--brand-mint)" }}
               >
-                <BadgeCheck className="h-4 w-4" style={{ color: "var(--brand-purple)" }} />
+                <Building2 className="h-4 w-4" style={{ color: "var(--brand-green)" }} />
               </span>
               <div>
-                <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>Documents verified</p>
-                <p className="text-[11px]" style={{ color: "var(--brand-muted)" }}>Screening complete</p>
+                <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>Interview request</p>
+                <p className="text-[11px]" style={{ color: "var(--brand-muted)" }}>Suncare Support · Just now</p>
               </div>
             </div>
 
+            {/* References completed card */}
             <div
-              className="absolute -right-6 bottom-16 z-10 flex items-center gap-3 rounded-2xl px-4 py-3"
-              style={{ backgroundColor: "white", boxShadow: "0 10px 40px rgba(43,183,227,0.14)" }}
+              className="absolute -right-6 bottom-20 z-10 flex items-center gap-3 rounded-2xl px-4 py-3"
+              style={{ backgroundColor: "white", boxShadow: "0 10px 40px rgba(43,183,227,0.16)" }}
             >
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                 style={{ backgroundColor: "var(--brand-cyan-tint)" }}
               >
-                <Star className="h-4 w-4 fill-current" style={{ color: "var(--brand-cyan-deep)" }} />
+                <CheckCircle2 className="h-4 w-4" style={{ color: "var(--brand-cyan-deep)" }} />
               </span>
               <div>
-                <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>4.9/5 avg rating</p>
-                <p className="text-[11px]" style={{ color: "var(--brand-muted)" }}>Worker satisfaction</p>
+                <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>References completed</p>
+                <p className="text-[11px]" style={{ color: "var(--brand-muted)" }}>2 of 2 verified</p>
               </div>
             </div>
 
+            {/* Worker profile card */}
             <div
               className="overflow-hidden rounded-[2.2rem] p-2.5"
               style={{ backgroundColor: "white", boxShadow: "0 24px 72px rgba(151,100,199,0.14)" }}
@@ -417,17 +424,10 @@ export default function GetHiredPage() {
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
                   Worker profile · Personal care
                 </p>
-                <div className="mb-5 flex items-start justify-between">
-                  <p className="text-[1.45rem] font-black leading-tight">Sarah Mitchell</p>
-                  <div
-                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
-                    style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                  >
-                    <Star className="h-3 w-3 fill-white" /> 4.9
-                  </div>
-                </div>
+                <p className="text-[1.35rem] font-black leading-tight mb-1">Sarah Mitchell</p>
+                <p className="text-[11px] text-white/70 mb-4">Melbourne, VIC · Available weekdays</p>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-3">
                   {["Personal care", "Social support", "Community access", "Domestic assist."].map((s) => (
                     <span
                       key={s}
@@ -440,21 +440,34 @@ export default function GetHiredPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 px-3 pt-3 pb-1">
-                {[
-                  { label: "Police check", color: "var(--brand-green)", bg: "#D1FAE5" },
-                  { label: "NDIS screened", color: "var(--brand-cyan-deep)", bg: "var(--brand-cyan-tint)" },
-                  { label: "First aid", color: "#F59E0B", bg: "#FFF7ED" },
-                ].map(({ label, color, bg }) => (
-                  <span
-                    key={label}
-                    className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-bold"
-                    style={{ backgroundColor: bg, color }}
-                  >
-                    <BadgeCheck className="h-3 w-3" />
-                    {label}
-                  </span>
-                ))}
+              {/* Qualifications row */}
+              <div className="px-4 pt-3 pb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: "var(--brand-muted)" }}>Qualifications uploaded</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {[
+                    { label: "Police check", color: "#10B981", bg: "#D1FAE5" },
+                    { label: "NDIS screened", color: "var(--brand-cyan-deep)", bg: "var(--brand-cyan-tint)" },
+                    { label: "First aid", color: "#F59E0B", bg: "#FFF7ED" },
+                    { label: "Cert III", color: "var(--brand-purple)", bg: "var(--brand-purple-tint)" },
+                  ].map(({ label, color, bg }) => (
+                    <span
+                      key={label}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[10px] font-bold"
+                      style={{ backgroundColor: bg, color }}
+                    >
+                      <BadgeCheck className="h-3 w-3" />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 py-2 border-t" style={{ borderColor: "var(--brand-border)" }}>
+                  <div className="flex -space-x-1.5">
+                    {["#9764C7", "#3A92DF", "#10B981"].map((bg) => (
+                      <div key={bg} className="h-5 w-5 rounded-full border-2 border-white" style={{ backgroundColor: bg }} />
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-semibold" style={{ color: "var(--brand-muted)" }}>3 providers viewed this week</p>
+                </div>
               </div>
             </div>
           </div>
@@ -463,20 +476,21 @@ export default function GetHiredPage() {
 
       {/* TRUST STRIP */}
       <div className="border-y" style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}>
-        <div className="mx-auto max-w-5xl px-6 py-8">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+        <div className="mx-auto max-w-5xl px-6 py-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 md:justify-between">
             {[
-              { icon: BadgeCheck, label: "Verified credentials" },
-              { icon: Shield, label: "NDIS-aligned screening" },
-              { icon: Compass, label: "Smart matching" },
-              { icon: Heart, label: "Purpose-built for care" },
+              { icon: UserCheck, label: "One profile" },
+              { icon: FileText, label: "Qualifications uploaded" },
+              { icon: Users, label: "References completed" },
+              { icon: Star, label: "Seen by providers" },
+              { icon: Clock, label: "Interview faster" },
             ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-3 text-center md:flex-row md:text-left">
+              <div key={label} className="flex items-center gap-2.5">
                 <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: "var(--brand-purple-tint)" }}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: "var(--brand-mint)" }}
                 >
-                  <Icon className="h-5 w-5" style={{ color: "var(--brand-purple)" }} />
+                  <Icon className="h-4 w-4" style={{ color: "var(--brand-green)" }} />
                 </span>
                 <p className="text-sm font-bold" style={{ color: "var(--brand-ink)" }}>{label}</p>
               </div>
@@ -485,40 +499,42 @@ export default function GetHiredPage() {
         </div>
       </div>
 
-      {/* BENEFITS */}
-      <section id="features" className="py-20 md:py-28">
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" ref={howItWorksRef} className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="mb-14 max-w-2xl">
+          <div className="mb-14 text-center">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
               style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
             >
-              Worker benefits
+              The process
             </span>
             <h2
               className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Everything you need to{" "}
-              <span style={{ color: "var(--brand-muted)", fontWeight: 600 }}>build your practice.</span>
+              How KizaziHire works for support workers
             </h2>
-            <p className="text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-              Four reasons support workers choose KizaziHire over generic job platforms.
-            </p>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map(({ icon: Icon, tint, fg, title, desc }) => (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {HOW_IT_WORKS.map(({ step, icon: Icon, color, tint, title, desc }) => (
               <div
-                key={title}
-                className="group rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl"
-                style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)" }}
+                key={step}
+                className="relative rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+                style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
               >
+                <span
+                  className="absolute right-5 top-5 text-[2rem] font-black leading-none"
+                  style={{ color: "var(--brand-surface)" }}
+                >
+                  {step}
+                </span>
                 <div
                   className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl"
                   style={{ backgroundColor: tint }}
                 >
-                  <Icon className="h-5 w-5" style={{ color: fg }} />
+                  <Icon className="h-5 w-5" style={{ color }} />
                 </div>
                 <h3 className="mb-2 text-[0.95rem] font-black" style={{ color: "var(--brand-ink)" }}>{title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{desc}</p>
@@ -528,57 +544,136 @@ export default function GetHiredPage() {
         </div>
       </section>
 
-      {/* PROMO BANNER */}
-      <section className="py-6 md:py-10" style={{ backgroundColor: "white" }}>
+      {/* BENEFITS */}
+      <section id="benefits" className="py-20 md:py-28" style={{ backgroundColor: "white" }}>
         <div className="mx-auto max-w-6xl px-6">
-          <div
-            className="relative overflow-hidden rounded-3xl p-8 md:p-10"
-            style={{ background: "var(--brand-hero-grad)" }}
-          >
-            <div className="pointer-events-none absolute -right-16 -top-16 h-80 w-80 rounded-full opacity-20" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-            <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full opacity-15" style={{ backgroundColor: "rgba(255,255,255,0.12)" }} />
-            <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span className="mb-3 inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/70 border border-white/20">
-                  Limited Time Offer
-                </span>
-                <h2 className="mb-2 text-xl font-black text-white md:text-2xl">
-                  Get Verified for Free
-                </h2>
-                <p className="text-sm leading-relaxed text-white/75 md:max-w-md">
-                  We've waived the $45 background check fee for new applicants this month. Start your journey with zero upfront costs.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 md:items-end md:shrink-0">
-                <div className="flex items-center gap-2 text-white text-xs font-semibold">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: "var(--brand-mint)" }} />
-                  ID &amp; Police Check Included
-                </div>
-                <button
-                  onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-black transition-all hover:-translate-y-0.5"
-                  style={{ backgroundColor: "white", color: "var(--brand-purple)" }}
+          <div className="mb-14 text-center">
+            <span
+              className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
+              style={{ backgroundColor: "var(--brand-cyan-tint)", color: "var(--brand-cyan-deep)" }}
+            >
+              Why choose us
+            </span>
+            <h2
+              className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
+              style={{ color: "var(--brand-ink)" }}
+            >
+              Why support workers use KizaziHire
+            </h2>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map(({ icon: Icon, color, tint, title, desc }) => (
+              <div
+                key={title}
+                className="group rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl"
+                style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)" }}
+              >
+                <div
+                  className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: tint }}
                 >
-                  Claim Now <ArrowRight className="h-4 w-4" />
-                </button>
+                  <Icon className="h-5 w-5" style={{ color }} />
+                </div>
+                <h3 className="mb-2 text-[0.95rem] font-black" style={{ color: "var(--brand-ink)" }}>{title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PROFILE PREVIEW */}
+      <section className="py-20 md:py-28">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-14 md:grid-cols-2 md:items-center">
+            <div>
+              <span
+                className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
+                style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
+              >
+                Your profile
+              </span>
+              <h2
+                className="mb-5 text-3xl font-black leading-tight md:text-[2.3rem]"
+                style={{ color: "var(--brand-ink)" }}
+              >
+                Your profile does the work for you
+              </h2>
+              <p className="mb-8 text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+                Once your profile is complete, providers can review the information they need before requesting an interview.
+              </p>
+              <button
+                onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
+                className="flex items-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white transition-all hover:-translate-y-0.5"
+                style={{ background: "var(--brand-purple-grad)", boxShadow: "0 6px 20px rgba(151,100,199,0.26)" }}
+              >
+                Create Worker Profile <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {PROFILE_FIELDS.map(({ icon: Icon, label, color }) => (
+                <div
+                  key={label}
+                  className="flex items-center gap-3 rounded-2xl border p-4 transition-all hover:shadow-md"
+                  style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
+                >
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: "var(--brand-canvas)" }}
+                  >
+                    <Icon className="h-4.5 w-4.5" style={{ color }} />
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: "var(--brand-ink)" }}>{label}</span>
+                </div>
+              ))}
+              <div
+                className="flex items-center justify-center rounded-2xl border-2 border-dashed p-4"
+                style={{ borderColor: "var(--brand-border)" }}
+              >
+                <span className="text-sm font-bold" style={{ color: "var(--brand-muted)" }}>+ more</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SIGNUP + SOCIAL PROOF */}
+      {/* PAIN POINT */}
+      <section
+        className="relative overflow-hidden py-20 md:py-24"
+        style={{ background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)" }}
+      >
+        <div className="pointer-events-none absolute -right-16 -top-16 h-80 w-80 rounded-full opacity-10" style={{ backgroundColor: "var(--brand-purple)" }} />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full opacity-10" style={{ backgroundColor: "var(--brand-cyan)" }} />
+
+        <div className="relative mx-auto max-w-3xl px-6 text-center">
+          <h2 className="mb-5 text-3xl font-black leading-tight text-white md:text-[2.5rem]">
+            Stop applying into silence
+          </h2>
+          <p className="mb-8 text-[1.05rem] leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>
+            Support workers spend too much time applying for roles and waiting for replies. KizaziHire helps you build one clear profile so providers can find you faster.
+          </p>
+          <button
+            onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })}
+            className="inline-flex items-center gap-2 rounded-2xl px-8 py-4 text-sm font-black transition-all hover:-translate-y-1"
+            style={{ backgroundColor: "white", color: "var(--brand-ink)" }}
+          >
+            Create Worker Profile <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </section>
+
+      {/* SIGNUP */}
       <section id="signup" className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-10 md:grid-cols-2 md:items-start">
-
-            {/* Form */}
             <div
               ref={formRef}
               className="rounded-3xl border p-8"
               style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
             >
-              <h2 className="mb-1 text-2xl font-black" style={{ color: "var(--brand-ink)" }}>Start Your Application</h2>
+              <h2 className="mb-1 text-2xl font-black" style={{ color: "var(--brand-ink)" }}>Create Worker Profile</h2>
               <p className="mb-6 text-sm" style={{ color: "var(--brand-muted)" }}>Takes less than 3 minutes to get started</p>
 
               {error && (
@@ -726,10 +821,10 @@ export default function GetHiredPage() {
                     style={{ accentColor: "var(--brand-purple)" }}
                   />
                   <label htmlFor="agree" className="cursor-pointer text-xs leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-                    By clicking "Create My Account" you agree to our{" "}
-                    <a href="https://ndis.gov.au/about-us/policies/privacy" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline" style={{ color: "var(--brand-purple)" }}>Terms of Service</a>
+                    By clicking "Create Worker Profile" you agree to our{" "}
+                    <Link to="/privacy-policy" className="font-bold hover:underline" style={{ color: "var(--brand-purple)" }}>Terms of Service</Link>
                     {" "}and{" "}
-                    <a href="https://ndis.gov.au/about-us/policies/privacy" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline" style={{ color: "var(--brand-purple)" }}>Privacy Policy</a>
+                    <Link to="/privacy-policy" className="font-bold hover:underline" style={{ color: "var(--brand-purple)" }}>Privacy Policy</Link>
                   </label>
                 </div>
 
@@ -743,7 +838,7 @@ export default function GetHiredPage() {
                   }}
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {loading ? "Creating account…" : "Create My Account →"}
+                  {loading ? "Creating profile…" : "Create Worker Profile →"}
                 </button>
               </form>
 
@@ -753,56 +848,31 @@ export default function GetHiredPage() {
               </p>
             </div>
 
-            {/* Social proof */}
+            {/* Right column — what happens next */}
             <div className="flex flex-col gap-5">
               <div
                 className="rounded-3xl border p-8"
                 style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
               >
-                <div className="mb-5 flex items-center gap-3">
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: "var(--brand-purple-tint)" }}
-                  >
-                    <Shield className="h-5 w-5" style={{ color: "var(--brand-purple)" }} />
-                  </span>
-                  <div>
-                    <h3 className="font-black" style={{ color: "var(--brand-ink)" }}>Join the Movement</h3>
-                    <p className="text-xs" style={{ color: "var(--brand-muted)" }}>Empowering 96,000+ support workers across Australia.</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex -space-x-2">
-                    {[
-                      { bg: "#3A92DF", label: "S" },
-                      { bg: "#9764C7", label: "J" },
-                      { bg: "#3ED4E2", label: "M" },
-                      { bg: "#F59E0B", label: "A" },
-                    ].map(({ bg, label }) => (
-                      <div
-                        key={label}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[10px] font-black text-white"
-                        style={{ backgroundColor: bg }}
-                      >
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs font-semibold" style={{ color: "var(--brand-muted)" }}>+96,000 workers joined</p>
-                </div>
-                <div className="space-y-3">
+                <h3 className="mb-5 text-lg font-black" style={{ color: "var(--brand-ink)" }}>What happens after you sign up</h3>
+                <div className="space-y-4">
                   {[
-                    { label: "Profile completion", pct: 85, color: "var(--brand-purple)" },
-                    { label: "Match rate", pct: 92, color: "var(--brand-cyan-deep)" },
-                    { label: "Worker satisfaction", pct: 96, color: "var(--brand-green)" },
-                  ].map(({ label, pct, color }) => (
-                    <div key={label}>
-                      <div className="mb-1 flex justify-between">
-                        <p className="text-xs font-semibold" style={{ color: "var(--brand-muted)" }}>{label}</p>
-                        <p className="text-xs font-black" style={{ color: "var(--brand-ink)" }}>{pct}%</p>
+                    { step: "1", title: "Verify your email", desc: "Click the link we send to activate your account." },
+                    { step: "2", title: "Complete your profile", desc: "Add your experience, location, and availability." },
+                    { step: "3", title: "Upload qualifications", desc: "Add your certifications and required documents." },
+                    { step: "4", title: "Add your references", desc: "Provide two referees for providers to review." },
+                    { step: "5", title: "Get seen by providers", desc: "Your profile goes live and providers can find you." },
+                  ].map(({ step, title, desc }) => (
+                    <div key={step} className="flex gap-4">
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
+                        style={{ background: "var(--brand-purple-grad)" }}
+                      >
+                        {step}
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: "var(--brand-surface)" }}>
-                        <div className="h-2 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                      <div>
+                        <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>{title}</p>
+                        <p className="text-xs leading-relaxed mt-0.5" style={{ color: "var(--brand-muted)" }}>{desc}</p>
                       </div>
                     </div>
                   ))}
@@ -811,10 +881,10 @@ export default function GetHiredPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { stat: "Free", label: "Verification this month" },
-                  { stat: "96k+", label: "Active workers" },
-                  { stat: "4.9/5", label: "Avg. satisfaction" },
+                  { stat: "Free", label: "For support workers" },
+                  { stat: "1–3 days", label: "Document verification" },
                   { stat: "3 min", label: "To sign up" },
+                  { stat: "100%", label: "Profile control" },
                 ].map(({ stat, label }) => (
                   <div
                     key={stat}
@@ -841,44 +911,51 @@ export default function GetHiredPage() {
         </div>
       </section>
 
-      {/* WHY JOIN */}
-      <section id="why" className="py-20 md:py-28" style={{ backgroundColor: "white" }}>
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="mb-14 text-center">
+      {/* FAQ */}
+      <section id="faq" className="py-20 md:py-28" style={{ backgroundColor: "white" }}>
+        <div className="mx-auto max-w-3xl px-6">
+          <div className="mb-12 text-center">
             <span
               className="mb-4 inline-block rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-widest"
-              style={{ backgroundColor: "var(--brand-cyan-tint)", color: "var(--brand-cyan-deep)" }}
+              style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
             >
-              Why KizaziHire
+              FAQs
             </span>
             <h2
-              className="mb-4 text-3xl font-black leading-tight md:text-[2.3rem]"
+              className="text-3xl font-black leading-tight md:text-[2.3rem]"
               style={{ color: "var(--brand-ink)" }}
             >
-              Built for better care outcomes
+              Common questions
             </h2>
-            <p className="mx-auto max-w-xl text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
-              Supporting workers across Australia. Designed for real-world NDIS care scenarios.
-            </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            {WHY_ITEMS.map(({ icon: Icon, fg, tint, title, desc }) => (
+          <div className="space-y-3">
+            {FAQS.map(({ q, a }, i) => (
               <div
-                key={title}
-                className="flex gap-5 rounded-3xl border p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)" }}
+                key={i}
+                className="overflow-hidden rounded-2xl border transition-all"
+                style={{ borderColor: openFaq === i ? "var(--brand-purple)" : "var(--brand-border)", backgroundColor: "var(--brand-canvas)" }}
               >
-                <span
-                  className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: tint }}
+                <button
+                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
                 >
-                  <Icon className="h-5 w-5" style={{ color: fg }} />
-                </span>
-                <div>
-                  <h3 className="mb-2 text-[0.95rem] font-black" style={{ color: "var(--brand-ink)" }}>{title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{desc}</p>
-                </div>
+                  <span className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>{q}</span>
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
+                    style={{ backgroundColor: openFaq === i ? "var(--brand-purple-tint)" : "var(--brand-surface)" }}
+                  >
+                    {openFaq === i
+                      ? <Minus className="h-3.5 w-3.5" style={{ color: "var(--brand-purple)" }} />
+                      : <Plus className="h-3.5 w-3.5" style={{ color: "var(--brand-muted)" }} />
+                    }
+                  </span>
+                </button>
+                {openFaq === i && (
+                  <div className="px-6 pb-5">
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>{a}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -894,16 +971,11 @@ export default function GetHiredPage() {
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full opacity-15" style={{ backgroundColor: "rgba(255,255,255,0.12)" }} />
 
         <div className="relative mx-auto max-w-3xl px-6 text-center">
-          <p className="mb-3 text-xs font-black uppercase tracking-[0.22em] text-white/55">
-            Ready to get started?
-          </p>
           <h2 className="mb-5 text-3xl font-black leading-tight text-white md:text-[2.7rem]">
-            Your next opportunity
-            <br />
-            <span style={{ opacity: 0.85 }}>is waiting.</span>
+            Ready to get seen by NDIS providers?
           </h2>
           <p className="mb-10 text-[1.05rem] leading-relaxed text-white/70">
-            Join thousands of support workers using KizaziHire to build a meaningful, flexible career in care.
+            Create your worker profile and make it easier for providers to review your experience, qualifications, and availability.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <button
@@ -911,7 +983,7 @@ export default function GetHiredPage() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl px-8 py-4 text-sm font-black transition-all hover:-translate-y-1 hover:shadow-xl sm:w-auto"
               style={{ backgroundColor: "white", color: "var(--brand-purple)" }}
             >
-              Create free account <ArrowRight className="h-4 w-4" />
+              Create Worker Profile <ArrowRight className="h-4 w-4" />
             </button>
             <Link
               to="/"
