@@ -18,6 +18,7 @@ export const profileCompletionReminder = api(
       WHERE
         u.is_verified = true
         AND u.is_suspended = false
+        AND u.is_demo = FALSE
         AND u.created_at <= NOW() - INTERVAL '3 days'
         AND u.created_at >= NOW() - INTERVAL '60 days'
       GROUP BY u.user_id, u.email, w.name
@@ -86,6 +87,7 @@ export const subscriptionExpiryReminder = api(
         AND e.subscription_period_end IS NOT NULL
         AND e.subscription_period_end::date = (NOW() + INTERVAL '7 days')::date
         AND u.is_suspended = false
+        AND u.is_demo = FALSE
     `;
 
     const payloads = rows.map((row) => {
@@ -139,6 +141,7 @@ export const inactiveWorkerReengagement = api(
       WHERE
         u.is_verified = true
         AND u.is_suspended = false
+        AND u.is_demo = FALSE
         AND (
           u.last_login_at IS NULL AND u.created_at <= NOW() - INTERVAL '30 days'
           OR u.last_login_at <= NOW() - INTERVAL '30 days'
