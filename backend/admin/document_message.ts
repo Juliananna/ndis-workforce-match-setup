@@ -73,10 +73,8 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
         (${auth.userID}, ${req.workerId}, ${req.documentId}, ${docLabel}, ${req.templateLabel ?? null}, ${notifBody})
     `;
 
-    await sendEmail({
-      to: workerUser.email,
-      subject: `Message about your document: ${docLabel}`,
-      html: `
+    const emailSubject = `Message about your document: ${docLabel}`;
+    const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #1a1a1a;">Document Review Message</h2>
           <p style="color: #555; font-size: 15px;">Hi ${workerUser.name},</p>
@@ -92,8 +90,23 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
           <p style="color: #999; font-size: 12px;">Kizazi Hire &mdash; Connecting disability support workers with employers.</p>
         </div>
-      `,
-    }).catch(() => {});
+      `;
+
+    let emailStatus = "sent";
+    let emailError: string | null = null;
+    try {
+      await sendEmail({ to: workerUser.email, subject: emailSubject, html: emailHtml });
+    } catch (e: unknown) {
+      emailStatus = "failed";
+      emailError = e instanceof Error ? e.message : "unknown error";
+    }
+
+    await db.exec`
+      INSERT INTO email_sent_log
+        (sent_by, recipient_user_id, recipient_email, subject, category, is_bulk, status, error_message)
+      VALUES
+        (${auth.userID}, ${workerUser.user_id}, ${workerUser.email}, ${emailSubject}, 'compliance', false, ${emailStatus}, ${emailError})
+    `;
 
     return { notificationId: row.id };
   }
