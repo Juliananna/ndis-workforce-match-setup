@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2 } from "lucide-react";
+import { LogOut, ShieldCheck, FileText, UserCheck, Users, Clock, AlertTriangle, BarChart2, CalendarClock } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import AdminPage from "./AdminPage";
+import { ReferenceQueueTab } from "../components/admin/ReferenceQueueTab";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import type { AdminWorkerSummary } from "~backend/admin/workers";
 
-type Section = "verification" | "overview";
+type Section = "verification" | "overview" | "references";
 
 export default function ComplianceDashboardPage() {
   const { user, logout } = useAuth();
@@ -74,6 +75,12 @@ export default function ComplianceDashboardPage() {
                 active={section === "verification"}
                 onClick={() => setSection("verification")}
                 badge={pendingDocs > 0 ? pendingDocs : undefined}
+              />
+              <NavItem
+                label="Reference Checks"
+                active={section === "references"}
+                onClick={() => setSection("references")}
+                badge={pendingRefs > 0 ? pendingRefs : undefined}
               />
             </nav>
           </div>
@@ -193,13 +200,18 @@ export default function ComplianceDashboardPage() {
                 cta="Manage References"
                 badge={pendingRefs > 0 ? `${pendingRefs} pending` : undefined}
                 badgeColor="bg-purple-100 text-purple-700"
-                onClick={() => setSection("verification")}
+                onClick={() => setSection("references")}
               />
             </div>
           </div>
         )}
 
         {section === "verification" && <AdminPage />}
+        {section === "references" && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <ReferenceQueueTab />
+          </div>
+        )}
       </main>
     </div>
   );
