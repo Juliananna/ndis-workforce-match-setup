@@ -579,16 +579,16 @@ export default function GetHiredPage() {
           ].map(({ icon: Icon, label, color, tint }, i) => (
             <div
               key={i}
-              className="mx-3 flex items-center gap-4 rounded-2xl border px-6 py-4 shrink-0"
-              style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)", minWidth: "220px" }}
+              className="mx-4 flex items-center gap-5 rounded-2xl border px-8 py-5 shrink-0"
+              style={{ borderColor: "var(--brand-border)", backgroundColor: "var(--brand-canvas)", minWidth: "270px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
             >
               <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
                 style={{ backgroundColor: tint }}
               >
-                <Icon className="h-5 w-5" style={{ color }} />
+                <Icon className="h-7 w-7" style={{ color }} />
               </span>
-              <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>{label}</p>
+              <p className="text-base font-black" style={{ color: "var(--brand-ink)" }}>{label}</p>
             </div>
           ))}
         </div>
