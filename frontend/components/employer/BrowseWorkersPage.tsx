@@ -37,6 +37,8 @@ export function BrowseWorkersPage() {
   const [orgLocationLoaded, setOrgLocationLoaded] = useState(false);
 
   const [workers, setWorkers] = useState<WorkerSummary[]>([]);
+  const [fallbackWorkers, setFallbackWorkers] = useState<WorkerSummary[]>([]);
+  const [isFallback, setIsFallback] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,8 @@ export function BrowseWorkersPage() {
     setLoading(true);
     setError(null);
     setSearched(true);
+    setIsFallback(false);
+    setFallbackWorkers([]);
     try {
       const res = await api.workers.browseWorkers({
         query: (overrideQuery ?? query).trim() || undefined,
@@ -79,6 +83,11 @@ export function BrowseWorkersPage() {
         limit: 50,
       });
       setWorkers(res.workers);
+      if (res.workers.length === 0) {
+        const fallback = await api.workers.browseWorkers({ limit: 20 });
+        setFallbackWorkers(fallback.workers);
+        if (fallback.workers.length > 0) setIsFallback(true);
+      }
     } catch (e: unknown) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Search failed");
@@ -282,10 +291,29 @@ export function BrowseWorkersPage() {
         </div>
       )}
 
-      {!loading && searched && workers.length === 0 && (
+      {!loading && searched && workers.length === 0 && !isFallback && (
         <p className="text-sm text-muted-foreground italic text-center py-8">
           No workers found. Try adjusting your search or filters.
         </p>
+      )}
+
+      {!loading && isFallback && fallbackWorkers.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">No exact matches found</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                We couldn't find workers matching your current filters or location range. Here are available workers from outside your search area.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {fallbackWorkers.map((w) => (
+              <WorkerCard key={w.workerId} worker={w} onClick={() => setSelectedWorker(w)} />
+            ))}
+          </div>
+        </div>
       )}
 
       {!loading && !searched && (
