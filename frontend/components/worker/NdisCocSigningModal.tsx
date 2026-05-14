@@ -226,7 +226,8 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
             <div
               ref={contentRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto px-5 pb-4 space-y-4 min-h-0"
+              className="overflow-y-auto px-5 pb-4 space-y-4"
+              style={{ maxHeight: "340px" }}
             >
               <p className="text-xs text-muted-foreground leading-relaxed">
                 The NDIS Code of Conduct promotes safe and ethical supports for people with disability. 
