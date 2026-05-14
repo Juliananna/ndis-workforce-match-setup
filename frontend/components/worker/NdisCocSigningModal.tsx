@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, CheckCircle, AlertTriangle, X, RotateCcw } from "lucide-react";
+import { Loader2, FileText, CheckCircle, AlertTriangle, X, RotateCcw, Download } from "lucide-react";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 
 interface Props {
@@ -137,6 +137,167 @@ function SignaturePad({ onSigned }: { onSigned: (dataUrl: string) => void }) {
       </Button>
     </div>
   );
+}
+
+function downloadSignedDocument(signatureDataUrl: string | null, signedAt: Date | null) {
+  const W = 794;
+  const MARGIN = 56;
+  const contentWidth = W - MARGIN * 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+
+  const tmpCtx = canvas.getContext("2d")!;
+
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, lineHeight: number) => {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  };
+
+  const measureHeight = (ctx: CanvasRenderingContext2D) => {
+    let y = MARGIN;
+    y += 32;
+    y += 12;
+    y += 20;
+    y += 8;
+    const introLines = wrapText(ctx, "The NDIS Code of Conduct promotes safe and ethical supports for people with disability. All NDIS workers must comply with the following principles:", contentWidth, 18);
+    y += introLines.length * 18 + 20;
+    for (const s of COC_SECTIONS) {
+      y += 16;
+      const bodyLines = wrapText(ctx, s.body, contentWidth, 16);
+      y += bodyLines.length * 16 + 14;
+    }
+    y += 20;
+    y += 16;
+    const declLines = wrapText(ctx, "By signing below I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.", contentWidth, 16);
+    y += declLines.length * 16 + 28;
+    y += 14;
+    y += signatureDataUrl ? 100 : 60;
+    y += 18;
+    y += 16;
+    y += MARGIN;
+    return y;
+  };
+
+  tmpCtx.font = "14px sans-serif";
+  const H = measureHeight(tmpCtx);
+  canvas.height = H;
+
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  let y = MARGIN;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 22px sans-serif";
+  ctx.fillText("NDIS Code of Conduct", MARGIN, y + 22);
+  y += 32;
+
+  ctx.fillStyle = "#22c55e";
+  ctx.font = "bold 11px sans-serif";
+  ctx.fillText("SIGNED & VERIFIED", MARGIN, y + 12);
+  y += 20;
+
+  if (signedAt) {
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(new Date(signedAt).toLocaleString("en-AU"), MARGIN, y + 12);
+    y += 18;
+  }
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(MARGIN, y + 8);
+  ctx.lineTo(W - MARGIN, y + 8);
+  ctx.stroke();
+  y += 20;
+
+  ctx.fillStyle = "#475569";
+  ctx.font = "13px sans-serif";
+  const introLines = wrapText(ctx, "The NDIS Code of Conduct promotes safe and ethical supports for people with disability. All NDIS workers must comply with the following principles:", contentWidth, 18);
+  for (const line of introLines) { ctx.fillText(line, MARGIN, y + 14); y += 18; }
+  y += 20;
+
+  for (const s of COC_SECTIONS) {
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText(s.heading, MARGIN, y + 14);
+    y += 16;
+    ctx.fillStyle = "#475569";
+    ctx.font = "13px sans-serif";
+    const bodyLines = wrapText(ctx, s.body, contentWidth, 16);
+    for (const line of bodyLines) { ctx.fillText(line, MARGIN + 12, y + 13); y += 16; }
+    y += 14;
+  }
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.beginPath();
+  ctx.moveTo(MARGIN, y + 8);
+  ctx.lineTo(W - MARGIN, y + 8);
+  ctx.stroke();
+  y += 20;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillText("Declaration", MARGIN, y + 14);
+  y += 16;
+  ctx.fillStyle = "#475569";
+  ctx.font = "12px sans-serif";
+  const declLines = wrapText(ctx, "By signing below I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.", contentWidth, 16);
+  for (const line of declLines) { ctx.fillText(line, MARGIN, y + 13); y += 16; }
+  y += 28;
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "10px sans-serif";
+  ctx.fillText("SIGNATURE", MARGIN, y + 12);
+  y += 14;
+
+  const sigBoxH = signatureDataUrl ? 90 : 50;
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(MARGIN, y, contentWidth, sigBoxH);
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(MARGIN + 1, y + 1, contentWidth - 2, sigBoxH - 2);
+
+  if (signatureDataUrl) {
+    const sigImg = new Image();
+    sigImg.src = signatureDataUrl;
+    ctx.drawImage(sigImg, MARGIN + 8, y + 4, contentWidth - 16, sigBoxH - 8);
+  }
+  y += sigBoxH + 8;
+
+  if (signedAt) {
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(`Signed electronically on ${new Date(signedAt).toLocaleString("en-AU")}`, MARGIN, y + 14);
+    y += 18;
+  }
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.fillRect(MARGIN, y + 8, contentWidth, 1);
+  y += 14;
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "10px sans-serif";
+  ctx.fillText("Generated by NDIS Workforce Match Platform", MARGIN, y + 12);
+
+  const link = document.createElement("a");
+  link.href = canvas.toDataURL("image/png");
+  link.download = "ndis-code-of-conduct-signed.png";
+  link.click();
 }
 
 export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
@@ -284,8 +445,16 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
                 )}
               </div>
             </div>
-            <div className="px-5 py-4 border-t border-border shrink-0">
-              <Button onClick={onClose} className="w-full">Close</Button>
+            <div className="px-5 py-4 border-t border-border shrink-0 flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 border-border text-foreground hover:bg-muted gap-1.5"
+                onClick={() => downloadSignedDocument(signatureDataUrl, signedAt)}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download
+              </Button>
+              <Button onClick={onClose} className="flex-1">Close</Button>
             </div>
           </div>
         )}
