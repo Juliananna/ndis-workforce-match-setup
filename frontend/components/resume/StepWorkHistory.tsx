@@ -68,7 +68,7 @@ export function StepWorkHistory({ data, onChange }: Props) {
                 </div>
                 {entry.startDate && (
                   <div className="text-xs text-slate-400">
-                    {entry.startDate} — {entry.current ? "Present" : (entry.endDate || "—")}
+                    {String(entry.startDate)} — {entry.current ? "Present" : (entry.endDate ? String(entry.endDate) : "—")}
                   </div>
                 )}
               </div>

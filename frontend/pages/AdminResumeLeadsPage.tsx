@@ -256,7 +256,7 @@ export default function AdminResumeLeadsPage() {
                           <div className="text-sm font-medium text-slate-700 truncate">{doc.documentTitle}</div>
                           <div className="text-xs text-slate-400">
                             {doc.visibility} · {doc.verified ? "Verified" : "Unverified"}
-                            {doc.expiryDate ? ` · exp ${doc.expiryDate}` : ""}
+                            {doc.expiryDate ? ` · exp ${String(doc.expiryDate)}` : ""}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">

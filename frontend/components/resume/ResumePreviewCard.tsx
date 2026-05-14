@@ -74,7 +74,7 @@ export function ResumePreviewCard({ session }: Props) {
               {currentChecks.map((check) => (
                 <span key={check.type} className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">
                   <ShieldCheck size={11} />{check.type}
-                  {check.expiryDate && <span className="text-emerald-500">· exp {check.expiryDate}</span>}
+                  {check.expiryDate && <span className="text-emerald-500">· exp {String(check.expiryDate)}</span>}
                 </span>
               ))}
             </div>
@@ -98,7 +98,7 @@ export function ResumePreviewCard({ session }: Props) {
                 <div key={i} className="text-sm">
                   <span className="font-medium text-slate-700">{t.name}</span>
                   {t.provider && <span className="text-slate-400"> · {t.provider}</span>}
-                  {t.completionDate && <span className="text-slate-400"> · {t.completionDate}</span>}
+                  {t.completionDate && <span className="text-slate-400"> · {String(t.completionDate)}</span>}
                 </div>
               ))}
             </div>
@@ -119,7 +119,7 @@ export function ResumePreviewCard({ session }: Props) {
                       <div className="text-xs text-slate-500">{job.employer}</div>
                     </div>
                     <div className="text-xs text-slate-400 shrink-0">
-                      {job.startDate} — {job.current ? "Present" : (job.endDate || "")}
+                      {String(job.startDate || "")} — {job.current ? "Present" : (job.endDate ? String(job.endDate) : "")}
                     </div>
                   </div>
                   {job.responsibilities && (
