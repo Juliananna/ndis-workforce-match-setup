@@ -146,6 +146,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedAt, setSignedAt] = useState<Date | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -161,6 +162,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
     api.workers.getNdisCocStatus().then((res) => {
       if (res.signed && res.signedAt) {
         setSignedAt(res.signedAt);
+        setSignatureDataUrl(res.signatureDataUrl);
         setStep("done");
       } else {
         setStep("read");
@@ -184,6 +186,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
       if (!api) throw new Error("Not authenticated");
       const res = await api.workers.signNdisCoc({ signatureDataUrl: dataUrl });
       setSignedAt(res.signedAt);
+      setSignatureDataUrl(dataUrl);
       setStep("done");
       onSigned();
     } catch (e: unknown) {
@@ -240,6 +243,16 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
               <p className="text-xs text-muted-foreground/60">
                 Signed {new Date(signedAt).toLocaleString("en-AU")}
               </p>
+            )}
+            {signatureDataUrl && (
+              <div className="rounded-lg border border-border bg-white p-2 mx-auto max-w-xs">
+                <p className="text-xs text-muted-foreground mb-1 text-center">Your signature</p>
+                <img
+                  src={signatureDataUrl}
+                  alt="Your signature"
+                  className="w-full h-auto"
+                />
+              </div>
             )}
             <Button onClick={onClose} className="w-full">Close</Button>
           </div>

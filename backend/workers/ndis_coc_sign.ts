@@ -13,6 +13,7 @@ export interface SignNdisCocResponse {
 export interface NdisCocStatusResponse {
   signed: boolean;
   signedAt: Date | null;
+  signatureDataUrl: string | null;
 }
 
 export const signNdisCoc = api<SignNdisCocRequest, SignNdisCocResponse>(
@@ -79,10 +80,14 @@ export const getNdisCocStatus = api<void, NdisCocStatusResponse>(
     `;
     if (!worker) throw APIError.notFound("worker not found");
 
-    const row = await db.queryRow<{ signed_at: Date }>`
-      SELECT signed_at FROM ndis_conduct_signings WHERE worker_id = ${worker.worker_id}
+    const row = await db.queryRow<{ signed_at: Date; signature_data_url: string }>`
+      SELECT signed_at, signature_data_url FROM ndis_conduct_signings WHERE worker_id = ${worker.worker_id}
     `;
 
-    return { signed: !!row, signedAt: row?.signed_at ?? null };
+    return {
+      signed: !!row,
+      signedAt: row?.signed_at ?? null,
+      signatureDataUrl: row?.signature_data_url ?? null,
+    };
   }
 );
