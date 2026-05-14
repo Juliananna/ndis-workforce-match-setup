@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Download, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import { PDFDocument } from "pdf-lib";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
@@ -120,14 +120,10 @@ export default function ResumeBuilderPreviewPage() {
       }
       const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
 
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const pngDataUrl = await toPng(el, {
+        pixelRatio: 2,
         backgroundColor: "#ffffff",
       });
-
-      const pngDataUrl = canvas.toDataURL("image/png");
       const pngBase64 = pngDataUrl.split(",")[1];
       const pngBytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
 
@@ -136,14 +132,13 @@ export default function ResumeBuilderPreviewPage() {
       const pdfDoc = await PDFDocument.create();
       const pngImage = await pdfDoc.embedPng(pngBytes);
 
-      const imgNaturalW = canvas.width / 2;
-      const imgNaturalH = canvas.height / 2;
+      const imgNaturalW = el.offsetWidth;
+      const imgNaturalH = el.offsetHeight;
       const scale = Math.min(A4_W / imgNaturalW, A4_H / imgNaturalH, 1);
       const drawW = imgNaturalW * scale;
       const drawH = imgNaturalH * scale;
 
       let heightLeft = drawH;
-      let srcY = 0;
 
       while (heightLeft > 0) {
         const page = pdfDoc.addPage([A4_W, A4_H]);
@@ -155,7 +150,6 @@ export default function ResumeBuilderPreviewPage() {
           height: drawH,
         });
         heightLeft -= A4_H;
-        srcY += A4_H;
       }
 
       const pdfBytes = await pdfDoc.save();
