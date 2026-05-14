@@ -225,6 +225,30 @@ export default function ResumeBuilderPreviewPage() {
           )}
 
           <ResumePreviewCard session={session} />
+
+          {hasEmail && !session.convertedWorkerId && (
+            <div className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-2xl">🎉</span>
+                    <h3 className="font-extrabold text-xl">Your resume is ready — join KizaziHire free</h3>
+                  </div>
+                  <p className="text-teal-100 text-sm mb-3">Turn this resume into a live profile and get matched with NDIS provider jobs — no re-entering data.</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-teal-100">
+                    <span>✓ Free forever</span>
+                    <span>✓ No credit card</span>
+                    <span>✓ You control your visibility</span>
+                  </div>
+                </div>
+                <ProfileConversionPanel
+                  session={session}
+                  onConverted={(wid) => setSession((p) => ({ ...p, convertedWorkerId: wid }))}
+                  compact
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-5">
@@ -246,6 +270,10 @@ export default function ResumeBuilderPreviewPage() {
                 Enter email & download
               </button>
             </div>
+          )}
+
+          {hasEmail && !session.convertedWorkerId && (
+            <ProfileConversionPanel session={session} onConverted={(wid) => setSession((p) => ({ ...p, convertedWorkerId: wid }))} />
           )}
 
           {hasEmail && (
@@ -281,10 +309,6 @@ export default function ResumeBuilderPreviewPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
               <RefereeSection sessionId={id!} referees={referees} onRefereesChange={setReferees} />
             </div>
-          )}
-
-          {hasEmail && (
-            <ProfileConversionPanel session={session} onConverted={(wid) => setSession((p) => ({ ...p, convertedWorkerId: wid }))} />
           )}
 
           {!hasEmail && (
