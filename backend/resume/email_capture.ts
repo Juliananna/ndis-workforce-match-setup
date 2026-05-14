@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { convertSessionToProfile } from "./convert_helpers";
 import type { ResumeSession } from "./types";
 
 interface EmailCaptureRequest {
@@ -16,9 +17,10 @@ interface EmailCaptureRequest {
 
 interface EmailCaptureResponse {
   session: ResumeSession;
+  profileCreated: boolean;
+  workerId: string | null;
 }
 
-// Captures the user's email and consent choices for the resume session.
 export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/email-capture" },
   async (req) => {
@@ -61,6 +63,23 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
     `;
 
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
-    return { session: rowToSession(row!) };
+    const session = rowToSession(row!);
+
+    let profileCreated = false;
+    let workerId: string | null = null;
+
+    if (req.consentProfileCreation) {
+      try {
+        const result = await convertSessionToProfile(req.id, session);
+        profileCreated = !result.alreadyExists;
+        workerId = result.workerId;
+
+        const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
+        return { session: rowToSession(updatedRow!), profileCreated, workerId };
+      } catch {
+      }
+    }
+
+    return { session, profileCreated, workerId };
   }
 );

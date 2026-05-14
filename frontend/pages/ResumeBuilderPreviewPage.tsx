@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Download, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
+import { Download, ArrowLeft, Sparkles, RefreshCw, Mail, CheckCircle } from "lucide-react";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
 import { EmailConsentForm } from "../components/resume/EmailConsentForm";
 import { DocumentUploadSection } from "../components/resume/DocumentUploadSection";
 import { RefereeSection } from "../components/resume/RefereeSection";
-import { ProfileConversionPanel } from "../components/resume/ProfileConversionPanel";
 import { GetHiredFasterModal } from "../components/resume/GetHiredFasterModal";
 import type { SessionData } from "../components/resume/types";
 import type { DocumentRecord, RefereeRecord } from "~backend/resume/types";
@@ -38,6 +37,7 @@ export default function ResumeBuilderPreviewPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showHiredModal, setShowHiredModal] = useState(false);
+  const [profileJustCreated, setProfileJustCreated] = useState(false);
 
   const loadSession = async () => {
     if (!id) return;
@@ -95,10 +95,15 @@ export default function ResumeBuilderPreviewPage() {
     if (!id) return;
     setEmailLoading(true);
     try {
-      await backend.resume.emailCapture({ id, email, ...consents });
-      setSession((prev) => ({ ...prev, email, status: "email_captured" }));
+      const result = await backend.resume.emailCapture({ id, email, ...consents });
+      setSession(result.session as SessionData);
       setShowEmailForm(false);
-      toast({ title: "Email saved!", description: "You can now download your resume." });
+      if (result.profileCreated) {
+        setProfileJustCreated(true);
+        toast({ title: "Profile created!", description: "Check your email to set your password and log in." });
+      } else {
+        toast({ title: "Email saved!", description: "You can now download your resume." });
+      }
     } catch (err) {
       console.error(err);
       toast({ title: "Could not save email", variant: "destructive" });
@@ -160,6 +165,7 @@ export default function ResumeBuilderPreviewPage() {
 
   const hasAiContent = !!session.aiSummary;
   const hasEmail = !!session.email;
+  const hasProfile = !!session.convertedWorkerId;
   const AI_LIMIT = 3;
   const generationsLeft = Math.max(0, AI_LIMIT - (session.aiGenerationCount ?? 0));
   const atLimit = generationsLeft === 0;
@@ -264,26 +270,30 @@ export default function ResumeBuilderPreviewPage() {
 
           <ResumePreviewCard session={session} />
 
-          {hasEmail && !session.convertedWorkerId && (
+          {hasEmail && (profileJustCreated || hasProfile) && (
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-2xl">🎉</span>
-                    <h3 className="font-extrabold text-xl">Your resume is ready — join KizaziHire free</h3>
-                  </div>
-                  <p className="text-teal-100 text-sm mb-3">Turn this resume into a live profile and get matched with NDIS provider jobs — no re-entering data.</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-teal-100">
-                    <span>✓ Free forever</span>
-                    <span>✓ No credit card</span>
-                    <span>✓ You control your visibility</span>
+              <div className="flex items-start gap-4">
+                <div className="rounded-full bg-white/20 p-3 shrink-0">
+                  <CheckCircle size={28} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-xl mb-1">Your KizaziHire profile is live! 🎉</h3>
+                  <p className="text-teal-100 text-sm mb-3">
+                    We've sent a <strong className="text-white">set-password link</strong> to <strong className="text-white">{session.email}</strong>.
+                    Click it to log in and complete your profile.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="/login"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-teal-700 font-bold rounded-xl text-sm hover:bg-teal-50 transition-colors shadow-md"
+                    >
+                      Log in to my profile →
+                    </a>
+                    <span className="flex items-center gap-1.5 text-xs text-teal-100 self-center">
+                      <Mail size={13} /> Check your email for the set-password link
+                    </span>
                   </div>
                 </div>
-                <ProfileConversionPanel
-                  session={session}
-                  onConverted={(wid) => setSession((p) => ({ ...p, convertedWorkerId: wid }))}
-                  compact
-                />
               </div>
             </div>
           )}
@@ -308,10 +318,6 @@ export default function ResumeBuilderPreviewPage() {
                 Enter email & download
               </button>
             </div>
-          )}
-
-          {hasEmail && !session.convertedWorkerId && (
-            <ProfileConversionPanel session={session} onConverted={(wid) => setSession((p) => ({ ...p, convertedWorkerId: wid }))} />
           )}
 
           {hasEmail && (
@@ -353,10 +359,10 @@ export default function ResumeBuilderPreviewPage() {
             <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
               <h3 className="font-semibold text-blue-800 mb-2 text-sm">After entering your email you can also:</h3>
               <ul className="space-y-1.5 text-xs text-blue-700">
+                <li>→ Get a free KizaziHire worker profile (no re-entering data)</li>
                 <li>→ See your full resume strength score and tips</li>
                 <li>→ Upload compliance documents</li>
                 <li>→ Add referees</li>
-                <li>→ Convert to a KizaziHire profile</li>
               </ul>
             </div>
           )}

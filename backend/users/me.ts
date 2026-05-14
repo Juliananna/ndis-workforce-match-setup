@@ -11,6 +11,7 @@ export interface MeResponse {
   isSysAdmin: boolean;
   isComplianceOfficer: boolean;
   isSalesAgent: boolean;
+  hasPassword: boolean;
   createdAt: Date;
 }
 
@@ -24,9 +25,10 @@ export const me = api<void, MeResponse>(
       email: string;
       role: string;
       is_verified: boolean;
+      password_hash: string | null;
       created_at: Date;
     }>`
-      SELECT user_id, email, role, is_verified, created_at
+      SELECT user_id, email, role, is_verified, password_hash, created_at
       FROM users
       WHERE user_id = ${authData.userID}
     `;
@@ -56,6 +58,7 @@ export const me = api<void, MeResponse>(
       isSysAdmin: adminRow?.is_sysadmin ?? false,
       isComplianceOfficer: !!complianceRow,
       isSalesAgent: !!salesRow,
+      hasPassword: !!user.password_hash,
       createdAt: user.created_at,
     };
   }

@@ -25,7 +25,7 @@ export const login = api<LoginRequest, LoginResponse>(
     const user = await db.queryRow<{
       user_id: string;
       email: string;
-      password_hash: string;
+      password_hash: string | null;
       role: string;
       is_verified: boolean;
     }>`
@@ -36,6 +36,10 @@ export const login = api<LoginRequest, LoginResponse>(
 
     if (!user) {
       throw APIError.unauthenticated("invalid email or password");
+    }
+
+    if (!user.password_hash) {
+      throw APIError.unauthenticated("no password set — please check your email for the set-password link");
     }
 
     const valid = await bcrypt.compare(req.password, user.password_hash);

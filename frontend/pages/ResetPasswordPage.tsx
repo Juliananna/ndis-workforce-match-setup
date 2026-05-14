@@ -7,6 +7,7 @@ export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token") ?? "";
+  const isWelcome = searchParams.get("welcome") === "1";
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -65,7 +66,16 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Set new password</h1>
+            {isWelcome && (
+              <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 mb-4">
+                <span className="text-xl">🎉</span>
+                <div>
+                  <p className="font-bold text-teal-800 text-sm">Your KizaziHire profile is ready!</p>
+                  <p className="text-xs text-teal-700">Set a password to log in and start getting matched with providers.</p>
+                </div>
+              </div>
+            )}
+            <h1 className="text-2xl font-bold text-gray-900">{isWelcome ? "Create your password" : "Set new password"}</h1>
             <p className="text-gray-500 mt-1 text-sm">Choose a strong password for your account.</p>
           </div>
 

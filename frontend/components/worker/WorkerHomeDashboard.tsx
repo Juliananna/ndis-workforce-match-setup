@@ -3,14 +3,17 @@ import {
   Home, Briefcase, ShieldCheck, Settings as SettingsIcon, LogOut,
   Bell, HelpCircle, MapPin, CheckCircle2, AlertTriangle, XCircle,
   User, Zap, Star, Navigation, Clock, Menu, X,
-  CreditCard, Users, FileText, ChevronRight, TrendingUp,
+  CreditCard, Users, FileText, ChevronRight, TrendingUp, Lock, Eye, EyeOff,
 } from "lucide-react";
+import backend from "~backend/client";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { JobDetailModal } from "../matching/JobDetailModal";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { VerificationScoreResponse } from "~backend/workers/verification_score";
+
 
 type SidebarTab = "home" | "jobs" | "profile";
 
@@ -139,6 +142,97 @@ function statusPill(status: string) {
   if (status === "Verified") return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>;
   if (status === "Expiring Soon") return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Expiring</span>;
   return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">Missing</span>;
+}
+
+function SetPasswordBanner() {
+  const { toast } = useToast();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const api = useAuthedBackend();
+
+  if (dismissed) return null;
+
+  if (done) {
+    return (
+      <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
+        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+        <p className="text-sm font-semibold text-emerald-800">Password set! You can now log in with your email and password.</p>
+        <button onClick={() => setDismissed(true)} className="ml-auto text-xs text-emerald-600 hover:underline shrink-0">Dismiss</button>
+      </div>
+    );
+  }
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      toast({ title: "Password must be at least 8 characters", variant: "destructive" });
+      return;
+    }
+    if (password !== confirm) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      await backend.auth.setPassword({ newPassword: password });
+      setDone(true);
+      toast({ title: "Password set!", description: "You can now log in with your email and password." });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Could not set password", description: err?.message ?? "Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="rounded-full bg-amber-100 p-2 shrink-0">
+          <Lock className="h-4 w-4 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-bold text-amber-900 text-sm">Set a password for your account</h3>
+          <p className="text-xs text-amber-700 mt-0.5">
+            Your profile was created via the resume builder. Set a password so you can log in with your email next time.
+          </p>
+        </div>
+        <button onClick={() => setDismissed(true)} className="ml-auto text-amber-400 hover:text-amber-600 shrink-0 text-xs">✕ Later</button>
+      </div>
+      <form onSubmit={handleSetPassword} className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <input
+            type={showPw ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="New password (8+ chars)"
+            className="w-full px-3 py-2.5 pr-10 rounded-xl border border-amber-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          />
+          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 hover:text-amber-600">
+            {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <input
+          type={showPw ? "text" : "password"}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="Confirm password"
+          className="flex-1 px-3 py-2.5 rounded-xl border border-amber-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+        />
+        <button
+          type="submit"
+          disabled={loading || !password || !confirm}
+          className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm disabled:opacity-60 transition-colors whitespace-nowrap"
+        >
+          {loading ? "Saving…" : "Set password"}
+        </button>
+      </form>
+    </div>
+  );
 }
 
 export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
@@ -317,6 +411,8 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+
+          {!user?.hasPassword && <SetPasswordBanner />}
 
           {/* ── Hero: verification score + welcome ── */}
           <div className={`relative rounded-2xl bg-gradient-to-r ${cfg.gradient} p-5 sm:p-7 text-white overflow-hidden`}>

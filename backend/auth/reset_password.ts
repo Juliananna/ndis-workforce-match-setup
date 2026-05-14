@@ -26,7 +26,7 @@ export const forgotPassword = api<ForgotPasswordRequest, ForgotPasswordResponse>
       SELECT user_id, email, is_verified FROM users WHERE email = ${req.email.toLowerCase()}
     `;
 
-    if (user && user.is_verified) {
+    if (user) {
       await db.exec`
         UPDATE password_reset_tokens SET used_at = NOW()
         WHERE user_id = ${user.user_id} AND used_at IS NULL

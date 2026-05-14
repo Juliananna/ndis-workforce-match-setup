@@ -10,6 +10,7 @@ interface User {
   isSysAdmin: boolean;
   isComplianceOfficer: boolean;
   isSalesAgent: boolean;
+  hasPassword: boolean;
 }
 
 interface AuthContextType {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSysAdmin: data.isSysAdmin,
         isComplianceOfficer: data.isComplianceOfficer,
         isSalesAgent: data.isSalesAgent,
+        hasPassword: data.hasPassword,
       });
     } catch {
       localStorage.removeItem("ndis_token");
