@@ -69,7 +69,7 @@ const FEATURES = [
 const STATS = [
   { value: "3×", label: "more interview requests with a verified profile" },
   { value: "48h", label: "average time from profile to first job offer" },
-  { value: "Free", label: "forever — no subscription, no hidden fees" },
+  { value: "Free", label: "to join — profile & job matching at no cost" },
 ];
 
 interface Props {
@@ -133,7 +133,7 @@ export function GetHiredFasterModal({ open, onOpenChange, sessionId, hasEmail }:
 
         <div className="shrink-0 px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-3">
           <div className="flex-1 text-xs text-slate-500 hidden sm:block">
-            Free forever · No credit card · Cancel anytime
+            Free to join · Profile & matching at no cost
           </div>
           <button
             onClick={handleCTA}
