@@ -1,5 +1,13 @@
 import type { ResumeSession, ScoreBreakdown } from "./types";
 
+function parseJsonField<T>(value: any, fallback: T): T {
+  if (value == null) return fallback;
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch { return fallback; }
+  }
+  return value as T;
+}
+
 export function rowToSession(row: Record<string, any>): ResumeSession {
   return {
     id: row.id,
@@ -18,14 +26,14 @@ export function rowToSession(row: Record<string, any>): ResumeSession {
     targetRole: row.target_role,
     experienceLevel: row.experience_level,
     experienceYears: row.experience_years,
-    supportSettings: row.support_settings ?? [],
-    supportTasks: row.support_tasks ?? [],
+    supportSettings: parseJsonField(row.support_settings, []),
+    supportTasks: parseJsonField(row.support_tasks, []),
     supportStyle: row.support_style,
     capabilityStories: row.capability_stories ?? [],
     availability: row.availability ?? [],
     driversLicence: row.drivers_licence ?? false,
     ownVehicle: row.own_vehicle ?? false,
-    languages: row.languages ?? [],
+    languages: parseJsonField(row.languages, []),
     workHistory: row.work_history ?? [],
     qualifications: row.qualifications ?? [],
     training: row.training ?? [],

@@ -42,6 +42,16 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
     const existing = await db.queryRow`SELECT id FROM resume_sessions WHERE id = ${req.id}`;
     if (!existing) throw APIError.notFound("session not found");
 
+    const supportSettingsJson = req.supportSettings != null ? JSON.stringify(req.supportSettings) : null;
+    const supportTasksJson = req.supportTasks != null ? JSON.stringify(req.supportTasks) : null;
+    const languagesJson = req.languages != null ? JSON.stringify(req.languages) : null;
+    const capabilityStoriesJson = req.capabilityStories != null ? JSON.stringify(req.capabilityStories) : null;
+    const availabilityJson = req.availability != null ? JSON.stringify(req.availability) : null;
+    const workHistoryJson = req.workHistory != null ? JSON.stringify(req.workHistory) : null;
+    const qualificationsJson = req.qualifications != null ? JSON.stringify(req.qualifications) : null;
+    const trainingJson = req.training != null ? JSON.stringify(req.training) : null;
+    const checksJson = req.checks != null ? JSON.stringify(req.checks) : null;
+
     await db.exec`
       UPDATE resume_sessions SET
         updated_at = NOW(),
@@ -56,18 +66,18 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
         target_role = COALESCE(${req.targetRole ?? null}, target_role),
         experience_level = COALESCE(${req.experienceLevel ?? null}, experience_level),
         experience_years = COALESCE(${req.experienceYears ?? null}, experience_years),
-        support_settings = COALESCE(${req.supportSettings ? JSON.stringify(req.supportSettings) : null}::text[], support_settings),
-        support_tasks = COALESCE(${req.supportTasks ? JSON.stringify(req.supportTasks) : null}::text[], support_tasks),
+        support_settings = COALESCE(${supportSettingsJson}::jsonb, support_settings),
+        support_tasks = COALESCE(${supportTasksJson}::jsonb, support_tasks),
         support_style = COALESCE(${req.supportStyle ?? null}, support_style),
-        capability_stories = COALESCE(${req.capabilityStories ? JSON.stringify(req.capabilityStories) : null}::jsonb, capability_stories),
-        availability = COALESCE(${req.availability ? JSON.stringify(req.availability) : null}::jsonb, availability),
+        capability_stories = COALESCE(${capabilityStoriesJson}::jsonb, capability_stories),
+        availability = COALESCE(${availabilityJson}::jsonb, availability),
         drivers_licence = COALESCE(${req.driversLicence ?? null}, drivers_licence),
         own_vehicle = COALESCE(${req.ownVehicle ?? null}, own_vehicle),
-        languages = COALESCE(${req.languages ? JSON.stringify(req.languages) : null}::text[], languages),
-        work_history = COALESCE(${req.workHistory ? JSON.stringify(req.workHistory) : null}::jsonb, work_history),
-        qualifications = COALESCE(${req.qualifications ? JSON.stringify(req.qualifications) : null}::jsonb, qualifications),
-        training = COALESCE(${req.training ? JSON.stringify(req.training) : null}::jsonb, training),
-        checks = COALESCE(${req.checks ? JSON.stringify(req.checks) : null}::jsonb, checks),
+        languages = COALESCE(${languagesJson}::jsonb, languages),
+        work_history = COALESCE(${workHistoryJson}::jsonb, work_history),
+        qualifications = COALESCE(${qualificationsJson}::jsonb, qualifications),
+        training = COALESCE(${trainingJson}::jsonb, training),
+        checks = COALESCE(${checksJson}::jsonb, checks),
         ndis_screening_number = COALESCE(${req.ndisScreeningNumber ?? null}, ndis_screening_number)
       WHERE id = ${req.id}
     `;
