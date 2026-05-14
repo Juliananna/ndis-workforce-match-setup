@@ -9,6 +9,7 @@ import { EmailConsentForm } from "../components/resume/EmailConsentForm";
 import { DocumentUploadSection } from "../components/resume/DocumentUploadSection";
 import { RefereeSection } from "../components/resume/RefereeSection";
 import { ProfileConversionPanel } from "../components/resume/ProfileConversionPanel";
+import { GetHiredFasterModal } from "../components/resume/GetHiredFasterModal";
 import type { SessionData } from "../components/resume/types";
 import type { DocumentRecord, RefereeRecord } from "~backend/resume/types";
 
@@ -37,6 +38,7 @@ export default function ResumeBuilderPreviewPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [showHiredModal, setShowHiredModal] = useState(false);
 
   const loadSession = async () => {
     if (!id) return;
@@ -156,6 +158,8 @@ export default function ResumeBuilderPreviewPage() {
   const hasEmail = !!session.email;
 
   return (
+    <>
+    <GetHiredFasterModal open={showHiredModal} onOpenChange={setShowHiredModal} sessionId={id} hasEmail={hasEmail} />
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -167,6 +171,12 @@ export default function ResumeBuilderPreviewPage() {
             <span className="text-sm font-medium text-slate-500 hidden sm:block">Resume Preview</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHiredModal(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 border border-teal-200 rounded-xl hover:bg-teal-50 transition-colors"
+            >
+              <span>⚡</span> Get hired faster
+            </button>
             {hasEmail ? (
               <button
                 onClick={handleDownload}
@@ -190,6 +200,20 @@ export default function ResumeBuilderPreviewPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 grid lg:grid-cols-[1fr_380px] gap-6">
         <div className="space-y-6">
+          <button
+            onClick={() => setShowHiredModal(true)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 bg-white border border-teal-200 rounded-2xl shadow-sm hover:border-teal-400 hover:shadow-md transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚡</span>
+              <div className="text-left">
+                <p className="font-bold text-slate-800 text-sm">Find out how to get hired faster</p>
+                <p className="text-xs text-slate-500">See how a KizaziHire profile gets you in front of providers</p>
+              </div>
+            </div>
+            <span className="text-teal-600 font-bold text-sm group-hover:translate-x-0.5 transition-transform">→</span>
+          </button>
+
           {!hasAiContent && (
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-2xl p-5 flex items-center justify-between gap-4">
               <div>
@@ -334,5 +358,6 @@ export default function ResumeBuilderPreviewPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
