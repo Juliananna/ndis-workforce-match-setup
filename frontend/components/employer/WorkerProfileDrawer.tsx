@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   X, Star, MapPin, Car, FileCheck, Briefcase, Loader2,
-  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, ShieldCheck,
+  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, Heart,
 } from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,9 @@ import type { ReferencesSummary } from "~backend/workers/references";
 interface Props {
   worker: WorkerSummary | null;
   onClose: () => void;
+  savedIds?: Set<string>;
+  savingIds?: Set<string>;
+  onToggleSave?: (workerId: string, e: React.MouseEvent) => void;
 }
 
 type DrawerView = "profile" | "send-offer";
@@ -31,7 +34,7 @@ const DAY_LABELS: Record<string, string> = {
   friday: "Fri", saturday: "Sat", sunday: "Sun",
 };
 
-export function WorkerProfileDrawer({ worker, onClose }: Props) {
+export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onToggleSave }: Props) {
   const api = useAuthedBackend();
   const [view, setView] = useState<DrawerView>("profile");
   const [refSummary, setRefSummary] = useState<ReferencesSummary | null>(null);
@@ -113,6 +116,9 @@ export function WorkerProfileDrawer({ worker, onClose }: Props) {
 
   if (!worker) return null;
 
+  const isSaved = savedIds?.has(worker.workerId) ?? false;
+  const isSaving = savingIds?.has(worker.workerId) ?? false;
+
   const sortedDays = [...(Array.isArray(worker.availableDays) ? worker.availableDays : [])].sort(
     (a, b) => DAY_ORDER.indexOf(a.toLowerCase()) - DAY_ORDER.indexOf(b.toLowerCase())
   );
@@ -140,9 +146,25 @@ export function WorkerProfileDrawer({ worker, onClose }: Props) {
               {worker.fullName ?? worker.name}
             </h2>
           )}
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {onToggleSave && view === "profile" && (
+              <button
+                onClick={(e) => onToggleSave(worker.workerId, e)}
+                disabled={isSaving}
+                className={`p-1.5 rounded-full transition-colors ${
+                  isSaved
+                    ? "text-rose-500 hover:text-rose-600"
+                    : "text-muted-foreground hover:text-rose-400"
+                }`}
+                title={isSaved ? "Remove from shortlist" : "Save to shortlist"}
+              >
+                <Heart className={`h-4 w-4 ${isSaved ? "fill-rose-500" : ""} ${isSaving ? "animate-pulse" : ""}`} />
+              </button>
+            )}
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {view === "profile" && (
@@ -332,8 +354,19 @@ export function WorkerProfileDrawer({ worker, onClose }: Props) {
               </div>
             )}
 
-            <div className="pt-2">
-              <Button className="w-full" onClick={() => setView("send-offer")}>
+            <div className="pt-2 flex gap-2">
+              {onToggleSave && (
+                <Button
+                  variant="outline"
+                  onClick={(e) => onToggleSave(worker.workerId, e)}
+                  disabled={isSaving}
+                  className={`gap-2 ${isSaved ? "text-rose-500 border-rose-200 hover:bg-rose-50" : ""}`}
+                >
+                  <Heart className={`h-4 w-4 ${isSaved ? "fill-rose-500" : ""}`} />
+                  {isSaved ? "Saved" : "Save"}
+                </Button>
+              )}
+              <Button className="flex-1" onClick={() => setView("send-offer")}>
                 <Send className="h-4 w-4 mr-2" />Send Offer
               </Button>
             </div>

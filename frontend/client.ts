@@ -932,6 +932,12 @@ import {
 } from "~backend/employers/logo";
 import { getEmployerProfile as api_employers_profile_get_getEmployerProfile } from "~backend/employers/profile_get";
 import { updateEmployerProfile as api_employers_profile_update_updateEmployerProfile } from "~backend/employers/profile_update";
+import {
+    getSavedWorkerStatus as api_employers_saved_workers_getSavedWorkerStatus,
+    listSavedWorkers as api_employers_saved_workers_listSavedWorkers,
+    saveWorker as api_employers_saved_workers_saveWorker,
+    unsaveWorker as api_employers_saved_workers_unsaveWorker
+} from "~backend/employers/saved_workers";
 
 export namespace employers {
 
@@ -944,6 +950,10 @@ export namespace employers {
             this.deleteEmployerLogo = this.deleteEmployerLogo.bind(this)
             this.getEmployerProfile = this.getEmployerProfile.bind(this)
             this.getLogoUploadUrl = this.getLogoUploadUrl.bind(this)
+            this.getSavedWorkerStatus = this.getSavedWorkerStatus.bind(this)
+            this.listSavedWorkers = this.listSavedWorkers.bind(this)
+            this.saveWorker = this.saveWorker.bind(this)
+            this.unsaveWorker = this.unsaveWorker.bind(this)
             this.updateEmployerProfile = this.updateEmployerProfile.bind(this)
         }
 
@@ -967,6 +977,42 @@ export namespace employers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/employers/logo/upload-url`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_logo_getLogoUploadUrl>
+        }
+
+        /**
+         * Returns saved status for a list of worker IDs.
+         */
+        public async getSavedWorkerStatus(params: RequestType<typeof api_employers_saved_workers_getSavedWorkerStatus>): Promise<ResponseType<typeof api_employers_saved_workers_getSavedWorkerStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers/status`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_getSavedWorkerStatus>
+        }
+
+        /**
+         * Lists all workers saved/shortlisted by the employer.
+         */
+        public async listSavedWorkers(): Promise<ResponseType<typeof api_employers_saved_workers_listSavedWorkers>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_listSavedWorkers>
+        }
+
+        /**
+         * Saves a worker to the employer's shortlist.
+         */
+        public async saveWorker(params: RequestType<typeof api_employers_saved_workers_saveWorker>): Promise<ResponseType<typeof api_employers_saved_workers_saveWorker>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_saveWorker>
+        }
+
+        /**
+         * Removes a worker from the employer's shortlist.
+         */
+        public async unsaveWorker(params: { workerId: string }): Promise<ResponseType<typeof api_employers_saved_workers_unsaveWorker>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers/${encodeURIComponent(params.workerId)}`, {method: "DELETE", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_unsaveWorker>
         }
 
         public async updateEmployerProfile(params: RequestType<typeof api_employers_profile_update_updateEmployerProfile>): Promise<ResponseType<typeof api_employers_profile_update_updateEmployerProfile>> {

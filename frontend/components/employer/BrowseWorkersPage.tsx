@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Search, MapPin, Star, Car, FileCheck, Loader2,
-  ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle,
+  ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle, Heart,
 } from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,9 @@ export function BrowseWorkersPage() {
 
   const [selectedWorker, setSelectedWorker] = useState<WorkerSummary | null>(null);
 
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (!api || orgLocationLoaded) return;
     setOrgLocationLoaded(true);
@@ -60,6 +63,15 @@ export function BrowseWorkersPage() {
   }, [api, orgLocationLoaded]);
 
   const searchRef = useRef<AbortController | null>(null);
+
+  const refreshSavedStatus = useCallback(async (workerList: WorkerSummary[]) => {
+    if (!api || workerList.length === 0) return;
+    try {
+      const res = await api.employers.getSavedWorkerStatus({ workerIds: workerList.map((w) => w.workerId) });
+      setSavedIds(new Set(res.savedIds));
+    } catch {
+    }
+  }, [api]);
 
   const search = useCallback(async (overrideQuery?: string) => {
     if (!api) return;
@@ -86,7 +98,12 @@ export function BrowseWorkersPage() {
       if (res.workers.length === 0) {
         const fallback = await api.workers.browseWorkers({ limit: 20 });
         setFallbackWorkers(fallback.workers);
-        if (fallback.workers.length > 0) setIsFallback(true);
+        if (fallback.workers.length > 0) {
+          setIsFallback(true);
+          await refreshSavedStatus(fallback.workers);
+        }
+      } else {
+        await refreshSavedStatus(res.workers);
       }
     } catch (e: unknown) {
       console.error(e);
@@ -94,7 +111,7 @@ export function BrowseWorkersPage() {
     } finally {
       setLoading(false);
     }
-  }, [api, query, selectedSkills, driversLicense, vehicleAccess, verifiedOnly, geoLocation, radiusKm]);
+  }, [api, query, selectedSkills, driversLicense, vehicleAccess, verifiedOnly, geoLocation, radiusKm, refreshSavedStatus]);
 
   useEffect(() => {
     if (!api) return;
@@ -120,6 +137,26 @@ export function BrowseWorkersPage() {
     setVerifiedOnly(false);
   };
 
+  const handleToggleSave = useCallback(async (workerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!api || savingIds.has(workerId)) return;
+    setSavingIds((prev) => new Set(prev).add(workerId));
+    const isSaved = savedIds.has(workerId);
+    try {
+      if (isSaved) {
+        await api.employers.unsaveWorker({ workerId });
+        setSavedIds((prev) => { const s = new Set(prev); s.delete(workerId); return s; });
+      } else {
+        await api.employers.saveWorker({ workerId });
+        setSavedIds((prev) => new Set(prev).add(workerId));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingIds((prev) => { const s = new Set(prev); s.delete(workerId); return s; });
+    }
+  }, [api, savedIds, savingIds]);
+
   const activeFilterCount = selectedSkills.length + (driversLicense ? 1 : 0) + (vehicleAccess ? 1 : 0) + (verifiedOnly ? 1 : 0);
 
   const verifiedCount = workers.filter((w) => w.isFullyVerified).length;
@@ -133,7 +170,6 @@ export function BrowseWorkersPage() {
         </p>
       </div>
 
-      {/* Trust message */}
       <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
         <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
         <div>
@@ -162,7 +198,6 @@ export function BrowseWorkersPage() {
           </Button>
         </div>
 
-        {/* Verified-only quick filter — top-level */}
         <label className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-border bg-card cursor-pointer hover:border-green-400 hover:bg-green-50/50 transition-colors select-none">
           <input
             type="checkbox"
@@ -310,7 +345,14 @@ export function BrowseWorkersPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {fallbackWorkers.map((w) => (
-              <WorkerCard key={w.workerId} worker={w} onClick={() => setSelectedWorker(w)} />
+              <WorkerCard
+                key={w.workerId}
+                worker={w}
+                saved={savedIds.has(w.workerId)}
+                saving={savingIds.has(w.workerId)}
+                onClick={() => setSelectedWorker(w)}
+                onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+              />
             ))}
           </div>
         </div>
@@ -335,7 +377,14 @@ export function BrowseWorkersPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {workers.map((w) => (
-              <WorkerCard key={w.workerId} worker={w} onClick={() => setSelectedWorker(w)} />
+              <WorkerCard
+                key={w.workerId}
+                worker={w}
+                saved={savedIds.has(w.workerId)}
+                saving={savingIds.has(w.workerId)}
+                onClick={() => setSelectedWorker(w)}
+                onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+              />
             ))}
           </div>
         </div>
@@ -343,6 +392,9 @@ export function BrowseWorkersPage() {
 
       <WorkerProfileDrawer
         worker={selectedWorker}
+        savedIds={savedIds}
+        savingIds={savingIds}
+        onToggleSave={handleToggleSave}
         onClose={() => setSelectedWorker(null)}
       />
     </div>
@@ -378,7 +430,15 @@ function VerificationBadge({ score }: { score: number }) {
   );
 }
 
-function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () => void }) {
+interface WorkerCardProps {
+  worker: WorkerSummary;
+  saved: boolean;
+  saving: boolean;
+  onClick: () => void;
+  onToggleSave: (e: React.MouseEvent) => void;
+}
+
+function WorkerCard({ worker, saved, saving, onClick, onToggleSave }: WorkerCardProps) {
   const days = Array.isArray(worker.availableDays) ? worker.availableDays : [];
   return (
     <div
@@ -410,7 +470,21 @@ function WorkerCard({ worker, onClick }: { worker: WorkerSummary; onClick: () =>
             </span>
           )}
         </div>
-        <LastOnlineBadge lastLoginAt={worker.lastLoginAt} />
+        <div className="flex items-center gap-2">
+          <LastOnlineBadge lastLoginAt={worker.lastLoginAt} />
+          <button
+            onClick={onToggleSave}
+            disabled={saving}
+            className={`p-1 rounded-full transition-colors ${
+              saved
+                ? "text-rose-500 hover:text-rose-600"
+                : "text-muted-foreground hover:text-rose-400"
+            }`}
+            title={saved ? "Remove from shortlist" : "Save to shortlist"}
+          >
+            <Heart className={`h-4 w-4 ${saved ? "fill-rose-500" : ""} ${saving ? "animate-pulse" : ""}`} />
+          </button>
+        </div>
       </div>
 
       <div className="flex items-start justify-between gap-2">

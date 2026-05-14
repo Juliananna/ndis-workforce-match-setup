@@ -5,7 +5,7 @@ import {
   Users, Bell, Plus,
   Briefcase, BadgeCheck, Sparkles,
   Settings, MessageSquare,
-  Zap, Menu, X, Compass,
+  Zap, Menu, X, Compass, Heart,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { VerifyEmailModal } from "../components/VerifyEmailModal";
@@ -29,8 +29,11 @@ const SalesPortalInner = lazy(() =>
 const BrowseWorkersPage = lazy(() =>
   import("../components/employer/BrowseWorkersPage").then((m) => ({ default: m.BrowseWorkersPage }))
 );
+const SavedWorkersTab = lazy(() =>
+  import("../components/employer/SavedWorkersTab").then((m) => ({ default: m.SavedWorkersTab }))
+);
 
-type Tab = "home" | "profile" | "employer" | "offers" | "admin" | "browse" | "upgrade" | "sales";
+type Tab = "home" | "profile" | "employer" | "offers" | "admin" | "browse" | "saved" | "upgrade" | "sales";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -182,6 +185,7 @@ export default function DashboardPage() {
 const EMPLOYER_NAV: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: "home", label: "Dashboard", icon: BadgeCheck },
   { id: "browse", label: "Browse Workers", icon: Compass },
+  { id: "saved", label: "Saved Workers", icon: Heart },
   { id: "offers", label: "Messages", icon: MessageSquare },
   { id: "employer", label: "Jobs & Profile", icon: Briefcase },
   { id: "upgrade", label: "Subscription", icon: Sparkles },
@@ -224,6 +228,7 @@ function EmployerLayout({
 
   const mobileNavItems: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: "browse", label: "Explore", icon: Compass },
+    { id: "saved", label: "Saved", icon: Heart },
     { id: "home", label: "Home", icon: BadgeCheck },
     { id: "offers", label: "Messages", icon: MessageSquare },
     { id: "employer", label: "Jobs", icon: Briefcase },
@@ -690,6 +695,7 @@ function PageContent({
     <Suspense fallback={fallback}>
       {tab === "employer" && isEmployer && <EmployerDashboardPage />}
       {tab === "browse" && isEmployer && <BrowseWorkersPage />}
+      {tab === "saved" && isEmployer && <SavedWorkersTab />}
       {tab === "offers" && isEmployer && <EmployerOffersPage />}
       {tab === "upgrade" && isEmployer && <EmployerUpgradePage onBack={() => {}} />}
       {tab === "offers" && isWorker && <WorkerOffersPage />}
