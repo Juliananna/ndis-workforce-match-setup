@@ -76,8 +76,8 @@ export const getNdisCocStatus = api<void, NdisCocStatusResponse>(
     const auth = getAuthData()!;
     if (auth.role !== "WORKER") throw APIError.permissionDenied("workers only");
 
-    const worker = await db.queryRow<{ worker_id: string; first_name: string; last_name: string }>`
-      SELECT worker_id, first_name, last_name FROM workers WHERE user_id = ${auth.userID}
+    const worker = await db.queryRow<{ worker_id: string; full_name: string }>`
+      SELECT worker_id, full_name FROM workers WHERE user_id = ${auth.userID}
     `;
     if (!worker) throw APIError.notFound("worker not found");
 
@@ -89,7 +89,7 @@ export const getNdisCocStatus = api<void, NdisCocStatusResponse>(
       signed: !!row,
       signedAt: row?.signed_at ?? null,
       signatureDataUrl: row?.signature_data_url ?? null,
-      workerName: `${worker.first_name} ${worker.last_name}`.trim(),
+      workerName: worker.full_name ?? "",
     };
   }
 );
