@@ -100,7 +100,7 @@ export const convertToProfile = api<ConvertToProfileRequest, ConvertToProfileRes
       const shifts = [...new Set(session.availability.flatMap((a) => a.shifts))];
       await db.exec`
         INSERT INTO worker_availability (worker_id, available_days, preferred_shift_types, max_travel_distance_km)
-        VALUES (${worker.worker_id}, ${JSON.stringify(days)}::text[], ${JSON.stringify(shifts)}::text[], ${session.travelRadiusKm ?? 20})
+        VALUES (${worker.worker_id}, ${JSON.stringify(days)}, ${JSON.stringify(shifts)}, ${session.travelRadiusKm ?? 20})
         ON CONFLICT (worker_id) DO NOTHING
       `;
     }
