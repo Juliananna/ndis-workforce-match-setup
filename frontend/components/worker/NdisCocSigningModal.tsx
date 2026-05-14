@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, CheckCircle, AlertTriangle, X, RotateCcw } from "lucide-react";
-import backend from "~backend/client";
+import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 
 interface Props {
   open: boolean;
@@ -140,6 +140,7 @@ function SignaturePad({ onSigned }: { onSigned: (dataUrl: string) => void }) {
 }
 
 export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
+  const api = useAuthedBackend();
   const [step, setStep] = useState<Step>("read");
   const [hasScrolled, setHasScrolled] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -165,7 +166,8 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const res = await backend.workers.signNdisCoc({ signatureDataUrl: dataUrl });
+      if (!api) throw new Error("Not authenticated");
+      const res = await api.workers.signNdisCoc({ signatureDataUrl: dataUrl });
       setSignedAt(res.signedAt);
       setStep("done");
       onSigned();
