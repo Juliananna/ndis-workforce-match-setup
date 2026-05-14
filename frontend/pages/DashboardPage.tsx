@@ -499,7 +499,7 @@ function EmployerHome({
               <div
                 key={w.name}
                 className="bg-white rounded-2xl p-3 cursor-pointer hover:shadow-sm transition-shadow"
-                onClick={() => onTabChange("browse")}
+                onClick={() => onTabChange("profile")}
               >
                 <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${w.color} flex items-center justify-center text-white font-bold mb-2 text-sm`}>
                   {w.name[0]}
