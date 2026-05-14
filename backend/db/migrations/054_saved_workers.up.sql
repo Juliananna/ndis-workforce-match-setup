@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS saved_workers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  employer_id UUID NOT NULL REFERENCES employers(user_id) ON DELETE CASCADE,
-  worker_id UUID NOT NULL REFERENCES workers(user_id) ON DELETE CASCADE,
+  employer_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (employer_id, worker_id)
 );
