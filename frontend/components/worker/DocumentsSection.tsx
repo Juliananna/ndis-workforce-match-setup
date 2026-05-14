@@ -243,6 +243,9 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
     return { type: t, docs: documents.filter((d) => d.documentType === t) };
   });
 
+  const cocDoc = documents.find((d) => d.documentType === NDIS_COC_TYPE);
+  const cocSigned = cocDoc?.verificationStatus === "Verified";
+
   const mandatoryUploaded = mandatoryDocs.filter((r) => r.doc || (r.type === NDIS_COC_TYPE && cocSigned)).length;
   const progressPct = Math.round((mandatoryUploaded / MANDATORY_DOCUMENT_TYPES.length) * 100);
   const verifiedCount = documents.filter((d) => d.verificationStatus === "Verified").length;
@@ -279,9 +282,6 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
       setUploading(false);
     }
   };
-
-  const cocDoc = documents.find((d) => d.documentType === NDIS_COC_TYPE);
-  const cocSigned = cocDoc?.verificationStatus === "Verified";
 
   const allNonTrainingUploaded = availableTypes.filter((t) => t !== OTHER_TRAINING && t !== NDIS_COC_TYPE).length === 0;
 
