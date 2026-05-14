@@ -120,36 +120,38 @@ export default function ResumeBuilderPreviewPage() {
       }
       const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
 
+      const A4_W = 595.28;
+      const A4_H = 841.89;
+
       const pngDataUrl = await toPng(el, {
         pixelRatio: 2,
         backgroundColor: "#ffffff",
+        style: {
+          width: "794px",
+          maxWidth: "none",
+          borderRadius: "0",
+        },
+        width: 794,
       });
+
       const pngBase64 = pngDataUrl.split(",")[1];
       const pngBytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
 
-      const A4_W = 595.28;
-      const A4_H = 841.89;
       const pdfDoc = await PDFDocument.create();
       const pngImage = await pdfDoc.embedPng(pngBytes);
 
-      const imgNaturalW = el.offsetWidth;
-      const imgNaturalH = el.offsetHeight;
-      const scale = Math.min(A4_W / imgNaturalW, A4_H / imgNaturalH, 1);
-      const drawW = imgNaturalW * scale;
-      const drawH = imgNaturalH * scale;
+      const imgW_pts = A4_W;
+      const imgH_pts = (pngImage.height / pngImage.width) * A4_W;
+      const pageCount = Math.ceil(imgH_pts / A4_H);
 
-      let heightLeft = drawH;
-
-      while (heightLeft > 0) {
+      for (let i = 0; i < pageCount; i++) {
         const page = pdfDoc.addPage([A4_W, A4_H]);
-        const sliceH = Math.min(heightLeft, A4_H);
         page.drawImage(pngImage, {
-          x: (A4_W - drawW) / 2,
-          y: A4_H - sliceH,
-          width: drawW,
-          height: drawH,
+          x: 0,
+          y: A4_H - imgH_pts + i * A4_H,
+          width: imgW_pts,
+          height: imgH_pts,
         });
-        heightLeft -= A4_H;
       }
 
       const pdfBytes = await pdfDoc.save();
@@ -160,7 +162,7 @@ export default function ResumeBuilderPreviewPage() {
       a.download = `${fullName.replace(/\s+/g, "_")}_NDIS_Resume.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "PDF downloaded!", description: "Your resume has been saved as a PDF." });
+      toast({ title: "PDF downloaded!" });
     } catch (err) {
       console.error(err);
       toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
