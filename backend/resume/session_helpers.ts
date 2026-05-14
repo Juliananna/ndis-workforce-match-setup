@@ -46,6 +46,7 @@ export function rowToSession(row: Record<string, any>): ResumeSession {
     aiBio: row.ai_bio,
     aiSearchCard: row.ai_search_card,
     aiInterviewPrompts: parseJsonField(row.ai_interview_prompts, []),
+    aiGenerationCount: row.ai_generation_count ?? 0,
     convertedWorkerId: row.converted_worker_id,
   };
 }

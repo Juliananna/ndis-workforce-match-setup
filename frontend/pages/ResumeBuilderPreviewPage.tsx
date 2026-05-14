@@ -20,7 +20,7 @@ const defaultSession = (): SessionData => ({
   supportStyle: null, capabilityStories: [], availability: [], driversLicence: false, ownVehicle: false,
   languages: [], workHistory: [], qualifications: [], training: [], checks: [], ndisScreeningNumber: null,
   resumeStrengthScore: null, scoreBreakdown: null, aiSummary: null, aiBullets: [], aiBio: null,
-  aiSearchCard: null, aiInterviewPrompts: [], convertedWorkerId: null, status: "draft",
+  aiSearchCard: null, aiInterviewPrompts: [], aiGenerationCount: 0, convertedWorkerId: null, status: "draft",
 });
 
 export default function ResumeBuilderPreviewPage() {
@@ -160,6 +160,9 @@ export default function ResumeBuilderPreviewPage() {
 
   const hasAiContent = !!session.aiSummary;
   const hasEmail = !!session.email;
+  const AI_LIMIT = 3;
+  const generationsLeft = Math.max(0, AI_LIMIT - (session.aiGenerationCount ?? 0));
+  const atLimit = generationsLeft === 0;
 
   return (
     <>
@@ -218,15 +221,19 @@ export default function ResumeBuilderPreviewPage() {
           </button>
 
           {!hasAiContent && (
-            <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div className={`rounded-2xl p-5 flex items-center justify-between gap-4 ${atLimit ? "bg-slate-100 border border-slate-200" : "bg-gradient-to-r from-teal-600 to-emerald-600 text-white"}`}>
               <div>
-                <h3 className="font-bold mb-1">Generate AI resume content</h3>
-                <p className="text-sm text-teal-100">Get an AI-written professional summary, bullet points and bio — in Australian English.</p>
+                <h3 className={`font-bold mb-1 ${atLimit ? "text-slate-700" : ""}`}>Generate AI resume content</h3>
+                <p className={`text-sm ${atLimit ? "text-slate-500" : "text-teal-100"}`}>
+                  {atLimit
+                    ? "You've used all 3 AI generations for this session."
+                    : "Get an AI-written professional summary, bullet points and bio — in Australian English."}
+                </p>
               </div>
               <button
                 onClick={handleGenerate}
-                disabled={generating}
-                className="shrink-0 flex items-center gap-2 bg-white text-teal-700 font-bold px-5 py-2.5 rounded-xl text-sm hover:shadow-md transition-all disabled:opacity-60"
+                disabled={generating || atLimit}
+                className={`shrink-0 flex items-center gap-2 font-bold px-5 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 ${atLimit ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-white text-teal-700 hover:shadow-md"}`}
               >
                 {generating ? (
                   <><RefreshCw size={16} className="animate-spin" /> Generating…</>
@@ -240,14 +247,18 @@ export default function ResumeBuilderPreviewPage() {
           {hasAiContent && (
             <div className="flex items-center justify-between bg-emerald-50 rounded-xl px-4 py-3 border border-emerald-200">
               <span className="text-sm text-emerald-700 font-medium">✓ AI content generated</span>
-              <button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="flex items-center gap-1 text-xs text-emerald-700 hover:underline"
-              >
-                <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
-                Regenerate
-              </button>
+              {atLimit ? (
+                <span className="text-xs text-slate-400">Limit reached (3/3)</span>
+              ) : (
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="flex items-center gap-1 text-xs text-emerald-700 hover:underline disabled:opacity-60"
+                >
+                  <RefreshCw size={12} className={generating ? "animate-spin" : ""} />
+                  Regenerate ({generationsLeft} left)
+                </button>
+              )}
             </div>
           )}
 

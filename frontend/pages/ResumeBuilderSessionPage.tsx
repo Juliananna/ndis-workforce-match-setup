@@ -21,7 +21,7 @@ const defaultSession = (): SessionData => ({
   supportStyle: null, capabilityStories: [], availability: [], driversLicence: false, ownVehicle: false,
   languages: [], workHistory: [], qualifications: [], training: [], checks: [], ndisScreeningNumber: null,
   resumeStrengthScore: null, scoreBreakdown: null, aiSummary: null, aiBullets: [], aiBio: null,
-  aiSearchCard: null, aiInterviewPrompts: [], convertedWorkerId: null, status: "draft",
+  aiSearchCard: null, aiInterviewPrompts: [], aiGenerationCount: 0, convertedWorkerId: null, status: "draft",
 });
 
 export default function ResumeBuilderSessionPage() {

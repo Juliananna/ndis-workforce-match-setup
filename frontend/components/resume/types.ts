@@ -76,6 +76,7 @@ export interface SessionData {
   aiBio: string | null;
   aiSearchCard: string | null;
   aiInterviewPrompts: string[];
+  aiGenerationCount: number;
   convertedWorkerId: string | null;
   status: string;
 }

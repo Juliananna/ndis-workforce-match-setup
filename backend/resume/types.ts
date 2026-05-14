@@ -90,6 +90,7 @@ export interface ResumeSession {
   aiBio: string | null;
   aiSearchCard: string | null;
   aiInterviewPrompts: string[];
+  aiGenerationCount: number;
   convertedWorkerId: string | null;
 }
 

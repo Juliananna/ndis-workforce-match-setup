@@ -87,12 +87,21 @@ Languages: ${session.languages.join(", ") || "English"}
 `.trim();
 }
 
+const AI_GENERATION_LIMIT = 3;
+
 // Generates all AI content for a resume session (summary, bullets, bio, search card, interview prompts).
 export const generateResumeContent = api<GenerateParams, GenerateResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/generate-resume" },
   async ({ id }) => {
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
     if (!row) throw APIError.notFound("session not found");
+
+    const count: number = row.ai_generation_count ?? 0;
+    if (count >= AI_GENERATION_LIMIT) {
+      throw APIError.resourceExhausted(
+        `AI generation limit reached. Each resume session can generate AI content up to ${AI_GENERATION_LIMIT} times.`
+      );
+    }
 
     const session = rowToSession(row);
     const context = buildSessionContext(session);
@@ -158,6 +167,7 @@ Return a JSON array of 5 strings. Example: ["Tell me about a time...", "How do y
         ai_bio = ${bio.trim()},
         ai_search_card = ${searchCard.trim()},
         ai_interview_prompts = ${JSON.stringify(interviewPrompts)}::jsonb,
+        ai_generation_count = ai_generation_count + 1,
         updated_at = NOW()
       WHERE id = ${id}
     `;
