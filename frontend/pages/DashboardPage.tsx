@@ -11,6 +11,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { VerifyEmailModal } from "../components/VerifyEmailModal";
 import { WorkerHomeDashboard } from "../components/worker/WorkerHomeDashboard";
 import { DocumentUploadGate } from "../components/worker/DocumentUploadGate";
+import { WorkerProfileDrawer } from "../components/employer/WorkerProfileDrawer";
+import type { WorkerSummary } from "~backend/workers/browse";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import type { JobRequest } from "~backend/jobs/get";
 import type { EmployerProfile } from "~backend/employers/profile_get";
@@ -421,18 +423,28 @@ function EmployerHome({
   onLogout: () => void;
   profile: EmployerProfile | null;
 }) {
+  const [drawerWorker, setDrawerWorker] = useState<WorkerSummary | null>(null);
   const recentJobs = jobs.slice(0, 4);
   const activeMatchCount = activeJobs.length * 4;
   const profileViews = jobs.length > 0 ? 348 : 0;
   const responseRate = 98;
 
-  const topMatches = [
-    { name: "Jordan Smith", match: 95, role: "Support Worker", tags: ["Dementia Care", "Level 2"], color: "from-teal-400 to-emerald-500" },
-    { name: "Emma L.", match: 91, role: "Personal Care", tags: ["Mobility Supp."], color: "from-purple-400 to-indigo-500" },
-    { name: "Amir K.", match: 88, role: "Disability Support", tags: ["NDIS", "Community"], color: "from-orange-400 to-amber-400" },
+  const mockWorkerBase = {
+    fullName: null, location: null, avatarUrl: null, introVideoUrl: null,
+    distanceKm: null, averageRating: null, reviewCount: 0, availableDays: [],
+    minimumPayRate: null, priorityBoost: false, docsVerifiedPurchased: false,
+    refsPurchased: false, docsVerified: false, refsVerified: false, lastLoginAt: null,
+    travelRadiusKm: null, driversLicense: false, vehicleAccess: false,
+    qualifications: null, isFullyVerified: false,
+  };
+  const topMatches: (WorkerSummary & { match: number; color: string })[] = [
+    { ...mockWorkerBase, workerId: "mock-1", name: "Jordan Smith", match: 95, color: "from-teal-400 to-emerald-500", bio: "Experienced support worker specialising in dementia care and complex needs.", experienceYears: 5, skills: ["Dementia Care", "Level 2"], verificationScore: 80, driversLicense: true, vehicleAccess: true, travelRadiusKm: 30 },
+    { ...mockWorkerBase, workerId: "mock-2", name: "Emma L.", match: 91, color: "from-purple-400 to-indigo-500", bio: "Personal care specialist with a focus on mobility support and daily living assistance.", experienceYears: 3, skills: ["Mobility Supp.", "Personal Care"], verificationScore: 60 },
+    { ...mockWorkerBase, workerId: "mock-3", name: "Amir K.", match: 88, color: "from-orange-400 to-amber-400", bio: "Disability support worker experienced in NDIS community programs and individual support plans.", experienceYears: 4, skills: ["NDIS", "Community"], verificationScore: 70, driversLicense: true, vehicleAccess: true, travelRadiusKm: 20 },
   ];
 
   return (
+    <>
     <div className="bg-[#f4f5f9]">
       <div className="bg-white px-4 sm:px-6 pt-5 pb-5">
         <div className="flex items-center justify-between mb-1">
@@ -499,7 +511,7 @@ function EmployerHome({
               <div
                 key={w.name}
                 className="bg-white rounded-2xl p-3 cursor-pointer hover:shadow-sm transition-shadow"
-                onClick={() => onTabChange("profile")}
+                onClick={() => setDrawerWorker(w)}
               >
                 <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${w.color} flex items-center justify-center text-white font-bold mb-2 text-sm`}>
                   {w.name[0]}
@@ -510,13 +522,13 @@ function EmployerHome({
                   {w.match}% Match
                 </p>
                 <div className="flex flex-wrap gap-1 mb-3">
-                  {w.tags.map((t) => (
+                  {w.skills.map((t) => (
                     <span key={t} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full font-medium">{t}</span>
                   ))}
                 </div>
                 <button
                   className="w-full text-xs font-semibold text-indigo-600 border border-indigo-200 rounded-lg py-1.5 hover:bg-indigo-50 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); onTabChange("browse"); }}
+                  onClick={(e) => { e.stopPropagation(); setDrawerWorker(w); }}
                 >
                   View Profile
                 </button>
@@ -572,6 +584,8 @@ function EmployerHome({
 
         </div>
     </div>
+    <WorkerProfileDrawer worker={drawerWorker} onClose={() => setDrawerWorker(null)} />
+    </>
   );
 }
 
