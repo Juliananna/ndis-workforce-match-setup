@@ -114,30 +114,44 @@ export default function ResumeBuilderPreviewPage() {
       const el = document.getElementById("resume-preview");
       if (!el) return;
       const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
-      const style = `
-        <style>
-          body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; }
-          h1 { font-size: 22px; margin: 0 0 4px 0; }
-          h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin: 16px 0 6px 0; border-top: 1px solid #e2e8f0; padding-top: 8px; }
-          p, li { font-size: 12px; line-height: 1.5; }
-          ul { padding-left: 16px; }
-          .header { background: #0d9488; color: white; padding: 24px; }
-          .header h1 { color: white; }
-          .header p { color: #ccfbf1; font-size: 13px; margin: 0; }
-          .body { padding: 20px; }
-          .chip { display: inline-block; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 999px; padding: 2px 8px; font-size: 10px; margin: 2px; }
-        </style>
-      `;
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${fullName} – NDIS Resume</title>${style}</head><body>${el.innerHTML}</body></html>`;
-      const blob = new Blob([html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_NDIS_Resume.html`;
-      a.click();
-      URL.revokeObjectURL(url);
-      window.print();
-      toast({ title: "Resume ready!", description: "Use your browser's Print → Save as PDF to save your resume." });
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast({ title: "Popup blocked", description: "Please allow popups for this site and try again.", variant: "destructive" });
+        return;
+      }
+
+      const styles = Array.from(document.styleSheets)
+        .flatMap((sheet) => {
+          try {
+            return Array.from(sheet.cssRules).map((r) => r.cssText);
+          } catch {
+            return [];
+          }
+        })
+        .join("\n");
+
+      printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${fullName} – NDIS Resume</title>
+  <style>
+    ${styles}
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    body { background: white; }
+  </style>
+</head>
+<body>
+  <div style="max-width:720px;margin:0 auto;padding:24px;">
+    ${el.outerHTML}
+  </div>
+  <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
+</body>
+</html>`);
+      printWindow.document.close();
     } catch (err) {
       console.error(err);
       toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
