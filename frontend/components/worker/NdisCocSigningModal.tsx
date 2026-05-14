@@ -146,6 +146,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedAt, setSignedAt] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,8 +154,22 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
       setStep("read");
       setHasScrolled(false);
       setError(null);
+      return;
     }
-  }, [open]);
+    if (!api) return;
+    setLoading(true);
+    api.workers.getNdisCocStatus().then((res) => {
+      if (res.signed && res.signedAt) {
+        setSignedAt(res.signedAt);
+        setStep("done");
+      } else {
+        setStep("read");
+        setHasScrolled(false);
+      }
+    }).catch(() => {
+      setStep("read");
+    }).finally(() => setLoading(false));
+  }, [open, api]);
 
   const handleScroll = () => {
     const el = contentRef.current;
@@ -180,6 +195,18 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
   };
 
   if (!open) return null;
+
+  if (loading) return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+    >
+      <div className="rounded-xl border border-border bg-card shadow-2xl p-8 flex items-center gap-3">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    </div>
+  );
 
   return (
     <div
