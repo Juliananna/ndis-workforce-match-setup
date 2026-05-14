@@ -229,32 +229,64 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
         </div>
 
         {step === "done" && (
-          <div className="p-8 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="rounded-full bg-green-500/10 p-4">
-                <CheckCircle className="h-10 w-10 text-green-400" />
+          <div className="flex flex-col overflow-hidden">
+            <div className="overflow-y-auto px-5 py-4 space-y-4" style={{ maxHeight: "70vh" }}>
+              <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 px-3 py-2.5">
+                <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-green-400">Signed &amp; Verified</p>
+                  {signedAt && (
+                    <p className="text-xs text-muted-foreground/70">
+                      {new Date(signedAt).toLocaleString("en-AU")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-foreground">NDIS Code of Conduct</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  The NDIS Code of Conduct promotes safe and ethical supports for people with disability.
+                  All NDIS workers must comply with the following principles:
+                </p>
+              </div>
+
+              {COC_SECTIONS.map((s, i) => (
+                <div key={i} className="space-y-0.5">
+                  <p className="text-xs font-semibold text-foreground">{s.heading}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{s.body}</p>
+                </div>
+              ))}
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs text-foreground font-medium mb-1">Declaration</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  By signing below I confirm I have read and understood the NDIS Code of Conduct
+                  and agree to comply with all 7 principles in my work as an NDIS support worker.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground/60 uppercase tracking-wide">Signature</p>
+                {signatureDataUrl ? (
+                  <div className="rounded-lg border border-border bg-white p-3">
+                    <img src={signatureDataUrl} alt="Signature" className="w-full h-auto max-h-24 object-contain" />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border bg-muted/30 h-16 flex items-center justify-center">
+                    <p className="text-xs text-muted-foreground/40">Signature on file</p>
+                  </div>
+                )}
+                {signedAt && (
+                  <p className="text-xs text-muted-foreground/60">
+                    Signed electronically on {new Date(signedAt).toLocaleString("en-AU")}
+                  </p>
+                )}
               </div>
             </div>
-            <p className="text-base font-semibold text-foreground">Code of Conduct Signed</p>
-            <p className="text-sm text-muted-foreground">
-              Your acknowledgement has been recorded and your compliance document updated.
-            </p>
-            {signedAt && (
-              <p className="text-xs text-muted-foreground/60">
-                Signed {new Date(signedAt).toLocaleString("en-AU")}
-              </p>
-            )}
-            {signatureDataUrl && (
-              <div className="rounded-lg border border-border bg-white p-2 mx-auto max-w-xs">
-                <p className="text-xs text-muted-foreground mb-1 text-center">Your signature</p>
-                <img
-                  src={signatureDataUrl}
-                  alt="Your signature"
-                  className="w-full h-auto"
-                />
-              </div>
-            )}
-            <Button onClick={onClose} className="w-full">Close</Button>
+            <div className="px-5 py-4 border-t border-border shrink-0">
+              <Button onClick={onClose} className="w-full">Close</Button>
+            </div>
           </div>
         )}
 
