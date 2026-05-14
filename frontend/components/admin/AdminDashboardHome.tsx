@@ -364,6 +364,12 @@ export function AdminDashboardHome({
             description="Send comms and manage email campaigns"
             onClick={() => onNavigate("email")}
           />
+          <QuickAction
+            icon={<FileText className="h-5 w-5 text-teal-500" />}
+            label="Resume Builder Leads"
+            description="Review leads from the free NDIS resume builder tool"
+            onClick={() => window.location.href = "/admin/resume-leads"}
+          />
         </div>
       </div>
 

@@ -46,6 +46,7 @@ export class Client {
     public readonly notifications: notifications.ServiceClient
     public readonly offers: offers.ServiceClient
     public readonly payments: payments.ServiceClient
+    public readonly resume: resume.ServiceClient
     public readonly reviews: reviews.ServiceClient
     public readonly sales: sales.ServiceClient
     public readonly support: support.ServiceClient
@@ -79,6 +80,7 @@ export class Client {
         this.notifications = new notifications.ServiceClient(base)
         this.offers = new offers.ServiceClient(base)
         this.payments = new payments.ServiceClient(base)
+        this.resume = new resume.ServiceClient(base)
         this.reviews = new reviews.ServiceClient(base)
         this.sales = new sales.ServiceClient(base)
         this.support = new support.ServiceClient(base)
@@ -757,6 +759,7 @@ import {
     forgotPassword as api_auth_reset_password_forgotPassword,
     resetPassword as api_auth_reset_password_resetPassword
 } from "~backend/auth/reset_password";
+import { setPassword as api_auth_set_password_setPassword } from "~backend/auth/set_password";
 import { verifyEmail as api_auth_verifyEmail_verifyEmail } from "~backend/auth/verifyEmail";
 
 export namespace auth {
@@ -771,6 +774,7 @@ export namespace auth {
             this.register = this.register.bind(this)
             this.resendVerification = this.resendVerification.bind(this)
             this.resetPassword = this.resetPassword.bind(this)
+            this.setPassword = this.setPassword.bind(this)
             this.verifyEmail = this.verifyEmail.bind(this)
         }
 
@@ -805,6 +809,12 @@ export namespace auth {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/auth/reset-password`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_auth_reset_password_resetPassword>
+        }
+
+        public async setPassword(params: RequestType<typeof api_auth_set_password_setPassword>): Promise<ResponseType<typeof api_auth_set_password_setPassword>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/auth/set-password`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_auth_set_password_setPassword>
         }
 
         public async verifyEmail(params: RequestType<typeof api_auth_verifyEmail_verifyEmail>): Promise<ResponseType<typeof api_auth_verifyEmail_verifyEmail>> {
@@ -1432,6 +1442,316 @@ export namespace payments {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/payments/employer/test-activate`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_payments_test_activate_testActivateEmployerSubscription>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import {
+    getLeadDetail as api_resume_admin_leads_getLeadDetail,
+    listLeads as api_resume_admin_leads_listLeads,
+    verifyResumeDocument as api_resume_admin_leads_verifyResumeDocument
+} from "~backend/resume/admin_leads";
+import {
+    generateBio as api_resume_ai_generate_generateBio,
+    generateBullets as api_resume_ai_generate_generateBullets,
+    generateInterviewPrompts as api_resume_ai_generate_generateInterviewPrompts,
+    generateResumeContent as api_resume_ai_generate_generateResumeContent,
+    generateSearchCard as api_resume_ai_generate_generateSearchCard,
+    generateSummary as api_resume_ai_generate_generateSummary
+} from "~backend/resume/ai_generate";
+import { convertToProfile as api_resume_convert_to_profile_convertToProfile } from "~backend/resume/convert_to_profile";
+import {
+    addDocument as api_resume_documents_addDocument,
+    updateDocumentVisibility as api_resume_documents_updateDocumentVisibility
+} from "~backend/resume/documents";
+import { emailCapture as api_resume_email_capture_emailCapture } from "~backend/resume/email_capture";
+import {
+    addReferee as api_resume_referees_addReferee,
+    updateReferee as api_resume_referees_updateReferee
+} from "~backend/resume/referees";
+import { createSession as api_resume_session_create_createSession } from "~backend/resume/session_create";
+import { getSession as api_resume_session_get_getSession } from "~backend/resume/session_get";
+import { scoreSession as api_resume_session_score_scoreSession } from "~backend/resume/session_score";
+import { updateSession as api_resume_session_update_updateSession } from "~backend/resume/session_update";
+
+export namespace resume {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.addDocument = this.addDocument.bind(this)
+            this.addReferee = this.addReferee.bind(this)
+            this.convertToProfile = this.convertToProfile.bind(this)
+            this.createSession = this.createSession.bind(this)
+            this.emailCapture = this.emailCapture.bind(this)
+            this.generateBio = this.generateBio.bind(this)
+            this.generateBullets = this.generateBullets.bind(this)
+            this.generateInterviewPrompts = this.generateInterviewPrompts.bind(this)
+            this.generateResumeContent = this.generateResumeContent.bind(this)
+            this.generateSearchCard = this.generateSearchCard.bind(this)
+            this.generateSummary = this.generateSummary.bind(this)
+            this.getLeadDetail = this.getLeadDetail.bind(this)
+            this.getSession = this.getSession.bind(this)
+            this.listLeads = this.listLeads.bind(this)
+            this.scoreSession = this.scoreSession.bind(this)
+            this.updateDocumentVisibility = this.updateDocumentVisibility.bind(this)
+            this.updateReferee = this.updateReferee.bind(this)
+            this.updateSession = this.updateSession.bind(this)
+            this.verifyResumeDocument = this.verifyResumeDocument.bind(this)
+        }
+
+        /**
+         * Adds a document to a resume session.
+         */
+        public async addDocument(params: RequestType<typeof api_resume_documents_addDocument>): Promise<ResponseType<typeof api_resume_documents_addDocument>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                documentTitle: params.documentTitle,
+                documentType:  params.documentType,
+                expiryDate:    params.expiryDate,
+                fileUrl:       params.fileUrl,
+                visibility:    params.visibility,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/documents`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_documents_addDocument>
+        }
+
+        /**
+         * Adds a referee to a resume session.
+         */
+        public async addReferee(params: RequestType<typeof api_resume_referees_addReferee>): Promise<ResponseType<typeof api_resume_referees_addReferee>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                consentToContact: params.consentToContact,
+                email:            params.email,
+                organisation:     params.organisation,
+                phone:            params.phone,
+                refereeName:      params.refereeName,
+                refereeRole:      params.refereeRole,
+                relationship:     params.relationship,
+                yearsKnown:       params.yearsKnown,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/referees`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_addReferee>
+        }
+
+        public async convertToProfile(params: { id: string }): Promise<ResponseType<typeof api_resume_convert_to_profile_convertToProfile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/convert-to-profile`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_convert_to_profile_convertToProfile>
+        }
+
+        /**
+         * Creates a new resume builder session for a guest user.
+         */
+        public async createSession(params: RequestType<typeof api_resume_session_create_createSession>): Promise<ResponseType<typeof api_resume_session_create_createSession>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_create_createSession>
+        }
+
+        public async emailCapture(params: RequestType<typeof api_resume_email_capture_emailCapture>): Promise<ResponseType<typeof api_resume_email_capture_emailCapture>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                consentMarketingEmails:    params.consentMarketingEmails,
+                consentProfileCreation:    params.consentProfileCreation,
+                consentProviderVisibility: params.consentProviderVisibility,
+                consentResumeGeneration:   params.consentResumeGeneration,
+                email:                     params.email,
+                ipAddress:                 params.ipAddress,
+                userAgent:                 params.userAgent,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/email-capture`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_email_capture_emailCapture>
+        }
+
+        /**
+         * Generates an AI profile bio for a session.
+         */
+        public async generateBio(params: RequestType<typeof api_resume_ai_generate_generateBio>): Promise<ResponseType<typeof api_resume_ai_generate_generateBio>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/ai/profile-bio`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateBio>
+        }
+
+        /**
+         * Generates AI resume bullet points for a session.
+         */
+        public async generateBullets(params: RequestType<typeof api_resume_ai_generate_generateBullets>): Promise<ResponseType<typeof api_resume_ai_generate_generateBullets>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/ai/resume-bullets`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateBullets>
+        }
+
+        /**
+         * Generates AI interview prompts for a session.
+         */
+        public async generateInterviewPrompts(params: RequestType<typeof api_resume_ai_generate_generateInterviewPrompts>): Promise<ResponseType<typeof api_resume_ai_generate_generateInterviewPrompts>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/ai/interview-prompts`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateInterviewPrompts>
+        }
+
+        /**
+         * Generates all AI content for a resume session (summary, bullets, bio, search card, interview prompts).
+         */
+        public async generateResumeContent(params: { id: string }): Promise<ResponseType<typeof api_resume_ai_generate_generateResumeContent>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/generate-resume`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateResumeContent>
+        }
+
+        /**
+         * Generates an AI search card summary for a session.
+         */
+        public async generateSearchCard(params: RequestType<typeof api_resume_ai_generate_generateSearchCard>): Promise<ResponseType<typeof api_resume_ai_generate_generateSearchCard>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/ai/search-card`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateSearchCard>
+        }
+
+        /**
+         * Generates only the AI resume summary for a session.
+         */
+        public async generateSummary(params: RequestType<typeof api_resume_ai_generate_generateSummary>): Promise<ResponseType<typeof api_resume_ai_generate_generateSummary>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/ai/resume-summary`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateSummary>
+        }
+
+        /**
+         * Retrieves full detail for a resume lead including documents, referees and audit log.
+         */
+        public async getLeadDetail(params: { id: string }): Promise<ResponseType<typeof api_resume_admin_leads_getLeadDetail>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads/${encodeURIComponent(params.id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_getLeadDetail>
+        }
+
+        /**
+         * Retrieves a resume builder session with all associated data.
+         */
+        public async getSession(params: { id: string }): Promise<ResponseType<typeof api_resume_session_get_getSession>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_get_getSession>
+        }
+
+        /**
+         * Lists all resume builder leads for admin review.
+         */
+        public async listLeads(params: RequestType<typeof api_resume_admin_leads_listLeads>): Promise<ResponseType<typeof api_resume_admin_leads_listLeads>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                limit:  params.limit === undefined ? undefined : String(params.limit),
+                offset: params.offset === undefined ? undefined : String(params.offset),
+                status: params.status,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_listLeads>
+        }
+
+        /**
+         * Calculates the resume strength score for a session.
+         */
+        public async scoreSession(params: { id: string }): Promise<ResponseType<typeof api_resume_session_score_scoreSession>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/score`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_score_scoreSession>
+        }
+
+        /**
+         * Updates the visibility setting of a document in a resume session.
+         */
+        public async updateDocumentVisibility(params: RequestType<typeof api_resume_documents_updateDocumentVisibility>): Promise<ResponseType<typeof api_resume_documents_updateDocumentVisibility>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                visibility: params.visibility,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/documents/${encodeURIComponent(params.documentId)}/visibility`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_documents_updateDocumentVisibility>
+        }
+
+        /**
+         * Updates a referee's status or notes (used by admin).
+         */
+        public async updateReferee(params: RequestType<typeof api_resume_referees_updateReferee>): Promise<ResponseType<typeof api_resume_referees_updateReferee>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                referenceNotes:  params.referenceNotes,
+                referenceStatus: params.referenceStatus,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/referees/${encodeURIComponent(params.refereeId)}`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_updateReferee>
+        }
+
+        /**
+         * Updates a resume builder session with new questionnaire data.
+         */
+        public async updateSession(params: RequestType<typeof api_resume_session_update_updateSession>): Promise<ResponseType<typeof api_resume_session_update_updateSession>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                availability:        params.availability,
+                capabilityStories:   params.capabilityStories,
+                checks:              params.checks,
+                driversLicence:      params.driversLicence,
+                experienceLevel:     params.experienceLevel,
+                experienceYears:     params.experienceYears,
+                firstName:           params.firstName,
+                languages:           params.languages,
+                lastName:            params.lastName,
+                ndisScreeningNumber: params.ndisScreeningNumber,
+                ownVehicle:          params.ownVehicle,
+                phone:               params.phone,
+                postcode:            params.postcode,
+                qualifications:      params.qualifications,
+                state:               params.state,
+                stepCompleted:       params.stepCompleted,
+                suburb:              params.suburb,
+                supportSettings:     params.supportSettings,
+                supportStyle:        params.supportStyle,
+                supportTasks:        params.supportTasks,
+                targetRole:          params.targetRole,
+                training:            params.training,
+                travelRadiusKm:      params.travelRadiusKm,
+                workHistory:         params.workHistory,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_update_updateSession>
+        }
+
+        /**
+         * Marks a resume session document as verified or rejected.
+         */
+        public async verifyResumeDocument(params: RequestType<typeof api_resume_admin_leads_verifyResumeDocument>): Promise<ResponseType<typeof api_resume_admin_leads_verifyResumeDocument>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                adminNotes: params.adminNotes,
+                verified:   params.verified,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads/${encodeURIComponent(params.id)}/documents/${encodeURIComponent(params.documentId)}/verify`, {method: "PATCH", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_verifyResumeDocument>
         }
     }
 }

@@ -59,6 +59,10 @@ const SalesPortalPage = lazy(() => import("./pages/SalesPortalPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const JobSharePage = lazy(() => import("./pages/JobSharePage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
+const ResumeBuilderLandingPage = lazy(() => import("./pages/ResumeBuilderLandingPage"));
+const ResumeBuilderSessionPage = lazy(() => import("./pages/ResumeBuilderSessionPage"));
+const ResumeBuilderPreviewPage = lazy(() => import("./pages/ResumeBuilderPreviewPage"));
+const AdminResumeLeadsPage = lazy(() => import("./pages/AdminResumeLeadsPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { token, loading } = useAuth();
@@ -114,7 +118,7 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 
 function GlobalSupportButton() {
@@ -198,6 +202,40 @@ function AppInner() {
             <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" /></div>}>
               <ContactPage />
             </Suspense>
+          }
+        />
+        <Route
+          path="/resume-builder"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+              <ResumeBuilderLandingPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/resume-builder/session/:id"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+              <ResumeBuilderSessionPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/resume-builder/preview/:id"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+              <ResumeBuilderPreviewPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/resume-leads"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+                <AdminResumeLeadsPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
