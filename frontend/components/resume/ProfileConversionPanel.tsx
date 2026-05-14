@@ -4,7 +4,7 @@ import backend from "~backend/client";
 import { useNavigate } from "react-router-dom";
 import type { SessionData } from "./types";
 
-interface Props {
+interface Props  {
   session: SessionData;
   onConverted: (workerId: string) => void;
 }
