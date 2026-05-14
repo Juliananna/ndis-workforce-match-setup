@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Download, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
+import html2canvas from "html2canvas";
+import { PDFDocument } from "pdf-lib";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
 import { EmailConsentForm } from "../components/resume/EmailConsentForm";
@@ -112,46 +114,59 @@ export default function ResumeBuilderPreviewPage() {
     setDownloading(true);
     try {
       const el = document.getElementById("resume-preview");
-      if (!el) return;
-      const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
-
-      const printWindow = window.open("", "_blank");
-      if (!printWindow) {
-        toast({ title: "Popup blocked", description: "Please allow popups for this site and try again.", variant: "destructive" });
+      if (!el) {
+        toast({ title: "Resume not found", variant: "destructive" });
         return;
       }
+      const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
 
-      const styles = Array.from(document.styleSheets)
-        .flatMap((sheet) => {
-          try {
-            return Array.from(sheet.cssRules).map((r) => r.cssText);
-          } catch {
-            return [];
-          }
-        })
-        .join("\n");
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
 
-      printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${fullName} – NDIS Resume</title>
-  <style>
-    ${styles}
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    }
-    body { background: white; }
-  </style>
-</head>
-<body>
-  <div style="max-width:720px;margin:0 auto;padding:24px;">
-    ${el.outerHTML}
-  </div>
-  <script>window.onload = function(){ window.print(); window.onafterprint = function(){ window.close(); }; }<\/script>
-</body>
-</html>`);
-      printWindow.document.close();
+      const pngDataUrl = canvas.toDataURL("image/png");
+      const pngBase64 = pngDataUrl.split(",")[1];
+      const pngBytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
+
+      const A4_W = 595.28;
+      const A4_H = 841.89;
+      const pdfDoc = await PDFDocument.create();
+      const pngImage = await pdfDoc.embedPng(pngBytes);
+
+      const imgNaturalW = canvas.width / 2;
+      const imgNaturalH = canvas.height / 2;
+      const scale = Math.min(A4_W / imgNaturalW, A4_H / imgNaturalH, 1);
+      const drawW = imgNaturalW * scale;
+      const drawH = imgNaturalH * scale;
+
+      let heightLeft = drawH;
+      let srcY = 0;
+
+      while (heightLeft > 0) {
+        const page = pdfDoc.addPage([A4_W, A4_H]);
+        const sliceH = Math.min(heightLeft, A4_H);
+        page.drawImage(pngImage, {
+          x: (A4_W - drawW) / 2,
+          y: A4_H - sliceH,
+          width: drawW,
+          height: drawH,
+        });
+        heightLeft -= A4_H;
+        srcY += A4_H;
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fullName.replace(/\s+/g, "_")}_NDIS_Resume.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "PDF downloaded!", description: "Your resume has been saved as a PDF." });
     } catch (err) {
       console.error(err);
       toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
