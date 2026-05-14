@@ -139,7 +139,7 @@ function SignaturePad({ onSigned }: { onSigned: (dataUrl: string) => void }) {
   );
 }
 
-async function downloadSignedDocument(signatureDataUrl: string | null, signedAt: Date | null) {
+async function downloadSignedDocument(signatureDataUrl: string | null, signedAt: Date | null, workerName: string) {
   const W = 794;
   const MARGIN = 56;
   const contentWidth = W - MARGIN * 2;
@@ -181,7 +181,10 @@ async function downloadSignedDocument(signatureDataUrl: string | null, signedAt:
     }
     y += 20;
     y += 16;
-    const declLines = wrapText(ctx, "By signing below I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.", contentWidth, 16);
+    const declTextMeasure = workerName
+      ? `I, ${workerName}, confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.`
+      : "I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.";
+    const declLines = wrapText(ctx, declTextMeasure, contentWidth, 16);
     y += declLines.length * 16 + 28;
     y += 14;
     y += signatureDataUrl ? 100 : 60;
@@ -257,7 +260,10 @@ async function downloadSignedDocument(signatureDataUrl: string | null, signedAt:
   y += 16;
   ctx.fillStyle = "#475569";
   ctx.font = "12px sans-serif";
-  const declLines = wrapText(ctx, "By signing below I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.", contentWidth, 16);
+  const declText = workerName
+    ? `I, ${workerName}, confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.`
+    : "I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.";
+  const declLines = wrapText(ctx, declText, contentWidth, 16);
   for (const line of declLines) { ctx.fillText(line, MARGIN, y + 13); y += 16; }
   y += 28;
 
@@ -324,6 +330,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [signedAt, setSignedAt] = useState<Date | null>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [workerName, setWorkerName] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -337,6 +344,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
     if (!api) return;
     setLoading(true);
     api.workers.getNdisCocStatus().then((res) => {
+      setWorkerName(res.workerName);
       if (res.signed && res.signedAt) {
         setSignedAt(res.signedAt);
         setSignatureDataUrl(res.signatureDataUrl);
@@ -438,7 +446,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
                 <p className="text-xs text-foreground font-medium mb-1">Declaration</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  By signing below I confirm I have read and understood the NDIS Code of Conduct
+                  I, <span className="font-semibold text-foreground">{workerName}</span>, confirm I have read and understood the NDIS Code of Conduct
                   and agree to comply with all 7 principles in my work as an NDIS support worker.
                 </p>
               </div>
@@ -465,7 +473,7 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
               <Button
                 variant="outline"
                 className="flex-1 border-border text-foreground hover:bg-muted gap-1.5"
-                onClick={() => downloadSignedDocument(signatureDataUrl, signedAt)}
+                onClick={() => downloadSignedDocument(signatureDataUrl, signedAt, workerName)}
               >
                 <Download className="h-3.5 w-3.5" />
                 Download
@@ -501,8 +509,11 @@ export function NdisCocSigningModal({ open, onClose, onSigned }: Props) {
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 mt-2">
                 <p className="text-xs text-foreground font-medium mb-1">Declaration</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  By signing below I confirm I have read and understood the NDIS Code of Conduct 
-                  and agree to comply with all 7 principles in my work as an NDIS support worker.
+                  {workerName ? (
+                    <>I, <span className="font-semibold text-foreground">{workerName}</span>, confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.</>
+                  ) : (
+                    <>I confirm I have read and understood the NDIS Code of Conduct and agree to comply with all 7 principles in my work as an NDIS support worker.</>
+                  )}
                 </p>
               </div>
             </div>
