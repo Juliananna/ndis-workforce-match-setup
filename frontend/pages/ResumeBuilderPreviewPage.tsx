@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Download, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
-import { toPng } from "html-to-image";
-import { PDFDocument } from "pdf-lib";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
 import { EmailConsentForm } from "../components/resume/EmailConsentForm";
@@ -39,7 +37,6 @@ export default function ResumeBuilderPreviewPage() {
   const [scoring, setScoring] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [showHiredModal, setShowHiredModal] = useState(false);
 
   const loadSession = async () => {
@@ -110,65 +107,47 @@ export default function ResumeBuilderPreviewPage() {
     }
   };
 
-  const handleDownload = async () => {
-    setDownloading(true);
-    try {
-      const el = document.getElementById("resume-preview");
-      if (!el) {
-        toast({ title: "Resume not found", variant: "destructive" });
-        return;
-      }
-      const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
+  const handleDownload = () => {
+    const el = document.getElementById("resume-preview");
+    if (!el) return;
+    const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
 
-      const A4_W = 595.28;
-      const A4_H = 841.89;
-
-      const pngDataUrl = await toPng(el, {
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        style: {
-          width: "794px",
-          maxWidth: "none",
-          borderRadius: "0",
-        },
-        width: 794,
-      });
-
-      const pngBase64 = pngDataUrl.split(",")[1];
-      const pngBytes = Uint8Array.from(atob(pngBase64), (c) => c.charCodeAt(0));
-
-      const pdfDoc = await PDFDocument.create();
-      const pngImage = await pdfDoc.embedPng(pngBytes);
-
-      const imgW_pts = A4_W;
-      const imgH_pts = (pngImage.height / pngImage.width) * A4_W;
-      const pageCount = Math.ceil(imgH_pts / A4_H);
-
-      for (let i = 0; i < pageCount; i++) {
-        const page = pdfDoc.addPage([A4_W, A4_H]);
-        page.drawImage(pngImage, {
-          x: 0,
-          y: A4_H - imgH_pts + i * A4_H,
-          width: imgW_pts,
-          height: imgH_pts,
-        });
-      }
-
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${fullName.replace(/\s+/g, "_")}_NDIS_Resume.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: "PDF downloaded!" });
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
-    } finally {
-      setDownloading(false);
+    const printWin = window.open("", "_blank", "width=900,height=700");
+    if (!printWin) {
+      toast({ title: "Popup blocked", description: "Please allow popups for this site, then try again.", variant: "destructive" });
+      return;
     }
+
+    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map((l) => `<link rel="stylesheet" href="${(l as HTMLLinkElement).href}">`)
+      .join("\n");
+
+    printWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${fullName} – NDIS Support Worker Resume</title>
+  ${links}
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }
+    html, body { margin: 0; padding: 0; background: white; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    #resume-root { max-width: 680px; margin: 0 auto; }
+    @media screen { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div id="resume-root">${el.outerHTML}<\/div>
+  <script>
+    window.onload = function() {
+      document.title = "${fullName} – NDIS Support Worker Resume";
+      setTimeout(function() { window.print(); }, 400);
+      window.onafterprint = function() { window.close(); };
+    };
+  <\/script>
+</body>
+</html>`);
+    printWin.document.close();
   };
 
   if (loading) {
@@ -205,11 +184,10 @@ export default function ResumeBuilderPreviewPage() {
             {hasEmail ? (
               <button
                 onClick={handleDownload}
-                disabled={downloading}
-                className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold text-sm rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-60"
+                className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white font-semibold text-sm rounded-xl hover:bg-teal-700 transition-colors"
               >
                 <Download size={16} />
-                {downloading ? "Downloading…" : "Download PDF"}
+                Download PDF
               </button>
             ) : (
               <button
