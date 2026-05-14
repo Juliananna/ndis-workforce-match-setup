@@ -291,7 +291,7 @@ export function BrowseWorkersPage() {
         </div>
       )}
 
-      {!loading && searched && workers.length === 0 && !isFallback && (
+      {!loading && searched && workers.length === 0 && !isFallback && fallbackWorkers.length === 0 && (
         <p className="text-sm text-muted-foreground italic text-center py-8">
           No workers found. Try adjusting your search or filters.
         </p>
