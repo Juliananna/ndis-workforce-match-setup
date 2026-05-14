@@ -205,6 +205,10 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
   const [cocModalOpen, setCocModalOpen] = useState(false);
 
   const handleQuickView = (doc: WorkerDocument) => {
+    if (doc.documentType === NDIS_COC_TYPE) {
+      setCocModalOpen(true);
+      return;
+    }
     setPreviewDoc(doc as PreviewDoc);
     setPreviewOpen(true);
   };
