@@ -135,6 +135,7 @@ async function sendDigest(since: Date, periodLabel: string): Promise<{ sent: num
       AND u.is_suspended = false
       AND COALESCE(u.is_archived, false) = false
       AND u.is_demo = false
+      AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id)
     LIMIT 2000
   `;
 
@@ -214,6 +215,7 @@ export const adminPreviewJobDigest = api<DigestPreviewRequest, DigestPreviewResp
       JOIN users u ON u.user_id = w.user_id
       WHERE u.is_verified = true AND u.is_suspended = false
         AND COALESCE(u.is_archived, false) = false AND u.is_demo = false
+        AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id)
     `;
 
     const html = jobs.length > 0

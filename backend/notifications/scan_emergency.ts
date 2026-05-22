@@ -44,6 +44,7 @@ export const scanEmergencyShifts = api(
           AND n.body LIKE ${"%" + job.job_id + "%"}
         WHERE n.id IS NULL
           AND u.is_demo = FALSE
+          AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id)
         LIMIT 200
       `;
 

@@ -76,7 +76,8 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
 
         const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
         return { session: rowToSession(updatedRow!), profileCreated, workerId };
-      } catch {
+      } catch (err) {
+        console.error("[email_capture] profile conversion failed for session", req.id, err);
       }
     }
 

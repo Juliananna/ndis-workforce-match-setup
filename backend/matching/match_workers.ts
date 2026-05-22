@@ -186,6 +186,7 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE
           u.is_demo = FALSE
+          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
@@ -224,6 +225,7 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         JOIN users u ON u.user_id = w.user_id
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE u.is_demo = FALSE
+          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
         ORDER BY
           w.priority_boost DESC,

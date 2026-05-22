@@ -8,6 +8,20 @@ export interface ComplianceStatusResponse {
   complianceRequired: boolean;
 }
 
+export async function syncOnboardingStatus(workerId: string): Promise<"active" | "compliance_required"> {
+  const docRow = await db.queryRow<{ cnt: number }>`
+    SELECT COUNT(*)::int AS cnt FROM worker_documents WHERE worker_id = ${workerId}
+  `;
+  const documentCount = docRow?.cnt ?? 0;
+  const newStatus = documentCount > 0 ? "active" : "compliance_required";
+
+  await db.exec`
+    UPDATE workers SET onboarding_status = ${newStatus} WHERE worker_id = ${workerId}
+  `;
+
+  return newStatus;
+}
+
 export const getComplianceStatus = api<void, ComplianceStatusResponse>(
   { expose: true, auth: true, method: "GET", path: "/workers/compliance-status" },
   async () => {
@@ -16,34 +30,22 @@ export const getComplianceStatus = api<void, ComplianceStatusResponse>(
       throw APIError.permissionDenied("only workers can access this endpoint");
     }
 
-    const worker = await db.queryRow<{ worker_id: string; onboarding_status: string }>`
-      SELECT worker_id, onboarding_status FROM workers WHERE user_id = ${auth.userID}
+    const worker = await db.queryRow<{ worker_id: string }>`
+      SELECT worker_id FROM workers WHERE user_id = ${auth.userID}
     `;
     if (!worker) throw APIError.notFound("worker profile not found");
+
+    const newStatus = await syncOnboardingStatus(worker.worker_id);
 
     const docRow = await db.queryRow<{ cnt: number }>`
       SELECT COUNT(*)::int AS cnt FROM worker_documents WHERE worker_id = ${worker.worker_id}
     `;
     const documentCount = docRow?.cnt ?? 0;
 
-    const complianceRequired = documentCount === 0 || worker.onboarding_status === "compliance_required";
-
-    if (complianceRequired && worker.onboarding_status !== "compliance_required") {
-      await db.exec`
-        UPDATE workers SET onboarding_status = 'compliance_required' WHERE worker_id = ${worker.worker_id}
-      `;
-    }
-
-    if (!complianceRequired && worker.onboarding_status === "compliance_required") {
-      await db.exec`
-        UPDATE workers SET onboarding_status = 'active' WHERE worker_id = ${worker.worker_id}
-      `;
-    }
-
     return {
-      onboardingStatus: complianceRequired ? "compliance_required" : "active",
+      onboardingStatus: newStatus,
       documentCount,
-      complianceRequired,
+      complianceRequired: newStatus === "compliance_required",
     };
   }
 );

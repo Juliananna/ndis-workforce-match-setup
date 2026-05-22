@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { workerDocumentsBucket } from "./storage";
+import { syncOnboardingStatus } from "./compliance_status";
 
 export const MANDATORY_DOCUMENT_TYPES = [
   "Driver's Licence",
@@ -183,6 +184,8 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       throw APIError.internal("failed to record document");
     }
 
+    await syncOnboardingStatus(workerId);
+
     const { url: fileUrl } = await workerDocumentsBucket.signedDownloadUrl(row.file_key, { ttl: 3600 });
 
     return {
@@ -296,6 +299,8 @@ export const deleteWorkerDocument = api<DeleteDocumentRequest, void>(
     }
 
     await db.exec`DELETE FROM worker_documents WHERE id = ${req.documentId}`;
+
+    await syncOnboardingStatus(workerId);
   }
 );
 

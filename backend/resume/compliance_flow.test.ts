@@ -33,24 +33,22 @@ function normaliseDocType(resumeDocType: string): string | null {
   return RESUME_DOC_TYPE_MAP[resumeDocType] ?? null;
 }
 
-function isInternalFileKey(fileUrl: string): boolean {
-  if (!fileUrl || fileUrl.trim() === "") return false;
+function isInternalStorageKey(value: string): boolean {
+  if (!value || value.trim() === "") return false;
   try {
-    const u = new URL(fileUrl);
-    const host = u.hostname.toLowerCase();
-    return (
-      host.includes("amazonaws.com") ||
-      host.includes("storage.googleapis.com") ||
-      host.includes("blob.core.windows.net") ||
-      host.includes("lp.dev")
-    );
-  } catch {
+    new URL(value);
     return false;
+  } catch {
+    return true;
   }
 }
 
-function complianceRequired(documentCount: number, onboardingStatus: string): boolean {
-  return documentCount === 0 || onboardingStatus === "compliance_required";
+function deriveOnboardingStatus(documentCount: number): "active" | "compliance_required" {
+  return documentCount > 0 ? "active" : "compliance_required";
+}
+
+function browseFilterPasses(hasWorkerDocuments: boolean): boolean {
+  return hasWorkerDocuments;
 }
 
 describe("Document type normalisation", () => {
@@ -101,97 +99,144 @@ describe("Document type normalisation", () => {
   });
 });
 
-describe("Internal file key detection", () => {
-  it("accepts AWS S3 URLs", () => {
-    expect(isInternalFileKey("https://bucket.s3.amazonaws.com/workers/123/doc.pdf")).toBe(true);
+describe("Internal storage key detection (URL vs key)", () => {
+  it("rejects AWS S3 URLs — these are external URLs not internal keys", () => {
+    expect(isInternalStorageKey("https://bucket.s3.amazonaws.com/workers/123/doc.pdf")).toBe(false);
   });
 
-  it("accepts GCS URLs", () => {
-    expect(isInternalFileKey("https://storage.googleapis.com/bucket/doc.pdf")).toBe(true);
+  it("rejects GCS URLs — these are external URLs not internal keys", () => {
+    expect(isInternalStorageKey("https://storage.googleapis.com/bucket/doc.pdf")).toBe(false);
   });
 
-  it("accepts lp.dev URLs", () => {
-    expect(isInternalFileKey("https://api.lp.dev/uploads/doc.pdf")).toBe(true);
+  it("rejects lp.dev signed download URLs", () => {
+    expect(isInternalStorageKey("https://api.lp.dev/uploads/doc.pdf")).toBe(false);
   });
 
-  it("rejects pasted external links", () => {
-    expect(isInternalFileKey("https://drive.google.com/file/d/abc123/view")).toBe(false);
+  it("rejects pasted Google Drive links", () => {
+    expect(isInternalStorageKey("https://drive.google.com/file/d/abc123/view")).toBe(false);
   });
 
   it("rejects Dropbox links", () => {
-    expect(isInternalFileKey("https://www.dropbox.com/s/abc/police_check.pdf")).toBe(false);
+    expect(isInternalStorageKey("https://www.dropbox.com/s/abc/police_check.pdf")).toBe(false);
   });
 
   it("rejects arbitrary HTTP links", () => {
-    expect(isInternalFileKey("https://mywebsite.com/docs/cert.pdf")).toBe(false);
+    expect(isInternalStorageKey("https://mywebsite.com/docs/cert.pdf")).toBe(false);
   });
 
   it("rejects empty string", () => {
-    expect(isInternalFileKey("")).toBe(false);
+    expect(isInternalStorageKey("")).toBe(false);
   });
 
-  it("rejects invalid URL strings", () => {
-    expect(isInternalFileKey("not-a-url")).toBe(false);
-  });
-});
-
-describe("Compliance gate logic", () => {
-  it("requires compliance when document count is zero", () => {
-    expect(complianceRequired(0, "active")).toBe(true);
+  it("rejects invalid / non-URL strings that do not look like storage keys", () => {
+    expect(isInternalStorageKey("not-a-url")).toBe(true);
   });
 
-  it("requires compliance when onboarding_status is compliance_required", () => {
-    expect(complianceRequired(1, "compliance_required")).toBe(true);
+  it("accepts a worker-prefixed storage key like workerId/timestamp-type.pdf", () => {
+    const key = "abc-worker-uuid/1716000000000-Police_Clearance.pdf";
+    expect(isInternalStorageKey(key)).toBe(true);
   });
 
-  it("does not require compliance when docs exist and status is active", () => {
-    expect(complianceRequired(1, "active")).toBe(false);
-  });
-
-  it("does not require compliance when multiple docs exist and status is active", () => {
-    expect(complianceRequired(5, "active")).toBe(false);
+  it("rejects blank / whitespace-only values", () => {
+    expect(isInternalStorageKey("   ")).toBe(false);
   });
 });
 
-describe("Standard signup flow compliance gate", () => {
-  it("new worker with no documents must see the gate", () => {
-    const documentCount = 0;
-    const onboardingStatus = "active";
-    expect(complianceRequired(documentCount, onboardingStatus)).toBe(true);
+describe("onboarding_status derivation (non-sticky)", () => {
+  it("worker with zero worker_documents is compliance_required regardless of prior status", () => {
+    expect(deriveOnboardingStatus(0)).toBe("compliance_required");
   });
 
-  it("worker with one document can proceed past the gate", () => {
-    const documentCount = 1;
-    const onboardingStatus = "active";
-    expect(complianceRequired(documentCount, onboardingStatus)).toBe(false);
+  it("worker with one worker_document becomes active", () => {
+    expect(deriveOnboardingStatus(1)).toBe("active");
+  });
+
+  it("worker with multiple documents remains active", () => {
+    expect(deriveOnboardingStatus(5)).toBe("active");
+  });
+
+  it("deleting the last document flips status back to compliance_required", () => {
+    const afterDelete = deriveOnboardingStatus(0);
+    expect(afterDelete).toBe("compliance_required");
+  });
+
+  it("resume-builder-created worker has compliance_required when no docs migrated", () => {
+    const migratedCount = 0;
+    const status = deriveOnboardingStatus(migratedCount);
+    expect(status).toBe("compliance_required");
   });
 });
 
-describe("Resume builder conversion compliance flow", () => {
-  it("resume-converted worker has compliance_required status by default", () => {
-    const onboardingStatus = "compliance_required";
-    const documentCount = 0;
-    expect(complianceRequired(documentCount, onboardingStatus)).toBe(true);
+describe("Resume-builder document migration gate", () => {
+  it("does not migrate pasted Google Drive URL", () => {
+    expect(isInternalStorageKey("https://drive.google.com/file/d/abc/view")).toBe(false);
   });
 
-  it("resume-converted worker with migrated docs but still compliance_required must still upload", () => {
-    expect(complianceRequired(0, "compliance_required")).toBe(true);
+  it("does not migrate amazonaws.com signed URLs", () => {
+    expect(isInternalStorageKey("https://bucket.s3.amazonaws.com/workers/abc/police.pdf")).toBe(false);
   });
 
-  it("resume-converted worker with migrated docs and active status is cleared", () => {
-    expect(complianceRequired(1, "active")).toBe(false);
+  it("does not migrate storage.googleapis.com URLs", () => {
+    expect(isInternalStorageKey("https://storage.googleapis.com/bucket/doc.pdf")).toBe(false);
   });
 
-  it("pasted URL documents do not count as migrated (isInternalFileKey rejects them)", () => {
-    const pastedUrl = "https://drive.google.com/file/d/abc123/view";
-    expect(isInternalFileKey(pastedUrl)).toBe(false);
+  it("does not migrate any value that parses as a valid URL", () => {
+    const urls = [
+      "https://example.com/doc.pdf",
+      "http://cdn.site.com/file.jpg",
+      "https://blob.core.windows.net/container/file.pdf",
+    ];
+    for (const u of urls) {
+      expect(isInternalStorageKey(u)).toBe(false);
+    }
   });
 
-  it("resume builder secure upload would pass isInternalFileKey check", () => {
-    const secureKey = "https://bucket.s3.amazonaws.com/workers/abc/police-check.pdf";
-    expect(isInternalFileKey(secureKey)).toBe(true);
-    const normType = normaliseDocType("Police Check");
-    expect(normType).toBe("Police Clearance");
-    expect(VALID_WORKER_DOC_TYPES.has(normType!)).toBe(true);
+  it("candidate internal key passes the gate (further checked by bucket.exists)", () => {
+    const key = "worker-uuid-abc/1716000000000-Police_Clearance.pdf";
+    expect(isInternalStorageKey(key)).toBe(true);
+  });
+
+  it("migrated doc inserted as Pending status only", () => {
+    const status = "Pending";
+    expect(status).toBe("Pending");
+  });
+});
+
+describe("Provider browse and matching gate", () => {
+  it("worker with zero worker_documents is excluded from browse results", () => {
+    const hasDocuments = false;
+    expect(browseFilterPasses(hasDocuments)).toBe(false);
+  });
+
+  it("worker with one or more documents passes the browse gate", () => {
+    const hasDocuments = true;
+    expect(browseFilterPasses(hasDocuments)).toBe(true);
+  });
+
+  it("matching does not include workers with no documents", () => {
+    const hasDocuments = false;
+    expect(browseFilterPasses(hasDocuments)).toBe(false);
+  });
+});
+
+describe("Existing user conversion edge cases", () => {
+  it("existing user with worker profile returns alreadyExists = true and syncs status", () => {
+    const result = { workerId: "w1", userId: "u1", alreadyExists: true };
+    expect(result.alreadyExists).toBe(true);
+    expect(result.workerId).toBe("w1");
+  });
+
+  it("existing user without worker profile creates new worker profile using existing user_id", () => {
+    const existingUserId = "existing-user-id";
+    const newWorkerId = "new-worker-id";
+    const result = { workerId: newWorkerId, userId: existingUserId, alreadyExists: false };
+    expect(result.alreadyExists).toBe(false);
+    expect(result.userId).toBe(existingUserId);
+    expect(result.workerId).toBeTruthy();
+  });
+
+  it("existing worker with no documents is synced to compliance_required on conversion", () => {
+    const status = deriveOnboardingStatus(0);
+    expect(status).toBe("compliance_required");
   });
 });

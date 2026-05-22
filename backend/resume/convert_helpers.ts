@@ -3,6 +3,8 @@ import { secret } from "encore.dev/config";
 import { randomUUID } from "crypto";
 import db from "../db";
 import { sendEmail } from "../emailer/sender";
+import { workerDocumentsBucket } from "../workers/storage";
+import { syncOnboardingStatus } from "../workers/compliance_status";
 import type { ResumeSession } from "./types";
 
 const appBaseUrl = secret("AppBaseUrl");
@@ -112,20 +114,56 @@ function normaliseDocType(resumeDocType: string): string | null {
   return RESUME_DOC_TYPE_MAP[resumeDocType] ?? null;
 }
 
-function isInternalFileKey(fileUrl: string): boolean {
-  if (!fileUrl || fileUrl.trim() === "") return false;
+function isInternalStorageKey(value: string): boolean {
+  if (!value || value.trim() === "") return false;
   try {
-    const u = new URL(fileUrl);
-    const host = u.hostname.toLowerCase();
-    return (
-      host.includes("amazonaws.com") ||
-      host.includes("storage.googleapis.com") ||
-      host.includes("blob.core.windows.net") ||
-      host.includes("lp.dev")
-    );
-  } catch {
+    new URL(value);
     return false;
+  } catch {
+    return true;
   }
+}
+
+async function migrateResumeDocs(sessionId: string, workerId: string): Promise<number> {
+  const resumeDocs = await db.queryAll<{
+    document_type: string;
+    document_title: string;
+    file_url: string;
+    expiry_date: string | null;
+  }>`
+    SELECT document_type, document_title, file_url, expiry_date
+    FROM resume_session_documents
+    WHERE session_id = ${sessionId}
+  `;
+
+  let migratedCount = 0;
+  for (const doc of resumeDocs) {
+    if (!isInternalStorageKey(doc.file_url)) continue;
+
+    const canonicalType = normaliseDocType(doc.document_type);
+    if (!canonicalType) continue;
+
+    const fileExists = await workerDocumentsBucket.exists(doc.file_url);
+    if (!fileExists) continue;
+
+    const alreadyExists = await db.queryRow<{ id: string }>`
+      SELECT id FROM worker_documents
+      WHERE worker_id = ${workerId}
+        AND document_type = ${canonicalType}
+        AND file_key = ${doc.file_url}
+    `;
+    if (alreadyExists) continue;
+
+    const expiryDate = doc.expiry_date ? new Date(doc.expiry_date) : null;
+
+    await db.exec`
+      INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
+      VALUES (${workerId}, ${canonicalType}, ${doc.document_title}, ${doc.file_url}, ${expiryDate}, 'Pending')
+    `;
+    migratedCount++;
+  }
+
+  return migratedCount;
 }
 
 export async function convertSessionToProfile(
@@ -140,13 +178,63 @@ export async function convertSessionToProfile(
     const existingWorker = await db.queryRow<{ worker_id: string }>`
       SELECT worker_id FROM workers WHERE user_id = ${existingUser.user_id}
     `;
+
     if (existingWorker) {
       await db.exec`
         UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
         WHERE id = ${sessionId}
       `;
+      await syncOnboardingStatus(existingWorker.worker_id);
       return { workerId: existingWorker.worker_id, userId: existingUser.user_id, alreadyExists: true };
     }
+
+    const worker = await db.queryRow<{ worker_id: string }>`
+      INSERT INTO workers (
+        user_id, name, phone, full_name, location,
+        bio, experience_years, qualifications,
+        drivers_license, vehicle_access, ndis_screening_number,
+        onboarding_status
+      )
+      VALUES (
+        ${existingUser.user_id},
+        ${session.firstName ?? session.email!.split("@")[0]},
+        ${session.phone ?? ""},
+        ${[session.firstName, session.lastName].filter(Boolean).join(" ") || (session.firstName ?? session.email!.split("@")[0])},
+        ${[session.suburb, session.state].filter(Boolean).join(", ") || null},
+        ${session.aiBio ?? session.aiSummary ?? null},
+        ${session.experienceYears ?? null},
+        ${session.qualifications.map((q) => q.name).join(", ") || null},
+        ${session.driversLicence},
+        ${session.ownVehicle},
+        ${session.ndisScreeningNumber ?? null},
+        'compliance_required'
+      )
+      RETURNING worker_id
+    `;
+
+    if (!worker) throw APIError.internal("failed to create worker profile for existing user");
+
+    await buildWorkerExtras(session, worker.worker_id);
+
+    await db.exec`
+      UPDATE resume_sessions SET converted_worker_id = ${worker.worker_id}, status = 'converted', updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
+    const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
+    await syncOnboardingStatus(worker.worker_id);
+
+    await db.exec`
+      INSERT INTO resume_audit_log (session_id, event_type, event_data)
+      VALUES (${sessionId}, 'worker_profile_created_from_resume', ${JSON.stringify({
+        workerId: worker.worker_id,
+        source: 'resume_builder',
+        existingUserId: existingUser.user_id,
+        migratedDocuments: migratedCount,
+      })}::jsonb)
+    `;
+
+    return { workerId: worker.worker_id, userId: existingUser.user_id, alreadyExists: false };
   }
 
   const verificationToken = randomUUID();
@@ -188,22 +276,7 @@ export async function convertSessionToProfile(
 
   if (!worker) throw APIError.internal("failed to create worker profile");
 
-  for (const skill of session.supportTasks) {
-    await db.exec`
-      INSERT INTO worker_skills (worker_id, skill) VALUES (${worker.worker_id}, ${skill})
-      ON CONFLICT DO NOTHING
-    `;
-  }
-
-  if (session.availability.length > 0) {
-    const days = session.availability.map((a) => a.day);
-    const shifts = [...new Set(session.availability.flatMap((a) => a.shifts))];
-    await db.exec`
-      INSERT INTO worker_availability (worker_id, available_days, preferred_shift_types, max_travel_distance_km)
-      VALUES (${worker.worker_id}, ${JSON.stringify(days)}, ${JSON.stringify(shifts)}, ${session.travelRadiusKm ?? 20})
-      ON CONFLICT (worker_id) DO NOTHING
-    `;
-  }
+  await buildWorkerExtras(session, worker.worker_id);
 
   await db.exec`
     UPDATE resume_sessions
@@ -216,46 +289,8 @@ export async function convertSessionToProfile(
     VALUES (${sessionId}, 'converted_to_profile', ${JSON.stringify({ workerId: worker.worker_id, source: 'resume_builder' })}::jsonb)
   `;
 
-  const resumeDocs = await db.queryAll<{
-    document_type: string;
-    document_title: string;
-    file_url: string;
-    expiry_date: string | null;
-  }>`
-    SELECT document_type, document_title, file_url, expiry_date
-    FROM resume_session_documents
-    WHERE session_id = ${sessionId}
-  `;
-
-  let migratedCount = 0;
-  for (const doc of resumeDocs) {
-    if (!isInternalFileKey(doc.file_url)) continue;
-
-    const canonicalType = normaliseDocType(doc.document_type);
-    if (!canonicalType) continue;
-
-    const alreadyExists = await db.queryRow<{ id: string }>`
-      SELECT id FROM worker_documents
-      WHERE worker_id = ${worker.worker_id}
-        AND document_type = ${canonicalType}
-        AND file_key = ${doc.file_url}
-    `;
-    if (alreadyExists) continue;
-
-    const expiryDate = doc.expiry_date ? new Date(doc.expiry_date) : null;
-
-    await db.exec`
-      INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
-      VALUES (${worker.worker_id}, ${canonicalType}, ${doc.document_title}, ${doc.file_url}, ${expiryDate}, 'Pending')
-    `;
-    migratedCount++;
-  }
-
-  if (migratedCount > 0) {
-    await db.exec`
-      UPDATE workers SET onboarding_status = 'active' WHERE worker_id = ${worker.worker_id}
-    `;
-  }
+  const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
+  await syncOnboardingStatus(worker.worker_id);
 
   await db.exec`
     INSERT INTO resume_audit_log (session_id, event_type, event_data)
@@ -269,4 +304,23 @@ export async function convertSessionToProfile(
   await issueSetPasswordEmail(user.user_id, session.email!);
 
   return { workerId: worker.worker_id, userId: user.user_id, alreadyExists: false };
+}
+
+async function buildWorkerExtras(session: ResumeSession, workerId: string): Promise<void> {
+  for (const skill of session.supportTasks) {
+    await db.exec`
+      INSERT INTO worker_skills (worker_id, skill) VALUES (${workerId}, ${skill})
+      ON CONFLICT DO NOTHING
+    `;
+  }
+
+  if (session.availability.length > 0) {
+    const days = session.availability.map((a) => a.day);
+    const shifts = [...new Set(session.availability.flatMap((a) => a.shifts))];
+    await db.exec`
+      INSERT INTO worker_availability (worker_id, available_days, preferred_shift_types, max_travel_distance_km)
+      VALUES (${workerId}, ${JSON.stringify(days)}, ${JSON.stringify(shifts)}, ${session.travelRadiusKm ?? 20})
+      ON CONFLICT (worker_id) DO NOTHING
+    `;
+  }
 }
