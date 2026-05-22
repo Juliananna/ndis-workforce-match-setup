@@ -195,7 +195,8 @@ import {
     adminCancelBooking as api_admin_reference_bookings_adminCancelBooking,
     adminCreateBooking as api_admin_reference_bookings_adminCreateBooking,
     adminListPendingReferences as api_admin_reference_bookings_adminListPendingReferences,
-    adminListUpcomingBookings as api_admin_reference_bookings_adminListUpcomingBookings
+    adminListUpcomingBookings as api_admin_reference_bookings_adminListUpcomingBookings,
+    adminUpdateReferenceNotes as api_admin_reference_bookings_adminUpdateReferenceNotes
 } from "~backend/admin/reference_bookings";
 import {
     adminGetReferenceCheck as api_admin_reference_check_adminGetReferenceCheck,
@@ -279,6 +280,7 @@ export namespace admin {
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
             this.adminUpdateEmailTemplate = this.adminUpdateEmailTemplate.bind(this)
             this.adminUpdateJobStatus = this.adminUpdateJobStatus.bind(this)
+            this.adminUpdateReferenceNotes = this.adminUpdateReferenceNotes.bind(this)
             this.adminUpdateSMSTemplate = this.adminUpdateSMSTemplate.bind(this)
             this.adminUpdateSetting = this.adminUpdateSetting.bind(this)
             this.adminVerifyDocument = this.adminVerifyDocument.bind(this)
@@ -639,6 +641,15 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/jobs/${encodeURIComponent(params.jobId)}/status`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async adminUpdateReferenceNotes(params: RequestType<typeof api_admin_reference_bookings_adminUpdateReferenceNotes>): Promise<void> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                notes: params.notes,
+            }
+
+            await this.baseClient.callTypedAPI(`/admin/references/${encodeURIComponent(params.referenceId)}/notes`, {method: "PATCH", body: JSON.stringify(body)})
         }
 
         public async adminUpdateSMSTemplate(params: RequestType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>): Promise<ResponseType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>> {

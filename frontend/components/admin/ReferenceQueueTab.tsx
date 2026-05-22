@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Calendar, Clock, Phone, User, Building2, CheckCircle2,
   CalendarClock, AlertCircle, ChevronRight, RefreshCw, X, Search, MessageSquare, Loader2, Mail,
+  StickyNote, Check, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,12 @@ export function ReferenceQueueTab() {
     setMessageModal(null);
   };
 
+  const handleSaveNotes = async (referenceId: string, notes: string) => {
+    if (!api) throw new Error("Not authenticated");
+    await api.admin.adminUpdateReferenceNotes({ referenceId, notes });
+    await load();
+  };
+
   const handleWizardSubmit = async (req: SubmitReferenceCheckRequest): Promise<ReferenceCheckResult> => {
     if (!api) throw new Error("Not authenticated");
     const result = await api.admin.adminSubmitReferenceCheck(req);
@@ -165,6 +172,7 @@ export function ReferenceQueueTab() {
                       onConduct={() => setWizardRef({ item, existing: null })}
                       onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
                       onEmailReference={() => setEmailRefItem(item)}
+                      onSaveNotes={handleSaveNotes}
                     />
                   ))}
                 </Section>
@@ -187,6 +195,7 @@ export function ReferenceQueueTab() {
                       onConduct={() => setWizardRef({ item, existing: null })}
                       onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
                       onEmailReference={() => setEmailRefItem(item)}
+                      onSaveNotes={handleSaveNotes}
                     />
                   ))}
                 </Section>
@@ -478,6 +487,7 @@ function ReferenceCard({
   onConduct,
   onMessage,
   onEmailReference,
+  onSaveNotes,
 }: {
   item: PendingReferenceItem;
   onSchedule: () => void;
@@ -485,10 +495,26 @@ function ReferenceCard({
   onConduct: () => void;
   onMessage: () => void;
   onEmailReference: () => void;
+  onSaveNotes: (referenceId: string, notes: string) => Promise<void>;
 }) {
   const daysWaiting = Math.floor(
     (Date.now() - new Date(item.referenceCreatedAt).getTime()) / (1000 * 60 * 60 * 24)
   );
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesValue, setNotesValue] = useState(item.referenceNotes ?? "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await onSaveNotes(item.referenceId, notesValue);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2000);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -550,7 +576,44 @@ function ReferenceCard({
         </div>
       </div>
 
+      {notesOpen && (
+        <div className="mt-3 space-y-2">
+          <textarea
+            rows={3}
+            value={notesValue}
+            onChange={(e) => setNotesValue(e.target.value)}
+            placeholder="Add notes about this reference check (e.g. call attempts, observations, follow-up actions)…"
+            className="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+          />
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">{notesValue.length}/2000</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setNotesOpen(false)} className="h-7 text-xs">Cancel</Button>
+              <Button
+                size="sm"
+                onClick={handleSaveNotes}
+                disabled={savingNotes}
+                className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
+              >
+                {savingNotes ? <Loader2 className="h-3 w-3 animate-spin" /> : notesSaved ? <Check className="h-3 w-3" /> : null}
+                {notesSaved ? "Saved" : "Save Notes"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setNotesOpen((v) => !v)}
+          className={`h-7 text-xs gap-1 ${item.referenceNotes ? "text-amber-700 border-amber-300 bg-amber-50" : ""}`}
+          title={item.referenceNotes ? item.referenceNotes : "Add notes"}
+        >
+          {item.referenceNotes ? <Pencil className="h-3 w-3" /> : <StickyNote className="h-3 w-3" />}
+          Notes{item.referenceNotes ? " ●" : ""}
+        </Button>
         <Button
           size="sm"
           variant="outline"

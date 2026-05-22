@@ -28,6 +28,7 @@ export interface PendingReferenceItem {
   relationship: string;
   referenceStatus: string;
   referenceCreatedAt: Date;
+  referenceNotes: string | null;
   booking: ReferenceCallBooking | null;
 }
 
@@ -54,6 +55,7 @@ export const adminListPendingReferences = api<void, ListPendingReferencesRespons
       relationship: string;
       ref_status: string;
       ref_created_at: Date;
+      ref_notes: string | null;
       booking_id: string | null;
       officer_user_id: string | null;
       officer_email: string | null;
@@ -76,6 +78,7 @@ export const adminListPendingReferences = api<void, ListPendingReferencesRespons
         wr.relationship,
         wr.status AS ref_status,
         wr.created_at AS ref_created_at,
+        wr.notes AS ref_notes,
         rcb.id AS booking_id,
         rcb.officer_user_id,
         rcb.officer_email,
@@ -113,6 +116,7 @@ export const adminListPendingReferences = api<void, ListPendingReferencesRespons
         relationship: r.relationship,
         referenceStatus: r.ref_status,
         referenceCreatedAt: r.ref_created_at,
+        referenceNotes: r.ref_notes,
         booking: r.booking_id
           ? {
               id: r.booking_id,
@@ -267,6 +271,29 @@ export const adminCreateBooking = api<CreateBookingRequest, CreateBookingRespons
         updatedAt: row.updated_at,
       },
     };
+  }
+);
+
+export interface UpdateReferenceNotesRequest {
+  referenceId: string;
+  notes: string;
+}
+
+export const adminUpdateReferenceNotes = api<UpdateReferenceNotesRequest, void>(
+  { expose: true, auth: true, method: "PATCH", path: "/admin/references/:referenceId/notes" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdminOrCompliance(auth.userID);
+
+    if (req.notes.length > 2000) throw APIError.invalidArgument("notes cannot exceed 2000 characters");
+
+    const row = await db.queryRow<{ id: string }>`
+      UPDATE worker_references
+      SET notes = ${req.notes.trim() || null}, updated_at = NOW()
+      WHERE id = ${req.referenceId}
+      RETURNING id
+    `;
+    if (!row) throw APIError.notFound("reference not found");
   }
 );
 
