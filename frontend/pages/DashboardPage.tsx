@@ -51,8 +51,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as Tab | null;
+    const onboardingParam = searchParams.get("onboarding");
     if (tabParam) {
       setTab(tabParam);
+    }
+    if (onboardingParam === "compliance") {
+      setDocGateCleared(false);
+    }
+    if (tabParam || onboardingParam) {
       setSearchParams({}, { replace: true });
     }
   }, []);

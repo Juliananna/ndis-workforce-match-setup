@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, Loader2, Mail, Lock, Sparkles, Database } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import backend from "~backend/client";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +43,8 @@ export default function LoginPage() {
     try {
       const resp = await backend.auth.login({ email, password });
       await login(resp.token);
-      navigate("/dashboard");
+      const onboarding = searchParams.get("onboarding");
+      navigate(onboarding ? `/dashboard?onboarding=${onboarding}` : "/dashboard");
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : "Login failed. Check your credentials.";

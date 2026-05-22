@@ -10,7 +10,7 @@ import { DocumentUploadSection } from "../components/resume/DocumentUploadSectio
 import { RefereeSection } from "../components/resume/RefereeSection";
 import { GetHiredFasterModal } from "../components/resume/GetHiredFasterModal";
 import type { SessionData } from "../components/resume/types";
-import type { DocumentRecord, RefereeRecord } from "~backend/resume/types";
+import type { RefereeRecord } from "~backend/resume/types";
 
 const defaultSession = (): SessionData => ({
   id: "", stepCompleted: 0, email: null, firstName: null, lastName: null, phone: null,
@@ -28,7 +28,6 @@ export default function ResumeBuilderPreviewPage() {
   const { toast } = useToast();
 
   const [session, setSession] = useState<SessionData>(defaultSession());
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [referees, setReferees] = useState<RefereeRecord[]>([]);
   const [scoreData, setScoreData] = useState<{ score: number; breakdown: any; suggestions: string[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,9 +41,8 @@ export default function ResumeBuilderPreviewPage() {
   const loadSession = async () => {
     if (!id) return;
     try {
-      const { session: s, documents: d, referees: r } = await backend.resume.getSession({ id });
+      const { session: s, referees: r } = await backend.resume.getSession({ id });
       setSession(s as SessionData);
-      setDocuments(d as DocumentRecord[]);
       setReferees(r as RefereeRecord[]);
     } catch {
       toast({ title: "Session not found", variant: "destructive" });
@@ -276,18 +274,28 @@ export default function ResumeBuilderPreviewPage() {
                 <div className="rounded-full bg-white/20 p-3 shrink-0">
                   <CheckCircle size={28} className="text-white" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-xl mb-1">Your KizaziHire profile is live! 🎉</h3>
-                  <p className="text-teal-100 text-sm mb-3">
-                    We've sent a <strong className="text-white">set-password link</strong> to <strong className="text-white">{session.email}</strong>.
-                    Click it to log in and complete your profile.
+                <div className="w-full">
+                  <h3 className="font-extrabold text-xl mb-1">Your resume is ready! 🎉</h3>
+                  <p className="text-teal-100 text-sm mb-4">
+                    Upload your first compliance document to <strong className="text-white">activate your KizaziHire profile</strong> and claim your free verification package.
                   </p>
+                  <div className="bg-white/10 rounded-xl p-4 mb-4 space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-teal-100">
+                      <span className="text-white font-bold">1.</span> Check your email — we've sent a set-password link to <strong className="text-white">{session.email}</strong>
+                    </div>
+                    <div className="flex items-center gap-2 text-teal-100">
+                      <span className="text-white font-bold">2.</span> Set your password and log in
+                    </div>
+                    <div className="flex items-center gap-2 text-teal-100">
+                      <span className="text-white font-bold">3.</span> Upload your first compliance document to go live
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     <a
-                      href="/login"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-teal-700 font-bold rounded-xl text-sm hover:bg-teal-50 transition-colors shadow-md"
+                      href="/login?onboarding=compliance"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-teal-700 font-bold rounded-xl text-sm hover:bg-teal-50 transition-colors shadow-md"
                     >
-                      Log in to my profile →
+                      Activate my profile →
                     </a>
                     <span className="flex items-center gap-1.5 text-xs text-teal-100 self-center">
                       <Mail size={13} /> Check your email for the set-password link
@@ -345,7 +353,11 @@ export default function ResumeBuilderPreviewPage() {
 
           {hasEmail && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-              <DocumentUploadSection sessionId={id!} documents={documents} onDocumentsChange={setDocuments} />
+              <DocumentUploadSection
+                sessionId={id!}
+                hasProfile={hasProfile || profileJustCreated}
+                hasEmail={hasEmail}
+              />
             </div>
           )}
 

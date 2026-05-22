@@ -2225,6 +2225,7 @@ import {
 } from "~backend/workers/avatar";
 import { browseWorkers as api_workers_browse_browseWorkers } from "~backend/workers/browse";
 import { getWorkerCompletion as api_workers_completion_getWorkerCompletion } from "~backend/workers/completion";
+import { getComplianceStatus as api_workers_compliance_status_getComplianceStatus } from "~backend/workers/compliance_status";
 import {
     confirmDocumentUpload as api_workers_documents_confirmDocumentUpload,
     deleteWorkerDocument as api_workers_documents_deleteWorkerDocument,
@@ -2287,6 +2288,7 @@ export namespace workers {
             this.deleteWorkerVideo = this.deleteWorkerVideo.bind(this)
             this.downloadWorkerDocumentsZip = this.downloadWorkerDocumentsZip.bind(this)
             this.getAvatarUploadUrl = this.getAvatarUploadUrl.bind(this)
+            this.getComplianceStatus = this.getComplianceStatus.bind(this)
             this.getDocumentDownloadUrl = this.getDocumentDownloadUrl.bind(this)
             this.getDocumentUploadUrl = this.getDocumentUploadUrl.bind(this)
             this.getNdisCocStatus = this.getNdisCocStatus.bind(this)
@@ -2393,6 +2395,12 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/avatar/upload-url`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_avatar_getAvatarUploadUrl>
+        }
+
+        public async getComplianceStatus(): Promise<ResponseType<typeof api_workers_compliance_status_getComplianceStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/compliance-status`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_compliance_status_getComplianceStatus>
         }
 
         /**

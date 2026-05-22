@@ -8,6 +8,7 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const token = searchParams.get("token") ?? "";
   const isWelcome = searchParams.get("welcome") === "1";
+  const onboarding = searchParams.get("onboarding");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,7 +38,8 @@ export default function ResetPasswordPage() {
     try {
       await backend.auth.resetPassword({ token, newPassword });
       setDone(true);
-      setTimeout(() => navigate("/login"), 3000);
+      const loginDest = onboarding ? `/login?onboarding=${onboarding}` : "/login";
+      setTimeout(() => navigate(loginDest), 3000);
     } catch (err: unknown) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -67,11 +69,11 @@ export default function ResetPasswordPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <div className="mb-6">
             {isWelcome && (
-              <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 mb-4">
+              <div className="flex items-start gap-2 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 mb-4">
                 <span className="text-xl">🎉</span>
                 <div>
-                  <p className="font-bold text-teal-800 text-sm">Your KizaziHire profile is ready!</p>
-                  <p className="text-xs text-teal-700">Set a password to log in and start getting matched with providers.</p>
+                  <p className="font-bold text-teal-800 text-sm">Your resume is ready — one step to activate!</p>
+                  <p className="text-xs text-teal-700 mt-0.5">Set a password to log in, then upload your first compliance document to activate your profile and get matched with providers.</p>
                 </div>
               </div>
             )}
@@ -88,7 +90,7 @@ export default function ResetPasswordPage() {
                 <p className="font-semibold text-gray-900">Password reset successfully!</p>
                 <p className="text-sm text-gray-500 mt-1">Redirecting you to login…</p>
               </div>
-              <Link to="/login" className="text-sm text-blue-600 hover:underline font-medium mt-2">
+              <Link to={onboarding ? `/login?onboarding=${onboarding}` : "/login"} className="text-sm text-blue-600 hover:underline font-medium mt-2">
                 Go to login now
               </Link>
             </div>
@@ -151,7 +153,7 @@ export default function ResetPasswordPage() {
               </form>
 
               <p className="text-center text-sm text-gray-500 mt-6">
-                <Link to="/login" className="text-blue-600 hover:underline font-semibold">
+                <Link to={onboarding ? `/login?onboarding=${onboarding}` : "/login"} className="text-blue-600 hover:underline font-semibold">
                   Back to login
                 </Link>
               </p>
