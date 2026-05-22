@@ -284,7 +284,7 @@ export function ReferenceCheckWizard({ reference, workerName, existingCheck, onS
                   <Phone className="h-4 w-4" />Call Opening Script
                 </div>
                 <div className="text-sm text-blue-200/80 space-y-2">
-                  <p>"Hi, my name is <span className="text-blue-300 font-medium">[Your Name]</span> from <span className="text-blue-300 font-medium">Whole Care Solutions</span>. I'm calling to complete a reference check for <span className="text-blue-300 font-medium">{workerName}</span>."</p>
+                  <p>"Hi, my name is <span className="text-blue-300 font-medium">[Your Name]</span> from <span className="text-blue-300 font-medium">Kizazi Hire</span>. I'm calling to complete a reference check for <span className="text-blue-300 font-medium">{workerName}</span>."</p>
                   <p>"Is now a good time? It should take about 10 minutes."</p>
                   <p>"Are you happy to provide a reference for them?"</p>
                 </div>
@@ -307,7 +307,7 @@ export function ReferenceCheckWizard({ reference, workerName, existingCheck, onS
                 label="Your name (conducting this check)"
                 value={conductedBy}
                 onChange={setConductedBy}
-                placeholder="e.g. Sarah – Whole Care Solutions"
+                placeholder="e.g. Sarah – Kizazi Hire"
               />
 
               <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3 text-xs text-yellow-300/80">
