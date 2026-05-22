@@ -61,7 +61,7 @@ export function EmailReferenceModal({ item, onClose, onSent }: Props) {
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [api, item.referenceId]);
 
   const handleSend = async () => {
     if (!api || !hasEmail) return;

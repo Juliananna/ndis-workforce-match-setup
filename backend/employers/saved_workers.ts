@@ -59,6 +59,13 @@ export const saveWorker = api<SaveWorkerRequest, SaveWorkerResponse>(
       throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
     }
 
+    const hasDoc = await db.queryRow<{ exists: boolean }>`
+      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${req.workerId}) AS exists
+    `;
+    if (!hasDoc?.exists) {
+      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
+    }
+
     await db.exec`
       INSERT INTO saved_workers (employer_id, worker_id)
       VALUES (${auth.userID}, ${req.workerId})
@@ -99,8 +106,11 @@ export const getSavedWorkerStatus = api<GetSavedStatusRequest, GetSavedStatusRes
     if (req.workerIds.length === 0) return { savedIds: [] };
 
     const rows = await db.queryAll<{ worker_id: string }>`
-      SELECT worker_id FROM saved_workers
-      WHERE employer_id = ${auth.userID} AND worker_id = ANY(${req.workerIds})
+      SELECT sw.worker_id FROM saved_workers sw
+      WHERE sw.employer_id = ${auth.userID}
+        AND sw.worker_id = ANY(${req.workerIds})
+        AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = sw.worker_id)
+        AND EXISTS (SELECT 1 FROM workers w WHERE w.worker_id = sw.worker_id AND w.onboarding_status = 'active')
     `;
 
     return { savedIds: rows.map((r) => r.worker_id) };
@@ -193,11 +203,12 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
           (w.phone IS NOT NULL AND w.phone <> '')
         ) AS profile_complete
       FROM saved_workers sw
-      JOIN workers w ON w.worker_id = sw.worker_id
+      JOIN workers w ON w.worker_id = sw.worker_id AND w.onboarding_status = 'active'
       LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
       LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'
       LEFT JOIN users u ON u.user_id = w.user_id
       WHERE sw.employer_id = ${auth.userID}
+        AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = sw.worker_id)
       GROUP BY w.worker_id, wa.available_days, wa.minimum_pay_rate, u.last_login_at, sw.created_at
       ORDER BY sw.created_at DESC
     `;

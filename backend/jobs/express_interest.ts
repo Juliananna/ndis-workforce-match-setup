@@ -31,6 +31,13 @@ export const expressJobInterest = api<JobInterestRequest, JobInterestResponse>(
       throw APIError.failedPrecondition("you must upload at least one compliance document before expressing interest in jobs");
     }
 
+    const hasDoc = await db.queryRow<{ exists: boolean }>`
+      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${worker.worker_id}) AS exists
+    `;
+    if (!hasDoc?.exists) {
+      throw APIError.failedPrecondition("you must upload at least one compliance document before expressing interest in jobs");
+    }
+
     const job = await db.queryRow<{ job_id: string; status: string }>`
       SELECT job_id, status FROM job_requests WHERE job_id = ${req.jobId}
     `;

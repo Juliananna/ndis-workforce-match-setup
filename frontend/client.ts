@@ -1534,7 +1534,6 @@ import {
     generateSummary as api_resume_ai_generate_generateSummary
 } from "~backend/resume/ai_generate";
 import { convertToProfile as api_resume_convert_to_profile_convertToProfile } from "~backend/resume/convert_to_profile";
-import { updateDocumentVisibility as api_resume_documents_updateDocumentVisibility } from "~backend/resume/documents";
 import { emailCapture as api_resume_email_capture_emailCapture } from "~backend/resume/email_capture";
 import {
     addReferee as api_resume_referees_addReferee,
@@ -1566,7 +1565,6 @@ export namespace resume {
             this.getSession = this.getSession.bind(this)
             this.listLeads = this.listLeads.bind(this)
             this.scoreSession = this.scoreSession.bind(this)
-            this.updateDocumentVisibility = this.updateDocumentVisibility.bind(this)
             this.updateReferee = this.updateReferee.bind(this)
             this.updateSession = this.updateSession.bind(this)
             this.verifyResumeDocument = this.verifyResumeDocument.bind(this)
@@ -1720,20 +1718,6 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/score`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_score_scoreSession>
-        }
-
-        /**
-         * Updates the visibility setting of a document in a resume session.
-         */
-        public async updateDocumentVisibility(params: RequestType<typeof api_resume_documents_updateDocumentVisibility>): Promise<ResponseType<typeof api_resume_documents_updateDocumentVisibility>> {
-            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
-            const body: Record<string, any> = {
-                visibility: params.visibility,
-            }
-
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/documents/${encodeURIComponent(params.documentId)}/visibility`, {method: "PATCH", body: JSON.stringify(body)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_documents_updateDocumentVisibility>
         }
 
         /**

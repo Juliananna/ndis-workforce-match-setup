@@ -58,6 +58,13 @@ export const createOffer = api<CreateOfferRequest, Offer>(
       throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
     }
 
+    const hasDoc = await db.queryRow<{ exists: boolean }>`
+      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${req.workerId}) AS exists
+    `;
+    if (!hasDoc?.exists) {
+      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
+    }
+
     const existing = await db.queryRow<{ offer_id: string }>`
       SELECT offer_id FROM offers
       WHERE job_id = ${req.jobId} AND worker_id = ${req.workerId}

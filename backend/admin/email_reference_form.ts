@@ -111,6 +111,10 @@ export const publicSubmitEmailReferenceForm = api<SubmitEmailReferenceFormReques
     if (!req.strengths?.trim()) throw APIError.invalidArgument("strengths is required");
     if (!req.developmentAreas?.trim()) throw APIError.invalidArgument("developmentAreas is required");
 
+    if (!req.scores || typeof req.scores !== "object" || Array.isArray(req.scores)) {
+      throw APIError.invalidArgument("scores must be an object");
+    }
+
     const SCORE_FIELDS: (keyof typeof req.scores)[] = [
       "workPerformance", "reliability", "punctuality", "professionalism",
       "qualityOfCare", "documentation", "teamwork", "initiative", "concerns", "rehire",

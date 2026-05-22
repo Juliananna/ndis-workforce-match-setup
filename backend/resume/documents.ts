@@ -66,7 +66,7 @@ interface UpdateDocumentVisibilityResponse {
 
 // Updates the visibility setting of a document in a resume session.
 export const updateDocumentVisibility = api<UpdateDocumentVisibilityRequest, UpdateDocumentVisibilityResponse>(
-  { expose: true, method: "PATCH", path: "/resume-sessions/:id/documents/:documentId/visibility" },
+  { expose: false, method: "PATCH", path: "/resume-sessions/:id/documents/:documentId/visibility" },
   async (req) => {
     if (!["private", "providers", "public"].includes(req.visibility)) {
       throw APIError.invalidArgument("invalid visibility value");

@@ -31,6 +31,13 @@ export const expressInterest = api<ExpressInterestRequest, ExpressInterestRespon
       throw APIError.failedPrecondition("you must upload at least one compliance document before responding to emergency shifts");
     }
 
+    const hasDoc = await db.queryRow<{ exists: boolean }>`
+      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${worker.worker_id}) AS exists
+    `;
+    if (!hasDoc?.exists) {
+      throw APIError.failedPrecondition("you must upload at least one compliance document before responding to emergency shifts");
+    }
+
     const job = await db.queryRow<{ job_id: string; is_emergency: boolean; status: string; response_deadline: Date | null }>`
       SELECT job_id, is_emergency, status, response_deadline
       FROM job_requests
