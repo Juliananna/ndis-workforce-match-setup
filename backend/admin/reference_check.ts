@@ -49,6 +49,7 @@ export interface ReferenceCheckResult {
   totalScore: number;
   riskLevel: RiskLevel;
   recommendation: Recommendation;
+  method: "phone" | "email";
   createdAt: Date;
 }
 
@@ -110,7 +111,7 @@ function mapRow(r: {
   score_professionalism: number; score_quality_of_care: number; score_documentation: number;
   score_teamwork: number; score_initiative: number; score_concerns: number; score_rehire: number;
   strengths: string; development_areas: string; additional_comments: string;
-  total_score: number; risk_level: string; recommendation: string; created_at: Date;
+  total_score: number; risk_level: string; recommendation: string; method?: string; created_at: Date;
 }): ReferenceCheckResult {
   return {
     id: r.id,
@@ -139,6 +140,7 @@ function mapRow(r: {
     totalScore: r.total_score,
     riskLevel: r.risk_level as RiskLevel,
     recommendation: r.recommendation as Recommendation,
+    method: (r.method ?? "phone") as "phone" | "email",
     createdAt: r.created_at,
   };
 }
@@ -177,7 +179,7 @@ export const adminSubmitReferenceCheck = api<SubmitReferenceCheckRequest, Refere
         score_quality_of_care, score_documentation, score_teamwork, score_initiative,
         score_concerns, score_rehire,
         strengths, development_areas, additional_comments,
-        total_score, risk_level, recommendation
+        total_score, risk_level, recommendation, method
       ) VALUES (
         ${req.referenceId}, ${req.conductedBy}, ${auth.userID}, ${req.relationship}, ${req.capacity},
         ${req.employmentDates}, ${req.reasonForLeaving},
@@ -186,7 +188,7 @@ export const adminSubmitReferenceCheck = api<SubmitReferenceCheckRequest, Refere
         ${req.scores.teamwork}, ${req.scores.initiative},
         ${req.scores.concerns}, ${req.scores.rehire},
         ${req.strengths}, ${req.developmentAreas}, ${req.additionalComments},
-        ${totalScore}, ${riskLevel}, ${recommendation}
+        ${totalScore}, ${riskLevel}, ${recommendation}, 'phone'
       )
       RETURNING *
     `;
@@ -224,7 +226,7 @@ export const adminGetReferenceCheck = api<GetReferenceCheckRequest, GetReference
       score_professionalism: number; score_quality_of_care: number; score_documentation: number;
       score_teamwork: number; score_initiative: number; score_concerns: number; score_rehire: number;
       strengths: string; development_areas: string; additional_comments: string;
-      total_score: number; risk_level: string; recommendation: string; created_at: Date;
+      total_score: number; risk_level: string; recommendation: string; method: string; created_at: Date;
     }>`
       SELECT * FROM reference_checks WHERE reference_id = ${req.referenceId}
       ORDER BY created_at DESC LIMIT 1

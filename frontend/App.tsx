@@ -63,6 +63,7 @@ const ResumeBuilderLandingPage = lazy(() => import("./pages/ResumeBuilderLanding
 const ResumeBuilderSessionPage = lazy(() => import("./pages/ResumeBuilderSessionPage"));
 const ResumeBuilderPreviewPage = lazy(() => import("./pages/ResumeBuilderPreviewPage"));
 const AdminResumeLeadsPage = lazy(() => import("./pages/AdminResumeLeadsPage"));
+const EmailReferencePage = lazy(() => import("./pages/EmailReferencePage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { token, loading } = useAuth();
@@ -120,11 +121,12 @@ function RoleRouter() {
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
+const REFERENCE_PATH_PREFIX = "/reference/";
 
 function GlobalSupportButton() {
   const { token } = useAuth();
   const location = useLocation();
-  const isPublic = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith(JOB_SHARE_PATH_PREFIX);
+  const isPublic = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith(JOB_SHARE_PATH_PREFIX) || location.pathname.startsWith(REFERENCE_PATH_PREFIX);
   if (!token || isPublic) return null;
   return <SupportButton />;
 }
@@ -225,6 +227,14 @@ function AppInner() {
           element={
             <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
               <ResumeBuilderPreviewPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/reference/:token"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" /></div>}>
+              <EmailReferencePage />
             </Suspense>
           }
         />

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
-  ChevronRight, ChevronLeft, CheckCircle, AlertTriangle, Phone,
+  ChevronRight, ChevronLeft, CheckCircle, AlertTriangle, Phone, Mail,
   ClipboardList, Star, ShieldAlert, Loader2, X, TrendingUp,
 } from "lucide-react";
 import type { AdminReferenceView } from "~backend/admin/workers";
@@ -564,6 +564,17 @@ function ResultView({ result, reference, workerName }: { result: ReferenceCheckR
         </div>
       )}
 
+      <div className="flex items-center justify-center gap-2">
+        {result.method === "email" ? (
+          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
+            <Mail className="h-3 w-3" />Email Reference
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+            <Phone className="h-3 w-3" />Phone Reference
+          </span>
+        )}
+      </div>
       <p className="text-xs text-muted-foreground/60 text-center">
         Conducted by {result.conductedBy} · {new Date(result.conductedAt).toLocaleString()}
       </p>

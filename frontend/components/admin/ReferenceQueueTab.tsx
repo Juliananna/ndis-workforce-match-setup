@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Calendar, Clock, Phone, User, Building2, CheckCircle2,
-  CalendarClock, AlertCircle, ChevronRight, RefreshCw, X, Search, MessageSquare, Loader2,
+  CalendarClock, AlertCircle, ChevronRight, RefreshCw, X, Search, MessageSquare, Loader2, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { BookingModal } from "./BookingModal";
 import { ReferenceCheckWizard } from "./ReferenceCheckWizard";
+import { EmailReferenceModal } from "./EmailReferenceModal";
 import type { PendingReferenceItem, ListUpcomingBookingsResponse } from "~backend/admin/reference_bookings";
 import type { AdminReferenceView } from "~backend/admin/workers";
 import type { ReferenceCheckResult, SubmitReferenceCheckRequest } from "~backend/admin/reference_check";
@@ -34,6 +35,7 @@ export function ReferenceQueueTab() {
   const [bookingItem, setBookingItem] = useState<PendingReferenceItem | null>(null);
   const [wizardRef, setWizardRef] = useState<{ item: PendingReferenceItem; existing: ReferenceCheckResult | null } | null>(null);
   const [messageModal, setMessageModal] = useState<MessageModalState | null>(null);
+  const [emailRefItem, setEmailRefItem] = useState<PendingReferenceItem | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
@@ -162,6 +164,7 @@ export function ReferenceQueueTab() {
                       onSchedule={() => setBookingItem(item)}
                       onConduct={() => setWizardRef({ item, existing: null })}
                       onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
+                      onEmailReference={() => setEmailRefItem(item)}
                     />
                   ))}
                 </Section>
@@ -183,6 +186,7 @@ export function ReferenceQueueTab() {
                       onCancelBooking={() => item.booking && handleCancelBooking(item.booking.id)}
                       onConduct={() => setWizardRef({ item, existing: null })}
                       onMessage={() => setMessageModal({ workerId: item.workerId, referenceId: item.referenceId, workerName: item.workerName, refereeName: item.refereeName, refereeOrganisation: item.refereeOrganisation })}
+                      onEmailReference={() => setEmailRefItem(item)}
                     />
                   ))}
                 </Section>
@@ -219,6 +223,14 @@ export function ReferenceQueueTab() {
           modal={messageModal}
           onSend={handleSendMessage}
           onClose={() => setMessageModal(null)}
+        />
+      )}
+
+      {emailRefItem && (
+        <EmailReferenceModal
+          item={emailRefItem}
+          onClose={() => setEmailRefItem(null)}
+          onSent={load}
         />
       )}
     </div>
@@ -465,12 +477,14 @@ function ReferenceCard({
   onCancelBooking,
   onConduct,
   onMessage,
+  onEmailReference,
 }: {
   item: PendingReferenceItem;
   onSchedule: () => void;
   onCancelBooking?: () => void;
   onConduct: () => void;
   onMessage: () => void;
+  onEmailReference: () => void;
 }) {
   const daysWaiting = Math.floor(
     (Date.now() - new Date(item.referenceCreatedAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -536,7 +550,7 @@ function ReferenceCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap">
         <Button
           size="sm"
           variant="outline"
@@ -545,6 +559,15 @@ function ReferenceCard({
         >
           <MessageSquare className="h-3 w-3" />
           Message Worker
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onEmailReference}
+          className="h-7 text-xs gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+        >
+          <Mail className="h-3 w-3" />
+          Email Reference
         </Button>
         <Button
           size="sm"

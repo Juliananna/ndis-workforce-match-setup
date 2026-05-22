@@ -160,6 +160,15 @@ import {
     adminUpdateEmailTemplate as api_admin_email_comms_adminUpdateEmailTemplate
 } from "~backend/admin/email_comms";
 import {
+    adminCancelEmailReferenceRequest as api_admin_email_reference_adminCancelEmailReferenceRequest,
+    adminListEmailReferenceRequests as api_admin_email_reference_adminListEmailReferenceRequests,
+    adminSendEmailReferenceRequest as api_admin_email_reference_adminSendEmailReferenceRequest
+} from "~backend/admin/email_reference";
+import {
+    publicGetEmailReferenceForm as api_admin_email_reference_form_publicGetEmailReferenceForm,
+    publicSubmitEmailReferenceForm as api_admin_email_reference_form_publicSubmitEmailReferenceForm
+} from "~backend/admin/email_reference_form";
+import {
     adminGrantSubscription as api_admin_employers_adminGrantSubscription,
     adminListEmployers as api_admin_employers_adminListEmployers,
     adminRevokeSubscription as api_admin_employers_adminRevokeSubscription
@@ -229,6 +238,7 @@ export namespace admin {
             this.baseClient = baseClient
             this.adminArchiveUser = this.adminArchiveUser.bind(this)
             this.adminCancelBooking = this.adminCancelBooking.bind(this)
+            this.adminCancelEmailReferenceRequest = this.adminCancelEmailReferenceRequest.bind(this)
             this.adminCreateBooking = this.adminCreateBooking.bind(this)
             this.adminCreateEmailTemplate = this.adminCreateEmailTemplate.bind(this)
             this.adminCreateSMSTemplate = this.adminCreateSMSTemplate.bind(this)
@@ -244,6 +254,7 @@ export namespace admin {
             this.adminListAuditLog = this.adminListAuditLog.bind(this)
             this.adminListComplianceMessageLog = this.adminListComplianceMessageLog.bind(this)
             this.adminListEmailLog = this.adminListEmailLog.bind(this)
+            this.adminListEmailReferenceRequests = this.adminListEmailReferenceRequests.bind(this)
             this.adminListEmailTemplates = this.adminListEmailTemplates.bind(this)
             this.adminListEmployers = this.adminListEmployers.bind(this)
             this.adminListJobs = this.adminListJobs.bind(this)
@@ -260,6 +271,7 @@ export namespace admin {
             this.adminSendBulkEmail = this.adminSendBulkEmail.bind(this)
             this.adminSendBulkSMS = this.adminSendBulkSMS.bind(this)
             this.adminSendDocumentMessage = this.adminSendDocumentMessage.bind(this)
+            this.adminSendEmailReferenceRequest = this.adminSendEmailReferenceRequest.bind(this)
             this.adminSendEmailToUser = this.adminSendEmailToUser.bind(this)
             this.adminSendReferenceMessage = this.adminSendReferenceMessage.bind(this)
             this.adminSendSMSToUser = this.adminSendSMSToUser.bind(this)
@@ -282,6 +294,8 @@ export namespace admin {
             this.listComplianceOfficers = this.listComplianceOfficers.bind(this)
             this.listDemoLeads = this.listDemoLeads.bind(this)
             this.listImpersonatableUsers = this.listImpersonatableUsers.bind(this)
+            this.publicGetEmailReferenceForm = this.publicGetEmailReferenceForm.bind(this)
+            this.publicSubmitEmailReferenceForm = this.publicSubmitEmailReferenceForm.bind(this)
             this.seed = this.seed.bind(this)
             this.updateComplianceOfficer = this.updateComplianceOfficer.bind(this)
             this.updateComplianceProfile = this.updateComplianceProfile.bind(this)
@@ -299,6 +313,10 @@ export namespace admin {
 
         public async adminCancelBooking(params: { bookingId: string }): Promise<void> {
             await this.baseClient.callTypedAPI(`/admin/references/bookings/${encodeURIComponent(params.bookingId)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async adminCancelEmailReferenceRequest(params: { requestId: string }): Promise<void> {
+            await this.baseClient.callTypedAPI(`/admin/references/email-requests/${encodeURIComponent(params.requestId)}`, {method: "DELETE", body: undefined})
         }
 
         public async adminCreateBooking(params: RequestType<typeof api_admin_reference_bookings_adminCreateBooking>): Promise<ResponseType<typeof api_admin_reference_bookings_adminCreateBooking>> {
@@ -419,6 +437,12 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminListEmailLog>
         }
 
+        public async adminListEmailReferenceRequests(params: { referenceId: string }): Promise<ResponseType<typeof api_admin_email_reference_adminListEmailReferenceRequests>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/references/${encodeURIComponent(params.referenceId)}/email-requests`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_reference_adminListEmailReferenceRequests>
+        }
+
         public async adminListEmailTemplates(): Promise<ResponseType<typeof api_admin_email_comms_adminListEmailTemplates>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/email-templates`, {method: "GET", body: undefined})
@@ -529,6 +553,17 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/documents/${encodeURIComponent(params.documentId)}/message`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_document_message_adminSendDocumentMessage>
+        }
+
+        public async adminSendEmailReferenceRequest(params: RequestType<typeof api_admin_email_reference_adminSendEmailReferenceRequest>): Promise<ResponseType<typeof api_admin_email_reference_adminSendEmailReferenceRequest>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                customMessage: params.customMessage,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/references/${encodeURIComponent(params.referenceId)}/email-request`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_reference_adminSendEmailReferenceRequest>
         }
 
         public async adminSendEmailToUser(params: RequestType<typeof api_admin_email_comms_adminSendEmailToUser>): Promise<ResponseType<typeof api_admin_email_comms_adminSendEmailToUser>> {
@@ -714,6 +749,31 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/impersonate/users`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_impersonate_listImpersonatableUsers>
+        }
+
+        public async publicGetEmailReferenceForm(params: { token: string }): Promise<ResponseType<typeof api_admin_email_reference_form_publicGetEmailReferenceForm>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/public/reference-form/${encodeURIComponent(params.token)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_reference_form_publicGetEmailReferenceForm>
+        }
+
+        public async publicSubmitEmailReferenceForm(params: RequestType<typeof api_admin_email_reference_form_publicSubmitEmailReferenceForm>): Promise<ResponseType<typeof api_admin_email_reference_form_publicSubmitEmailReferenceForm>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                additionalComments: params.additionalComments,
+                capacity:           params.capacity,
+                conductedBy:        params.conductedBy,
+                developmentAreas:   params.developmentAreas,
+                employmentDates:    params.employmentDates,
+                reasonForLeaving:   params.reasonForLeaving,
+                relationship:       params.relationship,
+                scores:             params.scores,
+                strengths:          params.strengths,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/public/reference-form/${encodeURIComponent(params.token)}/submit`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_reference_form_publicSubmitEmailReferenceForm>
         }
 
         public async seed(): Promise<ResponseType<typeof api_admin_seed_seed>> {
