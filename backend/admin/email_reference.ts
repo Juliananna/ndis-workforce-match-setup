@@ -1,11 +1,21 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import { randomBytes } from "crypto";
+import { secret } from "encore.dev/config";
 import db from "../db";
 import { assertAdminOrCompliance } from "./guard";
 import { sendEmail } from "../emailer/sender";
 
-const FRONTEND_BASE_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const appBaseUrl = secret("AppBaseUrl");
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
 
 export interface EmailReferenceRequest {
   referenceId: string;
@@ -77,32 +87,33 @@ export const adminSendEmailReferenceRequest = api<EmailReferenceRequest, EmailRe
       WHERE id = ${req.referenceId} AND status = 'Pending'
     `;
 
-    const formUrl = `${FRONTEND_BASE_URL}/reference/${token}`;
+    const baseUrl = appBaseUrl();
+    const formUrl = `${baseUrl}/reference/${token}`;
     const workerName = worker?.name ?? "the applicant";
     const officerName = officer?.name ?? "The Compliance Team";
     const customMsg = req.customMessage?.trim();
 
     await sendEmail({
       to: ref.referee_email,
-      subject: `Reference Check Request for ${workerName} – Kizazi Hire`,
+      subject: `Reference Check Request for ${escapeHtml(workerName)} – Kizazi Hire`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff;">
-          <img src="https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev/kizazi-hire-logo.png" alt="Kizazi Hire" style="height: 40px; margin-bottom: 24px;" />
+          <img src="${escapeHtml(baseUrl)}/kizazi-hire-logo.png" alt="Kizazi Hire" style="height: 40px; margin-bottom: 24px;" />
           <h2 style="color: #1a1a1a; margin-bottom: 8px;">Reference Check Request</h2>
-          <p style="color: #555; font-size: 15px;">Dear ${ref.referee_name},</p>
+          <p style="color: #555; font-size: 15px;">Dear ${escapeHtml(ref.referee_name)},</p>
           <p style="color: #555; font-size: 15px;">
-            My name is <strong>${officerName}</strong> from <strong>Kizazi Hire</strong>. We are in the process of verifying
-            <strong>${workerName}</strong>'s employment history and professional background. You have been listed as a
+            My name is <strong>${escapeHtml(officerName)}</strong> from <strong>Kizazi Hire</strong>. We are in the process of verifying
+            <strong>${escapeHtml(workerName)}</strong>'s employment history and professional background. You have been listed as a
             referee for this applicant.
           </p>
-          ${customMsg ? `<p style="color: #555; font-size: 15px;">${customMsg}</p>` : ""}
+          ${customMsg ? `<p style="color: #555; font-size: 15px;">${escapeHtml(customMsg)}</p>` : ""}
           <p style="color: #555; font-size: 15px;">
             We kindly ask you to complete a short reference check form at your convenience. It should take approximately
             10 minutes and covers standard questions about the applicant's work performance, reliability and
             professionalism.
           </p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${formUrl}"
+            <a href="${escapeHtml(formUrl)}"
                style="background: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; display: inline-block;">
               Complete Reference Check
             </a>
@@ -114,7 +125,7 @@ export const adminSendEmailReferenceRequest = api<EmailReferenceRequest, EmailRe
           <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
           <p style="color: #bbb; font-size: 12px;">
             Kizazi Hire &mdash; Connecting disability support workers with employers.<br/>
-            This email was sent to ${ref.referee_email} because you were listed as a referee.
+            This email was sent to ${escapeHtml(ref.referee_email)} because you were listed as a referee.
           </p>
         </div>
       `,

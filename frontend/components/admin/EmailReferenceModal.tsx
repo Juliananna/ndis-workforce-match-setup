@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, X, Loader2, Send, CheckCircle, AlertTriangle, Clock, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -59,9 +59,9 @@ export function EmailReferenceModal({ item, onClose, onSent }: Props) {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     loadHistory();
-  });
+  }, []);
 
   const handleSend = async () => {
     if (!api || !hasEmail) return;

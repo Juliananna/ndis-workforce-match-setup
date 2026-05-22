@@ -16,8 +16,10 @@ interface AddDocumentResponse {
 }
 
 // Adds a document to a resume session.
+// Internal only - not exposed publicly. Documents are only added via the upload proxy which
+// enforces storage-key ownership. External callers cannot inject arbitrary fileUrl values.
 export const addDocument = api<AddDocumentRequest, AddDocumentResponse>(
-  { expose: true, method: "POST", path: "/resume-sessions/:id/documents" },
+  { expose: false, method: "POST", path: "/resume-sessions/:id/documents" },
   async (req) => {
     const existing = await db.queryRow`SELECT id FROM resume_sessions WHERE id = ${req.id}`;
     if (!existing) throw APIError.notFound("session not found");

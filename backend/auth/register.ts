@@ -83,8 +83,8 @@ export const register = api<RegisterRequest, RegisterResponse>(
 
     if (req.role === "WORKER") {
       await db.exec`
-        INSERT INTO workers (user_id, name, phone)
-        VALUES (${user.user_id}, ${req.name.trim()}, ${req.phone.trim()})
+        INSERT INTO workers (user_id, name, phone, onboarding_status)
+        VALUES (${user.user_id}, ${req.name.trim()}, ${req.phone.trim()}, 'compliance_required')
       `;
       const firstName = req.name.trim().split(/\s+/)[0] ?? req.name.trim();
       try {

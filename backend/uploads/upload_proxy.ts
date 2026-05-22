@@ -3,6 +3,7 @@ import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { workerDocumentsBucket, workerVideosBucket, profilePhotosBucket } from "../workers/storage";
 import { DOCUMENT_TYPES } from "../workers/documents";
+import { syncOnboardingStatus } from "../workers/compliance_status";
 
 async function readBody(req: import("node:http").IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -102,6 +103,8 @@ export const uploadWorkerDocument = api.raw(
       resp.end(JSON.stringify({ error: "failed to record document" }));
       return;
     }
+
+    await syncOnboardingStatus(workerId).catch(() => {});
 
     const { url: fileUrl } = await workerDocumentsBucket.signedDownloadUrl(row.file_key, { ttl: 3600 });
 

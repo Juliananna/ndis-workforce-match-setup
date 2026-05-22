@@ -139,6 +139,7 @@ async function migrateResumeDocs(sessionId: string, workerId: string): Promise<n
   let migratedCount = 0;
   for (const doc of resumeDocs) {
     if (!isInternalStorageKey(doc.file_url)) continue;
+    if (!doc.file_url.startsWith(`${workerId}/`)) continue;
 
     const canonicalType = normaliseDocType(doc.document_type);
     if (!canonicalType) continue;

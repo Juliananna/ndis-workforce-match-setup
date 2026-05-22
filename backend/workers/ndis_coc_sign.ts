@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
+import { syncOnboardingStatus } from "./compliance_status";
 
 export interface SignNdisCocRequest {
   signatureDataUrl: string;
@@ -65,6 +66,8 @@ export const signNdisCoc = api<SignNdisCocRequest, SignNdisCocResponse>(
         WHERE id = ${existing.id}
       `;
     }
+
+    await syncOnboardingStatus(worker.worker_id).catch(() => {});
 
     return { signedAt: row!.signed_at };
   }

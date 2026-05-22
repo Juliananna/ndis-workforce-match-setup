@@ -103,6 +103,24 @@ export const publicSubmitEmailReferenceForm = api<SubmitEmailReferenceFormReques
     if (request.status !== "Pending") throw APIError.failedPrecondition("This reference link is no longer active");
     if (new Date(request.expires_at) < new Date()) throw APIError.failedPrecondition("This reference link has expired");
 
+    if (!req.conductedBy?.trim()) throw APIError.invalidArgument("conductedBy is required");
+    if (!req.relationship?.trim()) throw APIError.invalidArgument("relationship is required");
+    if (!req.capacity?.trim()) throw APIError.invalidArgument("capacity is required");
+    if (!req.employmentDates?.trim()) throw APIError.invalidArgument("employmentDates is required");
+    if (!req.reasonForLeaving?.trim()) throw APIError.invalidArgument("reasonForLeaving is required");
+    if (!req.strengths?.trim()) throw APIError.invalidArgument("strengths is required");
+    if (!req.developmentAreas?.trim()) throw APIError.invalidArgument("developmentAreas is required");
+
+    const SCORE_FIELDS: (keyof typeof req.scores)[] = [
+      "workPerformance", "reliability", "punctuality", "professionalism",
+      "qualityOfCare", "documentation", "teamwork", "initiative", "concerns", "rehire",
+    ];
+    for (const key of SCORE_FIELDS) {
+      if (req.scores[key] === undefined || req.scores[key] === null) {
+        throw APIError.invalidArgument(`score ${key} is required`);
+      }
+    }
+
     for (const [key, val] of Object.entries(req.scores)) {
       if (!Number.isInteger(val) || val < 1 || val > 5) {
         throw APIError.invalidArgument(`score ${key} must be between 1 and 5`);

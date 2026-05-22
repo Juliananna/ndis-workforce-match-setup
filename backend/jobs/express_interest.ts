@@ -23,10 +23,13 @@ export const expressJobInterest = api<JobInterestRequest, JobInterestResponse>(
       throw APIError.permissionDenied("only workers can express interest in jobs");
     }
 
-    const worker = await db.queryRow<{ worker_id: string }>`
-      SELECT worker_id FROM workers WHERE user_id = ${auth.userID}
+    const worker = await db.queryRow<{ worker_id: string; onboarding_status: string }>`
+      SELECT worker_id, onboarding_status FROM workers WHERE user_id = ${auth.userID}
     `;
     if (!worker) throw APIError.notFound("worker profile not found");
+    if (worker.onboarding_status !== "active") {
+      throw APIError.failedPrecondition("you must upload at least one compliance document before expressing interest in jobs");
+    }
 
     const job = await db.queryRow<{ job_id: string; status: string }>`
       SELECT job_id, status FROM job_requests WHERE job_id = ${req.jobId}

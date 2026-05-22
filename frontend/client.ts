@@ -1534,10 +1534,7 @@ import {
     generateSummary as api_resume_ai_generate_generateSummary
 } from "~backend/resume/ai_generate";
 import { convertToProfile as api_resume_convert_to_profile_convertToProfile } from "~backend/resume/convert_to_profile";
-import {
-    addDocument as api_resume_documents_addDocument,
-    updateDocumentVisibility as api_resume_documents_updateDocumentVisibility
-} from "~backend/resume/documents";
+import { updateDocumentVisibility as api_resume_documents_updateDocumentVisibility } from "~backend/resume/documents";
 import { emailCapture as api_resume_email_capture_emailCapture } from "~backend/resume/email_capture";
 import {
     addReferee as api_resume_referees_addReferee,
@@ -1555,7 +1552,6 @@ export namespace resume {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
-            this.addDocument = this.addDocument.bind(this)
             this.addReferee = this.addReferee.bind(this)
             this.convertToProfile = this.convertToProfile.bind(this)
             this.createSession = this.createSession.bind(this)
@@ -1574,24 +1570,6 @@ export namespace resume {
             this.updateReferee = this.updateReferee.bind(this)
             this.updateSession = this.updateSession.bind(this)
             this.verifyResumeDocument = this.verifyResumeDocument.bind(this)
-        }
-
-        /**
-         * Adds a document to a resume session.
-         */
-        public async addDocument(params: RequestType<typeof api_resume_documents_addDocument>): Promise<ResponseType<typeof api_resume_documents_addDocument>> {
-            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
-            const body: Record<string, any> = {
-                documentTitle: params.documentTitle,
-                documentType:  params.documentType,
-                expiryDate:    params.expiryDate,
-                fileUrl:       params.fileUrl,
-                visibility:    params.visibility,
-            }
-
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/documents`, {method: "POST", body: JSON.stringify(body)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_documents_addDocument>
         }
 
         /**

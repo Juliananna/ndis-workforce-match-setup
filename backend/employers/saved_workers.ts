@@ -51,6 +51,14 @@ export const saveWorker = api<SaveWorkerRequest, SaveWorkerResponse>(
     }
     await requireEmployerSubscription(auth.userID);
 
+    const workerToSave = await db.queryRow<{ onboarding_status: string }>`
+      SELECT onboarding_status FROM workers WHERE worker_id = ${req.workerId}
+    `;
+    if (!workerToSave) throw APIError.notFound("worker not found");
+    if (workerToSave.onboarding_status !== "active") {
+      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
+    }
+
     await db.exec`
       INSERT INTO saved_workers (employer_id, worker_id)
       VALUES (${auth.userID}, ${req.workerId})
