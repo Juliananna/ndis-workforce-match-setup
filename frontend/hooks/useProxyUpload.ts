@@ -6,18 +6,6 @@ import type { WorkerResume } from "~backend/workers/resume";
 export function useProxyUpload() {
   const client = useAuthedBackend();
 
-  async function putToSignedUrl(uploadUrl: string, file: File): Promise<void> {
-    const resp = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": file.type || "application/octet-stream" },
-    });
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => "");
-      throw new Error(`Storage upload failed (${resp.status})${text ? ": " + text : ""}`);
-    }
-  }
-
   const uploadDocument = useCallback(async (
     file: File,
     documentType: string,
@@ -25,44 +13,55 @@ export function useProxyUpload() {
     title?: string,
   ): Promise<WorkerDocument> => {
     if (!client) throw new Error("Not authenticated");
-    const { uploadUrl, fileKey } = await client.workers.getDocumentUploadUrl({
-      fileName: file.name,
-      documentType,
-      expiryDate,
+    const query: Record<string, string> = { documentType, fileName: file.name };
+    if (expiryDate) query.expiryDate = expiryDate;
+    if (title) query.title = title;
+    const resp = await client.uploads.uploadWorkerDocument({
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      query,
     });
-    await putToSignedUrl(uploadUrl, file);
-    return client.workers.confirmDocumentUpload({ fileKey, documentType, expiryDate, title });
+    return resp.json() as Promise<WorkerDocument>;
   }, [client]);
 
   const uploadAvatar = useCallback(async (file: File): Promise<{ avatarUrl: string }> => {
     if (!client) throw new Error("Not authenticated");
-    const { uploadUrl, fileKey } = await client.workers.getAvatarUploadUrl({ fileName: file.name });
-    await putToSignedUrl(uploadUrl, file);
-    const { avatarUrl } = await client.workers.confirmAvatarUpload({ fileKey });
-    return { avatarUrl: avatarUrl ?? "" };
+    const resp = await client.uploads.uploadWorkerAvatar({
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      query: { fileName: file.name },
+    });
+    return resp.json() as Promise<{ avatarUrl: string }>;
   }, [client]);
 
   const uploadVideo = useCallback(async (file: File): Promise<{ videoUrl: string }> => {
     if (!client) throw new Error("Not authenticated");
-    const { uploadUrl, fileKey } = await client.workers.getVideoUploadUrl({ fileName: file.name });
-    await putToSignedUrl(uploadUrl, file);
-    const { videoUrl } = await client.workers.confirmVideoUpload({ fileKey });
-    return { videoUrl: videoUrl ?? "" };
+    const resp = await client.uploads.uploadWorkerVideo({
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      query: { fileName: file.name },
+    });
+    return resp.json() as Promise<{ videoUrl: string }>;
   }, [client]);
 
   const uploadResume = useCallback(async (file: File): Promise<WorkerResume> => {
     if (!client) throw new Error("Not authenticated");
-    const { uploadUrl, fileKey } = await client.workers.getResumeUploadUrl({ fileName: file.name });
-    await putToSignedUrl(uploadUrl, file);
-    return client.workers.confirmResumeUpload({ fileKey, fileName: file.name });
+    const resp = await client.uploads.uploadWorkerResume({
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      query: { fileName: file.name },
+    });
+    return resp.json() as Promise<WorkerResume>;
   }, [client]);
 
   const uploadEmployerLogo = useCallback(async (file: File): Promise<{ logoUrl: string }> => {
     if (!client) throw new Error("Not authenticated");
-    const { uploadUrl, fileKey } = await client.employers.getLogoUploadUrl({ fileName: file.name });
-    await putToSignedUrl(uploadUrl, file);
-    const { logoUrl } = await client.employers.confirmLogoUpload({ fileKey });
-    return { logoUrl: logoUrl ?? "" };
+    const resp = await client.uploads.uploadEmployerLogo({
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      query: { fileName: file.name },
+    });
+    return resp.json() as Promise<{ logoUrl: string }>;
   }, [client]);
 
   const uploadEmailImage = useCallback(async (file: File): Promise<{ imageUrl: string }> => {
@@ -72,10 +71,6 @@ export function useProxyUpload() {
       body: file,
       query: { fileName: file.name },
     });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ error: "Upload failed" }));
-      throw new Error((err as { error?: string }).error ?? "Upload failed");
-    }
     return resp.json() as Promise<{ imageUrl: string }>;
   }, [client]);
 
