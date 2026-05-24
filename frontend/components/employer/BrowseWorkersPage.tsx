@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Search, MapPin, Star, Car, FileCheck, Loader2,
-  ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle, Heart,
+  ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle, Heart, GraduationCap,
 } from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
@@ -467,6 +467,11 @@ function WorkerCard({ worker, saved, saving, onClick, onToggleSave }: WorkerCard
           {worker.refsVerified && !worker.isFullyVerified && (
             <span className="flex items-center gap-0.5 text-[11px] text-blue-600">
               <Shield className="h-3 w-3" />Refs
+            </span>
+          )}
+          {worker.seekingPlacement && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+              <GraduationCap className="h-3 w-3" />Work Placement
             </span>
           )}
         </div>

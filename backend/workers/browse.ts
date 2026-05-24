@@ -45,6 +45,7 @@ export interface WorkerSummary {
   reviewCount: number;
   availableDays: string[];
   minimumPayRate: number | null;
+  seekingPlacement: boolean;
   priorityBoost: boolean;
   docsVerifiedPurchased: boolean;
   refsPurchased: boolean;
@@ -93,6 +94,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       review_count: number;
       available_days: string[] | null;
       minimum_pay_rate: number | null;
+      seeking_placement: boolean;
       priority_boost: boolean;
       docs_verified_purchased: boolean;
       refs_purchased: boolean;
@@ -120,7 +122,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         SELECT
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
-          w.avatar_url, w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
+          w.avatar_url, w.intro_video_url, w.seeking_placement, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
           wa.available_days, wa.minimum_pay_rate, u.last_login_at,
           CASE
             WHEN w.latitude IS NOT NULL AND w.longitude IS NOT NULL THEN
@@ -214,7 +216,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
         SELECT
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
-          w.avatar_url, w.intro_video_url, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
+          w.avatar_url, w.intro_video_url, w.seeking_placement, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
           wa.available_days, wa.minimum_pay_rate, u.last_login_at,
           NULL::double precision AS distance_km,
           AVG(r.rating) AS avg_rating,
@@ -356,6 +358,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       skills: skillsByWorker.get(r.worker_id) ?? [],
       availableDays: parsePgArray(r.available_days),
       minimumPayRate: r.minimum_pay_rate,
+      seekingPlacement: r.seeking_placement,
       priorityBoost: r.priority_boost,
       docsVerifiedPurchased: r.docs_verified_purchased,
       refsPurchased: r.refs_purchased,

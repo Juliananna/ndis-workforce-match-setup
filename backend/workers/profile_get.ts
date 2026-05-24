@@ -22,6 +22,7 @@ export interface WorkerProfile {
   introVideoUrl: string | null;
   avatarUrl: string | null;
   ndisScreeningNumber: string | null;
+  seekingPlacement: boolean;
   updatedAt: Date;
   completionPercent: number;
 }
@@ -75,12 +76,13 @@ export const getWorkerProfile = api<void, WorkerProfile>(
       intro_video_url: string | null;
       avatar_url: string | null;
       ndis_screening_number: string | null;
+      seeking_placement: boolean;
       updated_at: Date;
     }>`
       SELECT w.worker_id, w.user_id, u.email, w.name, w.phone, w.full_name, w.location,
              w.latitude, w.longitude, w.travel_radius_km,
              w.drivers_license, w.vehicle_access, w.bio, w.experience_years, w.previous_employers,
-             w.qualifications, w.intro_video_url, w.avatar_url, w.ndis_screening_number, w.updated_at
+             w.qualifications, w.intro_video_url, w.avatar_url, w.ndis_screening_number, w.seeking_placement, w.updated_at
       FROM workers w
       JOIN users u ON u.user_id = w.user_id
       WHERE w.user_id = ${auth.userID}
@@ -110,6 +112,7 @@ export const getWorkerProfile = api<void, WorkerProfile>(
       introVideoUrl: row.intro_video_url,
       avatarUrl: row.avatar_url,
       ndisScreeningNumber: row.ndis_screening_number,
+      seekingPlacement: row.seeking_placement,
       updatedAt: row.updated_at,
       completionPercent: computeCompletion(row),
     };

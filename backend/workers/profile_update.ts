@@ -19,6 +19,7 @@ export interface UpdateWorkerProfileRequest {
   previousEmployers?: string;
   qualifications?: string;
   ndisScreeningNumber?: string;
+  seekingPlacement?: boolean;
   email?: string;
 }
 
@@ -84,11 +85,13 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
       intro_video_url: string | null;
       avatar_url: string | null;
       ndis_screening_number: string | null;
+      seeking_placement: boolean;
       updated_at: Date;
     }>`
       UPDATE workers
       SET
         name = COALESCE(${req.name ?? null}, name),
+        seeking_placement = COALESCE(${req.seekingPlacement ?? null}, seeking_placement),
         phone = COALESCE(${req.phone ?? null}, phone),
         full_name = COALESCE(${req.fullName ?? null}, full_name),
         location = COALESCE(${req.location ?? null}, location),
@@ -106,7 +109,7 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
       WHERE user_id = ${auth.userID}
       RETURNING worker_id, user_id, name, phone, full_name, location, latitude, longitude, travel_radius_km,
                 drivers_license, vehicle_access, bio, experience_years, previous_employers,
-                qualifications, intro_video_url, avatar_url, ndis_screening_number, updated_at
+                qualifications, intro_video_url, avatar_url, ndis_screening_number, seeking_placement, updated_at
     `;
 
     if (!row) {
@@ -146,6 +149,7 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
       introVideoUrl: row.intro_video_url,
       avatarUrl: row.avatar_url,
       ndisScreeningNumber: row.ndis_screening_number,
+      seekingPlacement: row.seeking_placement,
       updatedAt: row.updated_at,
       completionPercent,
     };

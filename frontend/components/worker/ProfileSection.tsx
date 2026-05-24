@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle, Edit3, MapPin, Car, X } from "lucide-react";
+import { Loader2, CheckCircle, Edit3, MapPin, Car, X, GraduationCap } from "lucide-react";
 import type { WorkerProfile } from "~backend/workers/profile_get";
 import type { UpdateWorkerProfileRequest } from "~backend/workers/profile_update";
 import { LocationAutocomplete } from "../LocationAutocomplete";
@@ -40,6 +40,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
         previousEmployers: profile.previousEmployers ?? "",
         qualifications: profile.qualifications ?? "",
         ndisScreeningNumber: profile.ndisScreeningNumber ?? "",
+        seekingPlacement: profile.seekingPlacement ?? false,
       });
       setEmailTouched(false);
       setPhoneTouched(false);
@@ -102,7 +103,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
     </div>
   );
 
-  const checkbox = (label: string, key: "driversLicense" | "vehicleAccess") => (
+  const checkbox = (label: string, key: "driversLicense" | "vehicleAccess" | "seekingPlacement") => (
     <label className="flex items-center gap-2 cursor-pointer">
       <input
         type="checkbox"
@@ -201,6 +202,13 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">NDIS Worker Screening Number</p>
                 <p className="text-sm text-gray-900 font-mono">{profile.ndisScreeningNumber}</p>
+              </div>
+            )}
+
+            {profile?.seekingPlacement && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700">
+                <GraduationCap className="h-3.5 w-3.5" />
+                <span className="text-xs font-semibold">Seeking Work Placement</span>
               </div>
             )}
           </div>
@@ -312,6 +320,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
             <div className="flex flex-wrap gap-4">
               {checkbox("Driver's Licence", "driversLicense")}
               {checkbox("Own Vehicle", "vehicleAccess")}
+              {checkbox("Seeking Work Placement (uni student)", "seekingPlacement")}
             </div>
 
             {error && <p className="text-xs text-red-600">{error}</p>}

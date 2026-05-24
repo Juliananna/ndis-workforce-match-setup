@@ -446,7 +446,7 @@ function EmployerHome({
     minimumPayRate: null, priorityBoost: false, docsVerifiedPurchased: false,
     refsPurchased: false, docsVerified: false, refsVerified: false, lastLoginAt: null,
     travelRadiusKm: null, driversLicense: false, vehicleAccess: false,
-    qualifications: null, isFullyVerified: false,
+    qualifications: null, isFullyVerified: false, seekingPlacement: false,
   };
   const topMatches: (WorkerSummary & { match: number; color: string })[] = [
     { ...mockWorkerBase, workerId: "mock-1", name: "Jordan Smith", match: 95, color: "from-teal-400 to-emerald-500", bio: "Experienced support worker specialising in dementia care and complex needs.", experienceYears: 5, skills: ["Dementia Care", "Level 2"], verificationScore: 80, driversLicense: true, vehicleAccess: true, travelRadiusKm: 30 },

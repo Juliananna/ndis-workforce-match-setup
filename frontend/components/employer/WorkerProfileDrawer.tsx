@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   X, Star, MapPin, Car, FileCheck, Briefcase, Loader2,
-  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, Heart,
+  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, Heart, GraduationCap,
 } from "lucide-react";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
@@ -234,6 +234,13 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
                   </div>
                 )}
               </div>
+
+              {worker.seekingPlacement && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 mt-1">
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  <span className="text-xs font-semibold">Seeking Work Placement</span>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2 mt-2">
                 {worker.driversLicense && (
