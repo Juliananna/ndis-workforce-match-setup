@@ -59,7 +59,14 @@ export const uploadWorkerDocument = api.raw(
     const contentType = req.headers["content-type"] ?? "application/octet-stream";
     const body = await readBody(req);
 
-    await workerDocumentsBucket.upload(fileKey, body, { contentType });
+    try {
+      await workerDocumentsBucket.upload(fileKey, body, { contentType });
+    } catch (uploadErr) {
+      console.error("Failed to upload document to storage:", uploadErr);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "failed to upload document to storage" }));
+      return;
+    }
 
     const parsedExpiry = expiryDate ? new Date(expiryDate) : null;
     if (expiryDate && parsedExpiry && isNaN(parsedExpiry.getTime())) {
@@ -82,7 +89,7 @@ export const uploadWorkerDocument = api.raw(
       else if (diffDays <= 60) status = "Expiring Soon";
     }
 
-    const row = await db.queryRow<{
+    let row: {
       id: string;
       worker_id: string;
       document_type: string;
@@ -92,11 +99,30 @@ export const uploadWorkerDocument = api.raw(
       expiry_date: Date | null;
       verification_status: string;
       created_at: Date;
-    }>`
-      INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
-      VALUES (${workerId}, ${documentType}, ${title?.trim() ?? null}, ${fileKey}, ${parsedExpiry}, ${status})
-      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at
-    `;
+    } | null;
+
+    try {
+      row = await db.queryRow<{
+        id: string;
+        worker_id: string;
+        document_type: string;
+        title: string | null;
+        file_key: string;
+        upload_date: Date;
+        expiry_date: Date | null;
+        verification_status: string;
+        created_at: Date;
+      }>`
+        INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
+        VALUES (${workerId}, ${documentType}, ${title?.trim() ?? null}, ${fileKey}, ${parsedExpiry}, ${status})
+        RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at
+      `;
+    } catch (dbErr) {
+      console.error("Failed to insert worker_document record:", dbErr);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "failed to record document in database" }));
+      return;
+    }
 
     if (!row) {
       resp.writeHead(500, { "Content-Type": "application/json" });
@@ -104,9 +130,16 @@ export const uploadWorkerDocument = api.raw(
       return;
     }
 
-    await syncOnboardingStatus(workerId).catch(() => {});
+    await syncOnboardingStatus(workerId).catch((e) => console.error("syncOnboardingStatus failed:", e));
 
-    const { url: fileUrl } = await workerDocumentsBucket.signedDownloadUrl(row.file_key, { ttl: 3600 });
+    let fileUrl: string;
+    try {
+      const signed = await workerDocumentsBucket.signedDownloadUrl(row.file_key, { ttl: 3600 });
+      fileUrl = signed.url;
+    } catch (urlErr) {
+      console.error("Failed to generate signed download URL:", urlErr);
+      fileUrl = "";
+    }
 
     resp.writeHead(200, { "Content-Type": "application/json" });
     resp.end(JSON.stringify({
