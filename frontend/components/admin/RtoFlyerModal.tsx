@@ -53,16 +53,32 @@ export function RtoFlyerModal({ partner, open, onClose, onLogoUpdated }: Props) 
     setDownloading(true);
     try {
       const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(flyerRef.current, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-      const link = document.createElement("a");
-      link.download = `kizazi-rto-flyer-${partner.slug}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+
+      const clone = flyerRef.current.cloneNode(true) as HTMLElement;
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.top = "0";
+      clone.style.zIndex = "-1";
+      clone.style.color = "#111827";
+      clone.style.backgroundColor = "#ffffff";
+      clone.style.fontFamily = "Arial, Helvetica, sans-serif";
+      document.body.appendChild(clone);
+
+      try {
+        const canvas = await html2canvas(clone, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          foreignObjectRendering: false,
+        });
+        const link = document.createElement("a");
+        link.download = `kizazi-rto-flyer-${partner.slug}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } finally {
+        document.body.removeChild(clone);
+      }
     } catch (err) {
       console.error(err);
     } finally {
