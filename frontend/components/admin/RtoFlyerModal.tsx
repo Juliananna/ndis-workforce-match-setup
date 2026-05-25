@@ -381,56 +381,43 @@ async function renderFlyerToCanvas(
   ry += FEAT_TEXT_BOLD.length * 38 * S + 6 * S;
 
   // ── Referral code box ─────────────────────────────────────────────────────
-  const CODE_H = 76 * S;
+  const CODE_H = 72 * S;
   const CODE_Y = H - PAD - CODE_H - 22 * S;
 
+  // box background
   ctx.fillStyle = "#f0fdf4";
-  ctx.strokeStyle = TEAL;
-  ctx.lineWidth = 1.5 * S;
-  roundRect(ctx, RX, CODE_Y, RW, CODE_H, 12 * S);
+  roundRect(ctx, RX, CODE_Y, RW, CODE_H, 10 * S);
   ctx.fill();
+  // border
+  ctx.strokeStyle = "#6ee7b7";
+  ctx.lineWidth = 1.5 * S;
+  roundRect(ctx, RX, CODE_Y, RW, CODE_H, 10 * S);
   ctx.stroke();
+  // left accent bar (clipped to box)
+  ctx.save();
+  roundRect(ctx, RX, CODE_Y, RW, CODE_H, 10 * S);
+  ctx.clip();
+  ctx.fillStyle = TEAL;
+  ctx.fillRect(RX, CODE_Y, 5 * S, CODE_H);
+  ctx.restore();
 
-  // large teal circle with tag icon
-  const tagCX = RX + 36 * S;
-  const tagCY = CODE_Y + CODE_H / 2;
-  ctx.fillStyle = TEAL_DARK;
-  ctx.beginPath(); ctx.arc(tagCX, tagCY, 26 * S, 0, Math.PI * 2); ctx.fill();
-  // tag icon
-  ctx.strokeStyle = "#5eead4";
-  ctx.lineWidth = 1.8 * S;
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(tagCX - 8 * S, tagCY - 8 * S);
-  ctx.lineTo(tagCX + 4 * S, tagCY - 8 * S);
-  ctx.lineTo(tagCX + 10 * S, tagCY - 2 * S);
-  ctx.lineTo(tagCX + 4 * S, tagCY + 10 * S);
-  ctx.lineTo(tagCX - 8 * S, tagCY + 10 * S);
-  ctx.closePath(); ctx.stroke();
-  ctx.beginPath(); ctx.arc(tagCX - 2 * S, tagCY - 3 * S, 2.5 * S, 0, Math.PI * 2); ctx.stroke();
-  // diagonal line on tag
-  ctx.beginPath(); ctx.moveTo(tagCX - 4 * S, tagCY + 4 * S); ctx.lineTo(tagCX + 2 * S, tagCY - 2 * S); ctx.stroke();
-  ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+  const TX = RX + 18 * S;
 
-  // draw "REFERRAL CODE" label character by character for reliable spacing
-  ctx.fillStyle = "#065f46";
-  ctx.font = `700 ${11 * S}px Arial`;
-  const labelText = "REFERRAL CODE";
-  let lx = RX + 72 * S;
-  const letterGap = 1.5 * S;
-  for (const ch of labelText) {
-    ctx.fillText(ch, lx, CODE_Y + 24 * S);
-    lx += ctx.measureText(ch).width + letterGap;
-  }
+  // "REFERRAL CODE" label
+  ctx.fillStyle = "#059669";
+  ctx.font = `600 ${10.5 * S}px Arial`;
+  ctx.fillText("REFERRAL CODE", TX, CODE_Y + 26 * S);
 
+  // code value
   ctx.fillStyle = "#064e38";
-  ctx.font = `900 ${22 * S}px "Courier New", monospace`;
-  ctx.fillText(partner.referralCode, RX + 72 * S, CODE_Y + 56 * S);
+  ctx.font = `bold ${19 * S}px "Courier New", monospace`;
+  ctx.fillText(partner.referralCode, TX, CODE_Y + 54 * S);
 
-  ctx.fillStyle = "#16a34a";
-  ctx.font = `500 ${10.5 * S}px Arial`;
+  // "Use at..." right-aligned, same baseline as code
+  ctx.fillStyle = "#6b7280";
+  ctx.font = `400 ${10 * S}px Arial`;
   ctx.textAlign = "right";
-  ctx.fillText("Use at kizazihire.com.au", W - PAD - 10 * S, CODE_Y + 56 * S);
+  ctx.fillText("Use at kizazihire.com.au", W - PAD - 14 * S, CODE_Y + 54 * S);
   ctx.textAlign = "left";
 
   // ── Footer ────────────────────────────────────────────────────────────────
@@ -714,18 +701,15 @@ export function RtoFlyerModal({ partner, open, onClose, onLogoUpdated }: Props) 
                 </div>
 
                 {/* Referral code */}
-                <div style={{ marginTop: "auto", backgroundColor: "#f0fdf4", border: `1.5px solid ${TEAL}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ width: 50, height: 50, borderRadius: "50%", backgroundColor: TEAL_DARK, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5eead4" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
-                      <circle cx="7" cy="7" r="1.5" />
-                    </svg>
+                <div style={{ marginTop: "auto", backgroundColor: "#f0fdf4", border: "1.5px solid #6ee7b7", borderRadius: 10, overflow: "hidden", display: "flex", alignItems: "stretch" }}>
+                  <div style={{ width: 5, backgroundColor: TEAL, flexShrink: 0 }} />
+                  <div style={{ flex: 1, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: "#059669", marginBottom: 3 }}>REFERRAL CODE</div>
+                      <div style={{ fontSize: 19, fontWeight: 900, color: "#064e38", fontFamily: "monospace", letterSpacing: 1 }}>{partner.referralCode}</div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#6b7280", textAlign: "right" as const }}>Use at kizazihire.com.au</div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9.5, fontWeight: 700, color: "#065f46", letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 3 }}>Referral Code</div>
-                    <div style={{ fontSize: 22, fontWeight: 900, color: "#064e38", fontFamily: "monospace", letterSpacing: 1.5 }}>{partner.referralCode}</div>
-                  </div>
-                  <div style={{ fontSize: 10, color: "#16a34a", textAlign: "right" as const }}>Use at<br />kizazihire.com.au</div>
                 </div>
 
                 {/* Footer */}
