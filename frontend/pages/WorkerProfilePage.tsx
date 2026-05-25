@@ -59,19 +59,38 @@ function AvatarUpload({
     }
   };
 
+  if (!avatarUrl) {
+    return (
+      <div className="mb-3">
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all group w-full"
+        >
+          <div className="h-12 w-12 rounded-full bg-white border-2 border-blue-200 flex items-center justify-center shrink-0 shadow-sm">
+            {uploading ? (
+              <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />
+            ) : (
+              <Camera className="h-5 w-5 text-blue-400 group-hover:text-blue-600 transition-colors" />
+            )}
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-blue-700">Add a profile photo</p>
+            <p className="text-xs text-blue-500">Profiles with photos get 3× more views</p>
+          </div>
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
+      </div>
+    );
+  }
+
   return (
     <div className="relative inline-block mb-3 group">
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={displayName}
-          className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-md"
-        />
-      ) : (
-        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold border-4 border-white shadow-md">
-          {initials(displayName, "?")}
-        </div>
-      )}
+      <img
+        src={avatarUrl}
+        alt={displayName}
+        className="h-16 w-16 rounded-full object-cover border-4 border-white shadow-md"
+      />
       {isVerified && (
         <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">
           <CheckCircle className="h-3.5 w-3.5 text-white" />
@@ -88,13 +107,7 @@ function AvatarUpload({
           <Camera className="h-5 w-5 text-white" />
         )}
       </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleChange}
-      />
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
     </div>
   );
 }
