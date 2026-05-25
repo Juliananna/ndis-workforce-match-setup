@@ -45,7 +45,7 @@ export const updateWorkerProfile = api<UpdateWorkerProfileRequest, WorkerProfile
     if (req.fullName !== undefined && req.fullName.trim() === "") {
       throw APIError.invalidArgument("full name is required");
     }
-    if (req.location !== undefined && req.location.trim() === "") {
+    if (!req.location || req.location.trim() === "") {
       throw APIError.invalidArgument("location is required");
     }
     if (req.bio !== undefined && req.bio.trim() === "") {

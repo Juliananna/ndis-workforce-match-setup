@@ -1543,6 +1543,7 @@ import { createSession as api_resume_session_create_createSession } from "~backe
 import { getSession as api_resume_session_get_getSession } from "~backend/resume/session_get";
 import { scoreSession as api_resume_session_score_scoreSession } from "~backend/resume/session_score";
 import { updateSession as api_resume_session_update_updateSession } from "~backend/resume/session_update";
+import { getWorkerResumeSession as api_resume_worker_session_getWorkerResumeSession } from "~backend/resume/worker_session";
 
 export namespace resume {
 
@@ -1563,6 +1564,7 @@ export namespace resume {
             this.generateSummary = this.generateSummary.bind(this)
             this.getLeadDetail = this.getLeadDetail.bind(this)
             this.getSession = this.getSession.bind(this)
+            this.getWorkerResumeSession = this.getWorkerResumeSession.bind(this)
             this.listLeads = this.listLeads.bind(this)
             this.scoreSession = this.scoreSession.bind(this)
             this.updateReferee = this.updateReferee.bind(this)
@@ -1693,6 +1695,15 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_get_getSession>
+        }
+
+        /**
+         * Returns the resume builder session linked to the authenticated worker's profile, if any.
+         */
+        public async getWorkerResumeSession(): Promise<ResponseType<typeof api_resume_worker_session_getWorkerResumeSession>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/worker/mine`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_worker_session_getWorkerResumeSession>
         }
 
         /**
