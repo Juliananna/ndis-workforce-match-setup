@@ -381,8 +381,8 @@ async function renderFlyerToCanvas(
   ry += FEAT_TEXT_BOLD.length * 38 * S + 6 * S;
 
   // ── Referral code box ─────────────────────────────────────────────────────
-  const CODE_H = 68 * S;
-  const CODE_Y = H - PAD - CODE_H - 28 * S;
+  const CODE_H = 76 * S;
+  const CODE_Y = H - PAD - CODE_H - 22 * S;
 
   ctx.fillStyle = "#f0fdf4";
   ctx.strokeStyle = TEAL;
@@ -424,13 +424,13 @@ async function renderFlyerToCanvas(
   }
 
   ctx.fillStyle = "#064e38";
-  ctx.font = `900 ${26 * S}px "Courier New", monospace`;
-  ctx.fillText(partner.referralCode, RX + 72 * S, CODE_Y + 52 * S);
+  ctx.font = `900 ${22 * S}px "Courier New", monospace`;
+  ctx.fillText(partner.referralCode, RX + 72 * S, CODE_Y + 56 * S);
 
   ctx.fillStyle = "#16a34a";
-  ctx.font = `500 ${11 * S}px Arial`;
+  ctx.font = `500 ${10.5 * S}px Arial`;
   ctx.textAlign = "right";
-  ctx.fillText("Use at kizazihire.com.au", W - PAD - 10 * S, CODE_Y + 52 * S);
+  ctx.fillText("Use at kizazihire.com.au", W - PAD - 10 * S, CODE_Y + 56 * S);
   ctx.textAlign = "left";
 
   // ── Footer ────────────────────────────────────────────────────────────────
