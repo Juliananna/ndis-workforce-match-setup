@@ -52,10 +52,32 @@ export const uploadWorkerDocument = api.raw(
       return;
     }
 
-    const workerId = await getWorkerIdForUser(auth.userID);
+    let workerId: string;
+    try {
+      workerId = await getWorkerIdForUser(auth.userID);
+    } catch (workerErr) {
+      const errMsg = workerErr instanceof Error ? workerErr.message : String(workerErr);
+      console.error("Failed to find worker for user:", auth.userID, errMsg);
+      resp.writeHead(404, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "not_found", message: "worker not found" }));
+      return;
+    }
+
     const fileKey = `${workerId}/${Date.now()}-${documentType.replace(/[^a-z0-9]/gi, "_")}.${ext}`;
     const contentType = req.headers["content-type"] ?? "application/octet-stream";
-    const body = await readBody(req);
+
+    let body: Buffer;
+    try {
+      body = await readBody(req);
+    } catch (readErr) {
+      const errMsg = readErr instanceof Error ? readErr.message : String(readErr);
+      console.error("Failed to read request body:", errMsg);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "internal", message: "failed to read uploaded file" }));
+      return;
+    }
+
+    console.log("Uploading document:", { workerId, fileKey, contentType, bodySize: body.length, documentType });
 
     try {
       await workerDocumentsBucket.upload(fileKey, body, { contentType });
