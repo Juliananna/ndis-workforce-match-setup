@@ -11,6 +11,7 @@ import { AvailabilitySection } from "../components/worker/AvailabilitySection";
 import { DocumentsSection } from "../components/worker/DocumentsSection";
 import { VideoSection } from "../components/worker/VideoSection";
 import { ResumeSection } from "../components/worker/ResumeSection";
+import { ResumeBuilderSection } from "../components/worker/ResumeBuilderSection";
 import { ReferencesSection } from "../components/worker/ReferencesSection";
 import UpgradePage from "./UpgradePage";
 import { PromoCodeBox } from "../components/PromoCodeBox";
@@ -570,10 +571,12 @@ export default function WorkerProfilePage() {
           </div>
         </div>
 
+        <ResumeBuilderSection />
+
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-gray-100">
             <Video className="h-4 w-4 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Resume</h3>
+            <h3 className="font-semibold text-gray-900">Resume File</h3>
           </div>
           <div className="p-5">
             <ResumeSection
