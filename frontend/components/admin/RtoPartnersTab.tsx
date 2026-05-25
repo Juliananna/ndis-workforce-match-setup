@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Plus, Loader2, ExternalLink, BarChart2,
   CheckCircle, Users, FileText, ClipboardList, Briefcase,
-  X, Check, RefreshCw,
+  X, Check, RefreshCw, QrCode,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
+import { RtoFlyerModal } from "./RtoFlyerModal";
 import type { RtoPartner } from "~backend/rto/types";
 import type { RtoPartnerStats } from "~backend/admin/rto_partners";
 
@@ -29,6 +30,7 @@ export function RtoPartnersTab() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [flyerPartner, setFlyerPartner] = useState<RtoPartner | null>(null);
 
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
@@ -75,6 +77,7 @@ export function RtoPartnersTab() {
       });
       setPartners((prev) => [p, ...prev]);
       setShowCreateForm(false);
+      setFlyerPartner(p);
       setNewName(""); setNewSlug(""); setNewContactName(""); setNewContactEmail(""); setNewPhone(""); setNewWebsite("");
     } catch (e: unknown) {
       console.error(e);
@@ -86,6 +89,13 @@ export function RtoPartnersTab() {
 
   const autoSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const handleLogoUpdated = (partnerId: string, logoUrl: string) => {
+    setPartners((prev) => prev.map((p) => p.rtoPartnerId === partnerId ? { ...p, logoUrl } : p));
+    if (flyerPartner?.rtoPartnerId === partnerId) {
+      setFlyerPartner((prev) => prev ? { ...prev, logoUrl } : prev);
+    }
+  };
 
   if (loading) {
     return (
@@ -308,8 +318,10 @@ export function RtoPartnersTab() {
           ) : (
             partners.map((p) => (
               <Card key={p.rtoPartnerId} className="p-4 flex items-start gap-4">
-                <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
-                  <GraduationCap className="h-5 w-5 text-teal-600" />
+                <div className="h-12 w-12 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 overflow-hidden">
+                  {p.logoUrl
+                    ? <img src={p.logoUrl} alt={p.name} className="h-full w-full object-contain p-1" crossOrigin="anonymous" />
+                    : <GraduationCap className="h-5 w-5 text-teal-600" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -338,13 +350,31 @@ export function RtoPartnersTab() {
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground shrink-0">
-                  Added {new Date(p.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
-                </p>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <p className="text-xs text-muted-foreground">
+                    Added {new Date(p.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                  <button
+                    onClick={() => setFlyerPartner(p)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors"
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    QR &amp; Flyer
+                  </button>
+                </div>
               </Card>
             ))
           )}
         </div>
+      )}
+
+      {flyerPartner && (
+        <RtoFlyerModal
+          partner={flyerPartner}
+          open={true}
+          onClose={() => setFlyerPartner(null)}
+          onLogoUpdated={(logoUrl) => handleLogoUpdated(flyerPartner.rtoPartnerId, logoUrl)}
+        />
       )}
     </div>
   );

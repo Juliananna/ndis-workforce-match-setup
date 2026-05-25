@@ -77,5 +77,15 @@ export function useProxyUpload() {
     return resp.json() as Promise<{ imageUrl: string }>;
   }, [client]);
 
-  return { uploadDocument, uploadAvatar, uploadVideo, uploadResume, uploadEmployerLogo, uploadEmailImage };
+  const uploadRtoLogo = useCallback(async (file: File, rtoPartnerId: string): Promise<{ logoUrl: string }> => {
+    if (!client) throw new Error("Not authenticated");
+    const resp = await client.uploads.uploadRtoLogo({
+      headers: { "Content-Type": file.type || "image/png" },
+      body: file,
+      query: { fileName: file.name, rtoPartnerId },
+    });
+    return resp.json() as Promise<{ logoUrl: string }>;
+  }, [client]);
+
+  return { uploadDocument, uploadAvatar, uploadVideo, uploadResume, uploadEmployerLogo, uploadEmailImage, uploadRtoLogo };
 }

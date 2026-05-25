@@ -420,3 +420,58 @@ export const uploadEmployerLogo = api.raw(
     resp.end(JSON.stringify({ logoUrl }));
   }
 );
+
+export const uploadRtoLogo = api.raw(
+  { expose: true, auth: true, method: "POST", path: "/uploads/rto-logo" },
+  async (req, resp) => {
+    const auth = getAuthData();
+    if (!auth) {
+      resp.writeHead(403, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "unauthorized" }));
+      return;
+    }
+
+    const isAdmin = await db.queryRow<{ user_id: string }>`
+      SELECT user_id FROM admin_users WHERE user_id = ${auth.userID}
+    `;
+    if (!isAdmin) {
+      resp.writeHead(403, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "only admins can upload RTO logos" }));
+      return;
+    }
+
+    const url = new URL(req.url!, `http://localhost`);
+    const fileName = url.searchParams.get("fileName") ?? "logo.png";
+    const rtoPartnerId = url.searchParams.get("rtoPartnerId") ?? "";
+
+    if (!rtoPartnerId) {
+      resp.writeHead(400, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "rtoPartnerId is required" }));
+      return;
+    }
+
+    const ext = (fileName.split(".").pop() ?? "").toLowerCase();
+    const allowedExts = new Set(["jpg", "jpeg", "png", "webp", "svg"]);
+    if (!allowedExts.has(ext)) {
+      resp.writeHead(400, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ error: "logo must be JPG, PNG, WebP, or SVG" }));
+      return;
+    }
+
+    const fileKey = `rto-logos/${rtoPartnerId}.${ext}`;
+    const contentType = req.headers["content-type"] ?? "image/png";
+    const body = await readBody(req);
+
+    await profilePhotosBucket.upload(fileKey, body, { contentType });
+
+    const logoUrl = profilePhotosBucket.publicUrl(fileKey);
+
+    await db.exec`
+      UPDATE rto_partners SET logo_url = ${logoUrl}, updated_at = NOW()
+      WHERE rto_partner_id = ${rtoPartnerId}
+    `;
+
+    resp.writeHead(200, { "Content-Type": "application/json" });
+    resp.end(JSON.stringify({ logoUrl }));
+  }
+);
