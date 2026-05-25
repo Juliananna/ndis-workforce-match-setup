@@ -1,5 +1,6 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
+import { randomUUID } from "crypto";
 import db from "../db";
 import { assertAdmin } from "./guard";
 import { sendEmail } from "../emailer/sender";
@@ -137,6 +138,24 @@ export const adminUpdateRtoEnquiry = api<UpdateRtoEnquiryRequest, RtoEnquiry>(
     `;
 
     if (!row) throw APIError.notFound("enquiry not found");
+
+    if (row.status === "partner") {
+      const slug = row.rto_slug?.trim() ||
+        row.organisation_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const referralCode = slug.toUpperCase().replace(/-/g, "").slice(0, 12) + randomUUID().split("-")[0]!.toUpperCase();
+      await db.exec`
+        INSERT INTO rto_partners (name, slug, contact_name, contact_email, phone, referral_code)
+        VALUES (
+          ${row.organisation_name},
+          ${slug},
+          ${row.name},
+          ${row.email},
+          ${row.phone ?? null},
+          ${referralCode}
+        )
+        ON CONFLICT (slug) DO NOTHING
+      `;
+    }
 
     return {
       enquiryId: row.enquiry_id,
