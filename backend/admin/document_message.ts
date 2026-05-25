@@ -82,7 +82,7 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
             You have received a message regarding your document: <strong>${docLabel}</strong>
           </p>
           <div style="background: #f5f5f5; border-left: 4px solid #6366f1; padding: 16px; margin: 16px 0; border-radius: 4px;">
-            <p style="color: #333; font-size: 15px; margin: 0; white-space: pre-wrap;">${req.message.trim()}</p>
+            <p style="color: #333; font-size: 15px; margin: 0; white-space: pre-wrap;">${notifBody}</p>
           </div>
           <p style="color: #555; font-size: 15px;">
             Please log in to your account to view this message and update your document if required.

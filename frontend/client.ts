@@ -48,6 +48,7 @@ export class Client {
     public readonly payments: payments.ServiceClient
     public readonly resume: resume.ServiceClient
     public readonly reviews: reviews.ServiceClient
+    public readonly rto: rto.ServiceClient
     public readonly sales: sales.ServiceClient
     public readonly support: support.ServiceClient
     public readonly uploads: uploads.ServiceClient
@@ -82,6 +83,7 @@ export class Client {
         this.payments = new payments.ServiceClient(base)
         this.resume = new resume.ServiceClient(base)
         this.reviews = new reviews.ServiceClient(base)
+        this.rto = new rto.ServiceClient(base)
         this.sales = new sales.ServiceClient(base)
         this.support = new support.ServiceClient(base)
         this.uploads = new uploads.ServiceClient(base)
@@ -204,6 +206,17 @@ import {
 } from "~backend/admin/reference_check";
 import { adminSendReferenceMessage as api_admin_reference_message_adminSendReferenceMessage } from "~backend/admin/reference_message";
 import { adminResetUserPassword as api_admin_reset_user_password_adminResetUserPassword } from "~backend/admin/reset_user_password";
+import {
+    adminListRtoEnquiries as api_admin_rto_enquiries_adminListRtoEnquiries,
+    adminSendRtoEnquiryEmail as api_admin_rto_enquiries_adminSendRtoEnquiryEmail,
+    adminUpdateRtoEnquiry as api_admin_rto_enquiries_adminUpdateRtoEnquiry
+} from "~backend/admin/rto_enquiries";
+import {
+    adminCreateRtoPartner as api_admin_rto_partners_adminCreateRtoPartner,
+    adminListRtoPartnerStats as api_admin_rto_partners_adminListRtoPartnerStats,
+    adminListRtoPartners as api_admin_rto_partners_adminListRtoPartners,
+    adminUpdateRtoPartner as api_admin_rto_partners_adminUpdateRtoPartner
+} from "~backend/admin/rto_partners";
 import { seed as api_admin_seed_seed } from "~backend/admin/seed";
 import {
     adminListAuditLog as api_admin_settings_adminListAuditLog,
@@ -242,6 +255,7 @@ export namespace admin {
             this.adminCancelEmailReferenceRequest = this.adminCancelEmailReferenceRequest.bind(this)
             this.adminCreateBooking = this.adminCreateBooking.bind(this)
             this.adminCreateEmailTemplate = this.adminCreateEmailTemplate.bind(this)
+            this.adminCreateRtoPartner = this.adminCreateRtoPartner.bind(this)
             this.adminCreateSMSTemplate = this.adminCreateSMSTemplate.bind(this)
             this.adminDeleteEmailTemplate = this.adminDeleteEmailTemplate.bind(this)
             this.adminDeleteSMSTemplate = this.adminDeleteSMSTemplate.bind(this)
@@ -260,6 +274,9 @@ export namespace admin {
             this.adminListEmployers = this.adminListEmployers.bind(this)
             this.adminListJobs = this.adminListJobs.bind(this)
             this.adminListPendingReferences = this.adminListPendingReferences.bind(this)
+            this.adminListRtoEnquiries = this.adminListRtoEnquiries.bind(this)
+            this.adminListRtoPartnerStats = this.adminListRtoPartnerStats.bind(this)
+            this.adminListRtoPartners = this.adminListRtoPartners.bind(this)
             this.adminListSMSLog = this.adminListSMSLog.bind(this)
             this.adminListSMSTemplates = this.adminListSMSTemplates.bind(this)
             this.adminListSettings = this.adminListSettings.bind(this)
@@ -275,12 +292,15 @@ export namespace admin {
             this.adminSendEmailReferenceRequest = this.adminSendEmailReferenceRequest.bind(this)
             this.adminSendEmailToUser = this.adminSendEmailToUser.bind(this)
             this.adminSendReferenceMessage = this.adminSendReferenceMessage.bind(this)
+            this.adminSendRtoEnquiryEmail = this.adminSendRtoEnquiryEmail.bind(this)
             this.adminSendSMSToUser = this.adminSendSMSToUser.bind(this)
             this.adminSubmitReferenceCheck = this.adminSubmitReferenceCheck.bind(this)
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
             this.adminUpdateEmailTemplate = this.adminUpdateEmailTemplate.bind(this)
             this.adminUpdateJobStatus = this.adminUpdateJobStatus.bind(this)
             this.adminUpdateReferenceNotes = this.adminUpdateReferenceNotes.bind(this)
+            this.adminUpdateRtoEnquiry = this.adminUpdateRtoEnquiry.bind(this)
+            this.adminUpdateRtoPartner = this.adminUpdateRtoPartner.bind(this)
             this.adminUpdateSMSTemplate = this.adminUpdateSMSTemplate.bind(this)
             this.adminUpdateSetting = this.adminUpdateSetting.bind(this)
             this.adminVerifyDocument = this.adminVerifyDocument.bind(this)
@@ -337,6 +357,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/email-templates`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_email_comms_adminCreateEmailTemplate>
+        }
+
+        public async adminCreateRtoPartner(params: RequestType<typeof api_admin_rto_partners_adminCreateRtoPartner>): Promise<ResponseType<typeof api_admin_rto_partners_adminCreateRtoPartner>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-partners`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_partners_adminCreateRtoPartner>
         }
 
         public async adminCreateSMSTemplate(params: RequestType<typeof api_admin_sms_comms_adminCreateSMSTemplate>): Promise<ResponseType<typeof api_admin_sms_comms_adminCreateSMSTemplate>> {
@@ -469,6 +495,29 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_bookings_adminListPendingReferences>
         }
 
+        public async adminListRtoEnquiries(params: RequestType<typeof api_admin_rto_enquiries_adminListRtoEnquiries>): Promise<ResponseType<typeof api_admin_rto_enquiries_adminListRtoEnquiries>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                status: params.status === undefined ? undefined : String(params.status),
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-enquiries`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_enquiries_adminListRtoEnquiries>
+        }
+
+        public async adminListRtoPartnerStats(): Promise<ResponseType<typeof api_admin_rto_partners_adminListRtoPartnerStats>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-partners/stats`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_partners_adminListRtoPartnerStats>
+        }
+
+        public async adminListRtoPartners(): Promise<ResponseType<typeof api_admin_rto_partners_adminListRtoPartners>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-partners`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_partners_adminListRtoPartners>
+        }
+
         public async adminListSMSLog(params: RequestType<typeof api_admin_sms_comms_adminListSMSLog>): Promise<ResponseType<typeof api_admin_sms_comms_adminListSMSLog>> {
             // Convert our params into the objects we need for the request
             const query = makeRecord<string, string | string[]>({
@@ -585,6 +634,18 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_message_adminSendReferenceMessage>
         }
 
+        public async adminSendRtoEnquiryEmail(params: RequestType<typeof api_admin_rto_enquiries_adminSendRtoEnquiryEmail>): Promise<ResponseType<typeof api_admin_rto_enquiries_adminSendRtoEnquiryEmail>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                htmlBody: params.htmlBody,
+                subject:  params.subject,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-enquiries/${encodeURIComponent(params.enquiryId)}/email`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_enquiries_adminSendRtoEnquiryEmail>
+        }
+
         public async adminSendSMSToUser(params: RequestType<typeof api_admin_sms_comms_adminSendSMSToUser>): Promise<ResponseType<typeof api_admin_sms_comms_adminSendSMSToUser>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/sms/send-to-user`, {method: "POST", body: JSON.stringify(params)})
@@ -650,6 +711,37 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/references/${encodeURIComponent(params.referenceId)}/notes`, {method: "PATCH", body: JSON.stringify(body)})
+        }
+
+        public async adminUpdateRtoEnquiry(params: RequestType<typeof api_admin_rto_enquiries_adminUpdateRtoEnquiry>): Promise<ResponseType<typeof api_admin_rto_enquiries_adminUpdateRtoEnquiry>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                assignedTo: params.assignedTo,
+                followUpAt: params.followUpAt,
+                notes:      params.notes,
+                status:     params.status,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-enquiries/${encodeURIComponent(params.enquiryId)}`, {method: "PUT", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_enquiries_adminUpdateRtoEnquiry>
+        }
+
+        public async adminUpdateRtoPartner(params: RequestType<typeof api_admin_rto_partners_adminUpdateRtoPartner>): Promise<ResponseType<typeof api_admin_rto_partners_adminUpdateRtoPartner>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                contactEmail: params.contactEmail,
+                contactName:  params.contactName,
+                logoUrl:      params.logoUrl,
+                name:         params.name,
+                phone:        params.phone,
+                status:       params.status,
+                website:      params.website,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/rto-partners/${encodeURIComponent(params.rtoPartnerId)}`, {method: "PUT", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_rto_partners_adminUpdateRtoPartner>
         }
 
         public async adminUpdateSMSTemplate(params: RequestType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>): Promise<ResponseType<typeof api_admin_sms_comms_adminUpdateSMSTemplate>> {
@@ -1850,6 +1942,73 @@ export namespace reviews {
 /**
  * Import the endpoint handlers to derive the types for the client.
  */
+import { submitRtoEnquiry as api_rto_enquiry_submitRtoEnquiry } from "~backend/rto/enquiry";
+import { getRtoPartnerBySlug as api_rto_partner_get_getRtoPartnerBySlug } from "~backend/rto/partner_get";
+import {
+    getStudentProfile as api_rto_student_profile_getStudentProfile,
+    upsertStudentProfile as api_rto_student_profile_upsertStudentProfile
+} from "~backend/rto/student_profile";
+import {
+    linkRtoReferral as api_rto_track_referral_linkRtoReferral,
+    trackRtoReferral as api_rto_track_referral_trackRtoReferral
+} from "~backend/rto/track_referral";
+
+export namespace rto {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.getRtoPartnerBySlug = this.getRtoPartnerBySlug.bind(this)
+            this.getStudentProfile = this.getStudentProfile.bind(this)
+            this.linkRtoReferral = this.linkRtoReferral.bind(this)
+            this.submitRtoEnquiry = this.submitRtoEnquiry.bind(this)
+            this.trackRtoReferral = this.trackRtoReferral.bind(this)
+            this.upsertStudentProfile = this.upsertStudentProfile.bind(this)
+        }
+
+        public async getRtoPartnerBySlug(params: { slug: string }): Promise<ResponseType<typeof api_rto_partner_get_getRtoPartnerBySlug>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/partners/slug/${encodeURIComponent(params.slug)}`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_partner_get_getRtoPartnerBySlug>
+        }
+
+        public async getStudentProfile(): Promise<ResponseType<typeof api_rto_student_profile_getStudentProfile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/student-profile`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_student_profile_getStudentProfile>
+        }
+
+        public async linkRtoReferral(params: RequestType<typeof api_rto_track_referral_linkRtoReferral>): Promise<ResponseType<typeof api_rto_track_referral_linkRtoReferral>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/referrals/link`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_track_referral_linkRtoReferral>
+        }
+
+        public async submitRtoEnquiry(params: RequestType<typeof api_rto_enquiry_submitRtoEnquiry>): Promise<ResponseType<typeof api_rto_enquiry_submitRtoEnquiry>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/enquiry`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_enquiry_submitRtoEnquiry>
+        }
+
+        public async trackRtoReferral(params: RequestType<typeof api_rto_track_referral_trackRtoReferral>): Promise<ResponseType<typeof api_rto_track_referral_trackRtoReferral>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/referrals/track`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_track_referral_trackRtoReferral>
+        }
+
+        public async upsertStudentProfile(params: RequestType<typeof api_rto_student_profile_upsertStudentProfile>): Promise<ResponseType<typeof api_rto_student_profile_upsertStudentProfile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/rto/student-profile`, {method: "PUT", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_rto_student_profile_upsertStudentProfile>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
 import {
     getAccountDetail as api_sales_account_edit_getAccountDetail,
     salesActivateSubscription as api_sales_account_edit_salesActivateSubscription,
@@ -2195,6 +2354,7 @@ export namespace uploads {
             this.baseClient = baseClient
             this.uploadEmailImage = this.uploadEmailImage.bind(this)
             this.uploadEmployerLogo = this.uploadEmployerLogo.bind(this)
+            this.uploadRtoLogo = this.uploadRtoLogo.bind(this)
             this.uploadWorkerAvatar = this.uploadWorkerAvatar.bind(this)
             this.uploadWorkerDocument = this.uploadWorkerDocument.bind(this)
             this.uploadWorkerResume = this.uploadWorkerResume.bind(this)
@@ -2209,6 +2369,11 @@ export namespace uploads {
         public async uploadEmployerLogo(options: PickMethods<"POST"> = {}): Promise<globalThis.Response> {
             options.method ||= "POST";
             return this.baseClient.callAPI(`/uploads/employer-logo`, options)
+        }
+
+        public async uploadRtoLogo(options: PickMethods<"POST"> = {}): Promise<globalThis.Response> {
+            options.method ||= "POST";
+            return this.baseClient.callAPI(`/uploads/rto-logo`, options)
         }
 
         public async uploadWorkerAvatar(options: PickMethods<"POST"> = {}): Promise<globalThis.Response> {
