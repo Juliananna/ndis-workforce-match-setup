@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { RtoEnquiryModal } from "../components/RtoEnquiryModal";
 import {
   GraduationCap, FileText, Users, ShieldCheck, Briefcase,
   ArrowRight, CheckCircle2, Loader2, AlertCircle,
@@ -16,8 +17,8 @@ const FEATURES = [
 
 export default function RtoStudentLandingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [partner, setPartner] = useState<RtoPartner | null>(null);
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -82,6 +83,7 @@ export default function RtoStudentLandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      <RtoEnquiryModal open={enquiryOpen} onClose={() => setEnquiryOpen(false)} rtoSlug={slug} />
       <header className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <img src="/kizazi-hire-logo.png" alt="KIZAZI Hire" className="h-8 w-auto" />

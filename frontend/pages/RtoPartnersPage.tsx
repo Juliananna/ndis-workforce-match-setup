@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   GraduationCap, CheckCircle2, ArrowRight, FileText, Users, ShieldCheck,
-  Briefcase, Mail, BookOpen, ClipboardList,
+  Briefcase, BookOpen, ClipboardList,
 } from "lucide-react";
+import { RtoEnquiryModal } from "../components/RtoEnquiryModal";
 
 const STEPS = [
   {
@@ -50,8 +52,11 @@ const FAQS = [
 ];
 
 export default function RtoPartnersPage() {
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      <RtoEnquiryModal open={enquiryOpen} onClose={() => setEnquiryOpen(false)} />
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100 flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2">
           <img src="/kizazi-hire-logo.png" alt="KIZAZI Hire" className="h-8 w-auto" />
@@ -63,12 +68,12 @@ export default function RtoPartnersPage() {
           >
             Sign in
           </Link>
-          <a
-            href="mailto:hello@kizazihire.com.au?subject=RTO Partner Referral Link Request"
+          <button
+            onClick={() => setEnquiryOpen(true)}
             className="text-sm font-semibold px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors"
           >
             Request a referral link
-          </a>
+          </button>
         </div>
       </header>
 
@@ -87,15 +92,15 @@ export default function RtoPartnersPage() {
             KIZAZI Hire gives students one simple place to build a support worker profile, upload compliance documents, complete reference checks, and connect with NDIS providers looking for new workers or placement-ready students.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href="mailto:hello@kizazihire.com.au?subject=RTO Partner Referral Link Request"
+            <button
+              onClick={() => setEnquiryOpen(true)}
               className="inline-flex items-center gap-2 px-7 py-4 bg-white text-teal-700 font-bold rounded-2xl hover:bg-teal-50 transition-colors shadow-xl shadow-teal-900/20 text-base"
             >
-              <Mail className="h-5 w-5" />
+              <GraduationCap className="h-5 w-5" />
               Request an RTO referral link
-            </a>
+            </button>
             <Link
-              to="/worker-signup"
+              to="/worker-signup?source=rto"
               className="inline-flex items-center gap-2 px-7 py-4 bg-teal-500/30 border border-white/25 text-white font-semibold rounded-2xl hover:bg-teal-500/40 transition-colors text-base"
             >
               Refer students now
@@ -142,13 +147,13 @@ export default function RtoPartnersPage() {
               <p className="text-gray-500 mb-8 leading-relaxed">
                 RTOs spend significant time helping students gather compliance documents, chase referees, and find providers. KIZAZI gives students a structured, self-guided pathway so your team can focus on teaching.
               </p>
-              <a
-                href="mailto:hello@kizazihire.com.au?subject=RTO Partner Referral Link Request"
+              <button
+                onClick={() => setEnquiryOpen(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 transition-colors"
               >
                 Get your free referral link
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </button>
             </div>
             <ul className="space-y-4">
               {BENEFITS.map((b, i) => (
@@ -172,13 +177,13 @@ export default function RtoPartnersPage() {
             Get in touch and we'll set up a unique referral link for your RTO within 24 hours. No cost, no lock-in.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="mailto:hello@kizazihire.com.au?subject=RTO Partner Referral Link Request"
+            <button
+              onClick={() => setEnquiryOpen(true)}
               className="inline-flex items-center justify-center gap-2 px-7 py-4 bg-white text-teal-700 font-bold rounded-2xl hover:bg-teal-50 transition-colors"
             >
-              <Mail className="h-5 w-5" />
+              <GraduationCap className="h-5 w-5" />
               Request an RTO referral link
-            </a>
+            </button>
             <Link
               to="/worker-signup?source=rto"
               className="inline-flex items-center justify-center gap-2 px-7 py-4 bg-teal-500/30 border border-white/25 text-white font-semibold rounded-2xl hover:bg-teal-500/40 transition-colors"
