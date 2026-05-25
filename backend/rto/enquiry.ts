@@ -1,5 +1,6 @@
 import { api, APIError } from "encore.dev/api";
 import { sendEmail } from "../emailer/sender";
+import db from "../db";
 
 export interface RtoEnquiryRequest {
   name: string;
@@ -22,6 +23,18 @@ export const submitRtoEnquiry = api<RtoEnquiryRequest, RtoEnquiryResponse>(
     if (!req.email?.trim()) throw APIError.invalidArgument("email is required");
     if (!req.message?.trim()) throw APIError.invalidArgument("message is required");
     if (req.message.length > 2000) throw APIError.invalidArgument("message too long");
+
+    await db.exec`
+      INSERT INTO rto_enquiries (name, organisation_name, email, phone, message, rto_slug)
+      VALUES (
+        ${req.name.trim()},
+        ${req.organisationName.trim()},
+        ${req.email.trim()},
+        ${req.phone?.trim() ?? null},
+        ${req.message.trim()},
+        ${req.rtoSlug?.trim() ?? null}
+      )
+    `;
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">

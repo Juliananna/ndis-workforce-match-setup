@@ -2,7 +2,7 @@ import { useState, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, Users, Building2, Briefcase, UserCheck, ShieldCheck,
-  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, Eye, Rss, ShieldAlert,
+  Mail, LogOut, Menu, X, Loader2, LayoutDashboard, TrendingUp, HelpCircle, FileText, SlidersHorizontal, Eye, Rss, ShieldAlert, GraduationCap,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { AdminDashboardHome } from "../components/admin/AdminDashboardHome";
@@ -17,8 +17,9 @@ const JobDigestTab = lazy(() => import("../components/admin/JobDigestTab").then(
 const ReferenceQueueTab = lazy(() => import("../components/admin/ReferenceQueueTab").then((m) => ({ default: m.ReferenceQueueTab })));
 const DocVerificationTab = lazy(() => import("../components/admin/DocVerificationTab").then((m) => ({ default: m.DocVerificationTab })));
 const RtoPartnersTab = lazy(() => import("../components/admin/RtoPartnersTab").then((m) => ({ default: m.RtoPartnersTab })));
+const RtoEnquiriesTab = lazy(() => import("../components/admin/RtoEnquiriesTab").then((m) => ({ default: m.RtoEnquiriesTab })));
 
-type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas" | "jobdigest" | "compliance-portal" | "rto";
+type AdminTab = "home" | "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support" | "sales" | "privacy" | "platform" | "viewas" | "jobdigest" | "compliance-portal" | "rto" | "rto-enquiries";
 
 const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOnly?: boolean; sysadminOnly?: boolean }[] = [
   { id: "home",             label: "Dashboard",          Icon: LayoutDashboard },
@@ -35,7 +36,8 @@ const NAV_ITEMS: { id: AdminTab; label: string; Icon: React.ElementType; adminOn
   { id: "privacy",          label: "Privacy Policy",     Icon: FileText, adminOnly: true },
   { id: "platform",         label: "Platform Settings",  Icon: SlidersHorizontal, adminOnly: true },
   { id: "jobdigest",        label: "Job Digest",         Icon: Rss, adminOnly: true },
-  { id: "rto",              label: "RTO Partners",        Icon: LayoutDashboard },
+  { id: "rto",              label: "RTO Partners",       Icon: GraduationCap },
+  { id: "rto-enquiries",    label: "RTO Enquiries",      Icon: GraduationCap },
   { id: "viewas",           label: "View As",            Icon: Eye, sysadminOnly: true },
 ];
 
@@ -166,6 +168,7 @@ export default function AdminDashboardPage() {
             {tab === "platform" && <PlatformSettingsTab api={api} />}
             {tab === "jobdigest" && <JobDigestTab api={api} />}
             {tab === "rto" && <RtoPartnersTab />}
+            {tab === "rto-enquiries" && <RtoEnquiriesTab />}
             {tab === "viewas" && <ViewAsTab />}
             {tab === "compliance-portal" && (
               <div className="space-y-6">
@@ -189,7 +192,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             )}
-            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "jobdigest" && tab !== "viewas" && tab !== "compliance-portal" && tab !== "rto" && (
+            {tab !== "home" && tab !== "sales" && tab !== "privacy" && tab !== "platform" && tab !== "jobdigest" && tab !== "viewas" && tab !== "compliance-portal" && tab !== "rto" && tab !== "rto-enquiries" && (
               <AdminPage
                 initialTab={tab as "overview" | "workers" | "employers" | "jobs" | "users" | "compliance" | "email" | "support"}
                 onTabChange={(t) => setTab(t as AdminTab)}
