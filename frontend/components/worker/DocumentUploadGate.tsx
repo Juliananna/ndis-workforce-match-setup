@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Upload, Loader2, CheckCircle2, ShieldCheck, FileText,
-  AlertTriangle, ChevronRight, X,
+  AlertTriangle, ChevronRight, X, GraduationCap,
 } from "lucide-react";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { useProxyUpload } from "../../hooks/useProxyUpload";
@@ -28,6 +28,11 @@ interface Props {
 export function DocumentUploadGate({ onComplete }: Props) {
   const api = useAuthedBackend();
   const proxy = useProxyUpload();
+
+  const isRtoSource = typeof window !== "undefined" && (
+    sessionStorage.getItem("rto_source") === "true" ||
+    new URLSearchParams(window.location.search).get("source") === "rto"
+  );
 
   const [documents, setDocuments] = useState<WorkerDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,10 +95,19 @@ export function DocumentUploadGate({ onComplete }: Props) {
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-600 mb-4 shadow-lg shadow-blue-500/30">
             <ShieldCheck className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Compliance Documents</h1>
+          {isRtoSource && (
+            <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-full px-4 py-2 text-sm font-medium text-teal-700 mb-4">
+              <GraduationCap className="h-4 w-4" />
+              Student placement pathway
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isRtoSource ? "Upload Your First Compliance Document" : "Upload Your Compliance Documents"}
+          </h1>
           <p className="text-gray-500 text-sm max-w-md mx-auto">
-            To create your profile and get matched with NDIS providers, you must upload at least one compliance document.
-            You can add more documents at any time from your profile.
+            {isRtoSource
+              ? "To activate your placement-ready profile, upload at least one real compliance document. This keeps the platform trustworthy for providers considering placement students."
+              : "To create your profile and get matched with NDIS providers, you must upload at least one compliance document. You can add more documents at any time from your profile."}
           </p>
         </div>
 

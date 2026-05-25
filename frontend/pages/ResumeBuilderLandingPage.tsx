@@ -1,8 +1,8 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useState } from "react";
-import { CheckCircle, FileText, Star, Users, ShieldCheck, Download, ArrowRight, Sparkles } from "lucide-react";
+import { CheckCircle, FileText, Star, Users, ShieldCheck, Download, ArrowRight, Sparkles, GraduationCap } from "lucide-react";
 
 const BENEFITS = [
   { icon: FileText, title: "Free Professional Resume", desc: "Tailored for NDIS support worker roles in Australia" },
@@ -23,14 +23,26 @@ const STEPS = [
 
 export default function ResumeBuilderLandingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  const sourceParam = searchParams.get("source") ?? "";
+  const rtoCode = searchParams.get("rtoCode") ?? "";
+  const rtoId = searchParams.get("rtoId") ?? "";
+  const isRtoSource = sourceParam === "rto";
 
   const handleStart = async () => {
     setLoading(true);
     try {
       const { session } = await backend.resume.createSession({});
-      navigate(`/resume-builder/session/${session.id}`);
+      const params = new URLSearchParams({ id: session.id });
+      if (isRtoSource) {
+        params.set("source", "rto");
+        if (rtoCode) params.set("rtoCode", rtoCode);
+        if (rtoId) params.set("rtoId", rtoId);
+      }
+      navigate(`/resume-builder/session/${session.id}${isRtoSource ? `?source=rto&rtoCode=${rtoCode}&rtoId=${rtoId}` : ""}`);
     } catch (err) {
       console.error(err);
       toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
@@ -55,6 +67,12 @@ export default function ResumeBuilderLandingPage() {
 
       <section className="bg-gradient-to-br from-teal-600 to-emerald-700 text-white py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
+          {isRtoSource && rtoCode && (
+            <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-2 text-sm font-medium mb-4">
+              <GraduationCap size={14} className="text-teal-200" />
+              <span>Student pathway · RTO referral code: {rtoCode}</span>
+            </div>
+          )}
           <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
             <Sparkles size={14} />
             <span>Free for NDIS Support Workers</span>

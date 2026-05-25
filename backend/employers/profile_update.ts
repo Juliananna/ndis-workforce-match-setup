@@ -16,6 +16,11 @@ export interface UpdateEmployerProfileRequest {
   phone?: string;
   organisationSize?: string;
   servicesProvided?: string[];
+  canHostStudents?: boolean;
+  placementSupervisionAvailable?: boolean;
+  placementServiceAreas?: string[];
+  maxStudentsPerMonth?: number;
+  openToEntryLevelWorkers?: boolean;
 }
 
 export const updateEmployerProfile = api<UpdateEmployerProfileRequest, EmployerProfile>(
@@ -60,6 +65,8 @@ export const updateEmployerProfile = api<UpdateEmployerProfileRequest, EmployerP
     const serviceAreas = req.serviceAreas ?? null;
     const servicesProvided = req.servicesProvided ?? null;
 
+    const placementServiceAreas = req.placementServiceAreas ?? null;
+
     const row = await db.queryRow<{
       employer_id: string;
       user_id: string;
@@ -76,24 +83,36 @@ export const updateEmployerProfile = api<UpdateEmployerProfileRequest, EmployerP
       services_provided: string[] | null;
       logo_url: string | null;
       updated_at: Date;
+      can_host_students: boolean;
+      placement_supervision_available: boolean;
+      placement_service_areas: string[] | null;
+      max_students_per_month: number | null;
+      open_to_entry_level_workers: boolean;
     }>`
       UPDATE employers
       SET
-        organisation_name = COALESCE(${req.organisationName ?? null}, organisation_name),
-        abn = COALESCE(${req.abn ?? null}, abn),
-        location = COALESCE(${req.location ?? null}, location),
-        latitude = COALESCE(${req.latitude ?? null}, latitude),
-        longitude = COALESCE(${req.longitude ?? null}, longitude),
-        service_areas = COALESCE(${serviceAreas}, service_areas),
-        contact_person = COALESCE(${req.contactPerson ?? null}, contact_person),
-        email = COALESCE(${req.email ?? null}, email),
-        phone = COALESCE(${req.phone ?? null}, phone),
-        organisation_size = COALESCE(${req.organisationSize ?? null}, organisation_size),
-        services_provided = COALESCE(${servicesProvided}, services_provided),
-        updated_at = NOW()
+        organisation_name                = COALESCE(${req.organisationName ?? null}, organisation_name),
+        abn                              = COALESCE(${req.abn ?? null}, abn),
+        location                         = COALESCE(${req.location ?? null}, location),
+        latitude                         = COALESCE(${req.latitude ?? null}, latitude),
+        longitude                        = COALESCE(${req.longitude ?? null}, longitude),
+        service_areas                    = COALESCE(${serviceAreas}, service_areas),
+        contact_person                   = COALESCE(${req.contactPerson ?? null}, contact_person),
+        email                            = COALESCE(${req.email ?? null}, email),
+        phone                            = COALESCE(${req.phone ?? null}, phone),
+        organisation_size                = COALESCE(${req.organisationSize ?? null}, organisation_size),
+        services_provided                = COALESCE(${servicesProvided}, services_provided),
+        can_host_students                = COALESCE(${req.canHostStudents ?? null}, can_host_students),
+        placement_supervision_available  = COALESCE(${req.placementSupervisionAvailable ?? null}, placement_supervision_available),
+        placement_service_areas          = COALESCE(${placementServiceAreas}, placement_service_areas),
+        max_students_per_month           = COALESCE(${req.maxStudentsPerMonth ?? null}, max_students_per_month),
+        open_to_entry_level_workers      = COALESCE(${req.openToEntryLevelWorkers ?? null}, open_to_entry_level_workers),
+        updated_at                       = NOW()
       WHERE user_id = ${auth.userID}
       RETURNING employer_id, user_id, organisation_name, abn, location, latitude, longitude, service_areas,
-                contact_person, email, phone, organisation_size, services_provided, logo_url, updated_at
+                contact_person, email, phone, organisation_size, services_provided, logo_url, updated_at,
+                can_host_students, placement_supervision_available, placement_service_areas,
+                max_students_per_month, open_to_entry_level_workers
     `;
 
     if (!row) {
@@ -116,6 +135,11 @@ export const updateEmployerProfile = api<UpdateEmployerProfileRequest, EmployerP
       servicesProvided: row.services_provided ?? [],
       logoUrl: row.logo_url,
       updatedAt: row.updated_at,
+      canHostStudents: row.can_host_students,
+      placementSupervisionAvailable: row.placement_supervision_available,
+      placementServiceAreas: row.placement_service_areas ?? [],
+      maxStudentsPerMonth: row.max_students_per_month,
+      openToEntryLevelWorkers: row.open_to_entry_level_workers,
     };
   }
 );

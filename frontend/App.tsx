@@ -64,6 +64,8 @@ const ResumeBuilderSessionPage = lazy(() => import("./pages/ResumeBuilderSession
 const ResumeBuilderPreviewPage = lazy(() => import("./pages/ResumeBuilderPreviewPage"));
 const AdminResumeLeadsPage = lazy(() => import("./pages/AdminResumeLeadsPage"));
 const EmailReferencePage = lazy(() => import("./pages/EmailReferencePage"));
+const RtoPartnersPage = lazy(() => import("./pages/RtoPartnersPage"));
+const RtoStudentLandingPage = lazy(() => import("./pages/RtoStudentLandingPage"));
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { token, loading } = useAuth();
@@ -119,14 +121,15 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder", "/rto-partners"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 const REFERENCE_PATH_PREFIX = "/reference/";
+const RTO_PATH_PREFIX = "/rto/";
 
 function GlobalSupportButton() {
   const { token } = useAuth();
   const location = useLocation();
-  const isPublic = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith(JOB_SHARE_PATH_PREFIX) || location.pathname.startsWith(REFERENCE_PATH_PREFIX);
+  const isPublic = PUBLIC_PATHS.includes(location.pathname) || location.pathname.startsWith(JOB_SHARE_PATH_PREFIX) || location.pathname.startsWith(REFERENCE_PATH_PREFIX) || location.pathname.startsWith(RTO_PATH_PREFIX);
   if (!token || isPublic) return null;
   return <SupportButton />;
 }
@@ -227,6 +230,22 @@ function AppInner() {
           element={
             <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
               <ResumeBuilderPreviewPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/rto-partners"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+              <RtoPartnersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/rto/:slug"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-teal-600 border-t-transparent animate-spin" /></div>}>
+              <RtoStudentLandingPage />
             </Suspense>
           }
         />

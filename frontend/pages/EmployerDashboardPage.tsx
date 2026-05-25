@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { useProxyUpload } from "../hooks/useProxyUpload";
 import { OrgProfileSection } from "../components/employer/OrgProfileSection";
+import { PlacementSettingsSection } from "../components/employer/PlacementSettingsSection";
 import { JobRequestList } from "../components/employer/JobRequestList";
 import { JobRequestForm } from "../components/employer/JobRequestForm";
 import { JobRequestDetail } from "../components/employer/JobRequestDetail";
@@ -89,6 +90,7 @@ export default function EmployerDashboardPage() {
   return (
     <div className="space-y-6">
       <OrgProfileSection profile={profile} onSave={handleSaveProfile} onUploadLogo={handleUploadLogo} />
+      <PlacementSettingsSection profile={profile} onSave={handleSaveProfile} />
 
       {view === "list" && (
         <JobRequestList

@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   CheckCircle2,
@@ -12,6 +12,7 @@ import {
   Users,
   Star,
   BadgeCheck,
+  GraduationCap,
 } from "lucide-react";
 import backend from "~backend/client";
 
@@ -37,10 +38,25 @@ const BENEFITS = [
   { icon: Star, text: "Receive reviews that boost your profile" },
 ];
 
+const QUALIFICATION_LEVELS = [
+  "Certificate III in Individual Support",
+  "Certificate IV in Disability",
+  "Certificate IV in Ageing Support",
+  "Diploma of Community Services",
+  "Bachelor of Social Work",
+  "Other",
+];
+
 export default function WorkerSignupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const sourceParam = searchParams.get("source") ?? "";
+  const rtoCode = searchParams.get("rtoCode") ?? "";
+  const rtoId = searchParams.get("rtoId") ?? "";
+  const isRtoSource = sourceParam === "rto";
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -54,9 +70,18 @@ export default function WorkerSignupPage() {
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null);
   const promoDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [isCurrentStudent, setIsCurrentStudent] = useState(true);
+  const [courseName, setCourseName] = useState("");
+  const [qualificationLevel, setQualificationLevel] = useState("");
+  const [placementRequired, setPlacementRequired] = useState(false);
+  const [wantsPaidWork, setWantsPaidWork] = useState(true);
+  const [rtoProgressConsent, setRtoProgressConsent] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ email: string } | null>(null);
+
+  const totalSteps = isRtoSource ? 3 : 2;
 
   const handlePromoInput = (val: string) => {
     setPromoCode(val);
@@ -100,7 +125,17 @@ export default function WorkerSignupPage() {
       return;
     }
     setError(null);
-    setStep(2);
+    if (isRtoSource) {
+      setStep(2);
+    } else {
+      setStep(2);
+    }
+  };
+
+  const handleStep2RTO = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setStep(3);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,7 +153,21 @@ export default function WorkerSignupPage() {
         role: "WORKER",
         name,
         phone,
+        ...(promoCode && promoState === "valid" ? { promoCode } : {}),
       });
+
+      if (isRtoSource && rtoCode) {
+        try {
+          await backend.rto.linkRtoReferral({
+            referralCode: rtoCode,
+            userId: resp.userId,
+          });
+        } catch { }
+        sessionStorage.setItem("rto_source", "true");
+        sessionStorage.setItem("rto_code", rtoCode);
+        if (rtoId) sessionStorage.setItem("rto_id", rtoId);
+      }
+
       setSuccess({ email });
     } catch (err: unknown) {
       console.error(err);
@@ -142,13 +191,17 @@ export default function WorkerSignupPage() {
           <p className="text-gray-500 text-sm mb-6">
             Your account has been created. Verify your email to unlock all features.
           </p>
-          <p className="text-gray-500 text-sm mb-2">
-            We sent a verification link to:
-          </p>
+          <p className="text-gray-500 text-sm mb-2">We sent a verification link to:</p>
           <p className="font-semibold text-gray-800 mb-5">{success.email}</p>
           <p className="text-xs text-gray-400 mb-6">
             Click the link in your email to verify your account. Check your spam folder if you don't see it.
           </p>
+          {isRtoSource && (
+            <div className="mb-6 flex items-start gap-3 rounded-xl bg-teal-50 border border-teal-200 p-4 text-sm text-teal-800 text-left">
+              <GraduationCap className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
+              <p>Once verified, log in and upload at least one compliance document to activate your placement-ready profile.</p>
+            </div>
+          )}
           <button
             onClick={() => navigate("/login")}
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25"
@@ -160,6 +213,10 @@ export default function WorkerSignupPage() {
     );
   }
 
+  const stepLabels = isRtoSource
+    ? ["Your Details", "Your Study", "Confirm & Join"]
+    : ["Your Details", "Confirm & Join"];
+
   return (
     <div className="min-h-screen flex">
       <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex-col justify-between p-12 relative overflow-hidden">
@@ -170,18 +227,38 @@ export default function WorkerSignupPage() {
 
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-12">
-            <BadgeCheck className="h-4 w-4 text-blue-200" />
-            <span className="text-white text-sm font-medium">Built for NDIS Support Workers</span>
+            {isRtoSource ? (
+              <>
+                <GraduationCap className="h-4 w-4 text-teal-200" />
+                <span className="text-white text-sm font-medium">Student Pathway — NDIS Support Work</span>
+              </>
+            ) : (
+              <>
+                <BadgeCheck className="h-4 w-4 text-blue-200" />
+                <span className="text-white text-sm font-medium">Built for NDIS Support Workers</span>
+              </>
+            )}
           </div>
 
           <h1 className="text-5xl font-bold text-white leading-tight mb-5">
-            Your next<br />
-            NDIS role<br />
-            <span className="text-blue-200">starts here.</span>
+            {isRtoSource ? (
+              <>
+                Your placement<br />journey<br />
+                <span className="text-blue-200">starts here.</span>
+              </>
+            ) : (
+              <>
+                Your next<br />
+                NDIS role<br />
+                <span className="text-blue-200">starts here.</span>
+              </>
+            )}
           </h1>
 
           <p className="text-blue-100 text-base mb-10 leading-relaxed">
-            Create your free profile, get matched with providers, and build a career you're proud of.
+            {isRtoSource
+              ? "Build your compliance profile, complete reference checks, and connect with providers open to placement discussions."
+              : "Create your free profile, get matched with providers, and build a career you're proud of."}
           </p>
 
           <div className="space-y-4">
@@ -207,8 +284,14 @@ export default function WorkerSignupPage() {
               <CheckCircle2 className="h-4 w-4 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Free to join as a worker</p>
-              <p className="text-xs text-blue-200">Upgrade anytime for premium features</p>
+              <p className="text-sm font-semibold text-white">
+                {isRtoSource ? "Free placement-ready profile" : "Free to join as a worker"}
+              </p>
+              <p className="text-xs text-blue-200">
+                {isRtoSource
+                  ? "Upload 1 compliance document to activate"
+                  : "Upgrade anytime for premium features"}
+              </p>
             </div>
           </div>
         </div>
@@ -217,29 +300,43 @@ export default function WorkerSignupPage() {
       <div className="w-full lg:w-7/12 flex flex-col items-center justify-center px-6 py-12 bg-gray-50 overflow-y-auto">
         <div className="w-full max-w-lg">
           <div className="mb-8">
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Support Worker Signup</p>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">
+              {isRtoSource ? "Student Signup" : "Support Worker Signup"}
+            </p>
             <h2 className="text-3xl font-bold text-gray-900">Create your free account</h2>
-            <p className="text-gray-500 mt-1.5 text-sm">Get matched with NDIS providers in minutes.</p>
+            <p className="text-gray-500 mt-1.5 text-sm">
+              {isRtoSource
+                ? "Get placement-ready with a free compliance profile."
+                : "Get matched with NDIS providers in minutes."}
+            </p>
           </div>
 
+          {isRtoSource && rtoCode && (
+            <div className="mb-6 flex items-center gap-2 rounded-xl bg-teal-50 border border-teal-200 px-4 py-3 text-sm text-teal-800">
+              <GraduationCap className="h-4 w-4 text-teal-600 shrink-0" />
+              <span>RTO referral code: <strong>{rtoCode}</strong></span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 mb-8">
-            {[1, 2].map((s) => (
-              <div key={s} className="flex items-center gap-2">
-                <div
-                  className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                    step >= s
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-400"
-                  }`}
-                >
-                  {step > s ? <CheckCircle2 className="h-4 w-4" /> : s}
+            {stepLabels.map((label, i) => {
+              const s = i + 1;
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  <div
+                    className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                      step >= s ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"
+                    }`}
+                  >
+                    {step > s ? <CheckCircle2 className="h-4 w-4" /> : s}
+                  </div>
+                  <span className={`text-xs font-medium ${step >= s ? "text-gray-800" : "text-gray-400"}`}>
+                    {label}
+                  </span>
+                  {i < stepLabels.length - 1 && <ChevronRight className="h-4 w-4 text-gray-300" />}
                 </div>
-                <span className={`text-xs font-medium ${step >= s ? "text-gray-800" : "text-gray-400"}`}>
-                  {s === 1 ? "Your Details" : "Confirm & Join"}
-                </span>
-                {s < 2 && <ChevronRight className="h-4 w-4 text-gray-300" />}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {error && (
@@ -313,64 +410,57 @@ export default function WorkerSignupPage() {
                 </div>
               </div>
 
-              <div className="pt-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Promotional Code{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <div className="relative">
-                  <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Enter code e.g. WELCOME20"
-                    value={promoCode}
-                    onChange={(e) => handlePromoInput(e.target.value)}
-                    className={`w-full pl-10 pr-10 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 font-mono uppercase focus:outline-none focus:ring-2 transition-all ${
-                      promoState === "valid"
-                        ? "border-green-400 focus:ring-green-400"
-                        : promoState === "invalid"
-                        ? "border-red-300 focus:ring-red-300"
-                        : "border-gray-200 focus:ring-blue-500"
-                    }`}
-                  />
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                    {promoState === "checking" && (
-                      <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
-                    )}
-                    {promoState === "valid" && (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    )}
-                    {promoState === "invalid" && (
-                      <AlertCircle className="h-4 w-4 text-red-400" />
-                    )}
-                    {promoState === "idle" && promoCode && (
-                      <button type="button" onClick={clearPromo}>
-                        <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {promoState === "valid" && promoResult && (
-                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                    <div>
-                      <span className="text-sm font-semibold text-green-700">
-                        {formatDiscount(promoResult)} applied!
-                      </span>
-                      {promoResult.description && (
-                        <span className="text-xs text-green-600 ml-1.5">— {promoResult.description}</span>
+              {!isRtoSource && (
+                <div className="pt-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Promotional Code{" "}
+                    <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Enter code e.g. WELCOME20"
+                      value={promoCode}
+                      onChange={(e) => handlePromoInput(e.target.value)}
+                      className={`w-full pl-10 pr-10 py-3 bg-white border rounded-xl text-gray-900 placeholder-gray-400 font-mono uppercase focus:outline-none focus:ring-2 transition-all ${
+                        promoState === "valid"
+                          ? "border-green-400 focus:ring-green-400"
+                          : promoState === "invalid"
+                          ? "border-red-300 focus:ring-red-300"
+                          : "border-gray-200 focus:ring-blue-500"
+                      }`}
+                    />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                      {promoState === "checking" && <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />}
+                      {promoState === "valid" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                      {promoState === "invalid" && <AlertCircle className="h-4 w-4 text-red-400" />}
+                      {promoState === "idle" && promoCode && (
+                        <button type="button" onClick={clearPromo}>
+                          <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                        </button>
                       )}
                     </div>
                   </div>
-                )}
-                {promoState === "invalid" && (
-                  <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    This code is invalid or has expired.
-                  </p>
-                )}
-              </div>
+                  {promoState === "valid" && promoResult && (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                      <div>
+                        <span className="text-sm font-semibold text-green-700">{formatDiscount(promoResult)} applied!</span>
+                        {promoResult.description && (
+                          <span className="text-xs text-green-600 ml-1.5">— {promoResult.description}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {promoState === "invalid" && (
+                    <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      This code is invalid or has expired.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -382,7 +472,117 @@ export default function WorkerSignupPage() {
             </form>
           )}
 
-          {step === 2 && (
+          {step === 2 && isRtoSource && (
+            <form onSubmit={handleStep2RTO} className="space-y-5">
+              <div className="rounded-xl bg-teal-50 border border-teal-200 p-4 text-sm text-teal-800">
+                <p className="font-semibold mb-1 flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  Tell us about your study
+                </p>
+                <p className="text-teal-700 text-xs">This helps providers understand your background. All fields are optional.</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="is_student"
+                  checked={isCurrentStudent}
+                  onChange={(e) => setIsCurrentStudent(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="is_student" className="text-sm text-gray-700">I am currently enrolled in a course</label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Course name <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Certificate III in Individual Support"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Qualification level <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  value={qualificationLevel}
+                  onChange={(e) => setQualificationLevel(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                >
+                  <option value="">Select level…</option>
+                  {QUALIFICATION_LEVELS.map((q) => (
+                    <option key={q} value={q}>{q}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <p className="text-sm font-medium text-gray-700">What are you looking for?</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="needs_placement"
+                    checked={placementRequired}
+                    onChange={(e) => setPlacementRequired(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <label htmlFor="needs_placement" className="text-sm text-gray-700">
+                    I need to complete a work placement as part of my course
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="wants_paid"
+                    checked={wantsPaidWork}
+                    onChange={(e) => setWantsPaidWork(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <label htmlFor="wants_paid" className="text-sm text-gray-700">
+                    I'm also interested in paid support work
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-200 p-4">
+                <input
+                  type="checkbox"
+                  id="rto_consent"
+                  checked={rtoProgressConsent}
+                  onChange={(e) => setRtoProgressConsent(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="rto_consent" className="text-sm text-gray-600 leading-relaxed">
+                  I allow my training organisation to see my profile progress (not my compliance documents) to support my placement journey.
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setError(null); }}
+                  className="flex-none px-5 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-all text-sm"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-6 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-teal-500/25"
+                >
+                  Continue
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {((step === 2 && !isRtoSource) || (step === 3 && isRtoSource)) && (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="rounded-2xl bg-white border border-gray-200 p-5 space-y-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Account Summary</p>
@@ -400,7 +600,34 @@ export default function WorkerSignupPage() {
                       Support Worker
                     </span>
                   </span>
-                  {promoState === "valid" && promoResult && (
+                  {isRtoSource && rtoCode && (
+                    <>
+                      <span className="text-gray-500">RTO referral</span>
+                      <span className="text-right">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold px-2.5 py-0.5">
+                          <GraduationCap className="h-3 w-3" />
+                          {rtoCode}
+                        </span>
+                      </span>
+                    </>
+                  )}
+                  {isRtoSource && (
+                    <>
+                      {placementRequired && (
+                        <>
+                          <span className="text-gray-500">Placement needed</span>
+                          <span className="text-right text-gray-900 font-medium">Yes</span>
+                        </>
+                      )}
+                      {wantsPaidWork && (
+                        <>
+                          <span className="text-gray-500">Open to paid work</span>
+                          <span className="text-right text-gray-900 font-medium">Yes</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {!isRtoSource && promoState === "valid" && promoResult && (
                     <>
                       <span className="text-gray-500">Promo code</span>
                       <span className="text-right">
@@ -413,6 +640,13 @@ export default function WorkerSignupPage() {
                   )}
                 </div>
               </div>
+
+              {isRtoSource && (
+                <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p>Your profile won't be visible to providers until you've uploaded at least one compliance document after signing in.</p>
+                </div>
+              )}
 
               <div className="flex items-start gap-3">
                 <input
@@ -434,7 +668,7 @@ export default function WorkerSignupPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => { setStep(1); setError(null); }}
+                  onClick={() => { setStep(isRtoSource ? 2 : 1); setError(null); }}
                   className="flex-none px-5 py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-all text-sm"
                 >
                   Back
@@ -465,9 +699,7 @@ export default function WorkerSignupPage() {
             </Link>
           </p>
 
-          <p className="text-center text-xs text-gray-400 mt-4">
-            © 2024 Kizazi Hire. All rights reserved.
-          </p>
+          <p className="text-center text-xs text-gray-400 mt-4">© 2024 Kizazi Hire. All rights reserved.</p>
         </div>
       </div>
     </div>

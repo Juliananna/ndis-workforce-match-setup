@@ -18,6 +18,11 @@ export interface EmployerProfile {
   servicesProvided: string[];
   logoUrl: string | null;
   updatedAt: Date;
+  canHostStudents: boolean;
+  placementSupervisionAvailable: boolean;
+  placementServiceAreas: string[];
+  maxStudentsPerMonth: number | null;
+  openToEntryLevelWorkers: boolean;
 }
 
 export const getEmployerProfile = api<void, EmployerProfile>(
@@ -44,9 +49,16 @@ export const getEmployerProfile = api<void, EmployerProfile>(
       services_provided: string[] | null;
       logo_url: string | null;
       updated_at: Date;
+      can_host_students: boolean;
+      placement_supervision_available: boolean;
+      placement_service_areas: string[] | null;
+      max_students_per_month: number | null;
+      open_to_entry_level_workers: boolean;
     }>`
       SELECT employer_id, user_id, organisation_name, abn, location, latitude, longitude, service_areas,
-             contact_person, email, phone, organisation_size, services_provided, logo_url, updated_at
+             contact_person, email, phone, organisation_size, services_provided, logo_url, updated_at,
+             can_host_students, placement_supervision_available, placement_service_areas,
+             max_students_per_month, open_to_entry_level_workers
       FROM employers
       WHERE user_id = ${auth.userID}
     `;
@@ -71,6 +83,11 @@ export const getEmployerProfile = api<void, EmployerProfile>(
       servicesProvided: row.services_provided ?? [],
       logoUrl: row.logo_url,
       updatedAt: row.updated_at,
+      canHostStudents: row.can_host_students,
+      placementSupervisionAvailable: row.placement_supervision_available,
+      placementServiceAreas: row.placement_service_areas ?? [],
+      maxStudentsPerMonth: row.max_students_per_month,
+      openToEntryLevelWorkers: row.open_to_entry_level_workers,
     };
   }
 );
