@@ -7,11 +7,9 @@ import { syncOnboardingStatus } from "../workers/compliance_status";
 
 async function readBody(req: import("node:http").IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", resolve);
-    req.on("error", reject);
-  });
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
   return Buffer.concat(chunks);
 }
 
@@ -62,9 +60,10 @@ export const uploadWorkerDocument = api.raw(
     try {
       await workerDocumentsBucket.upload(fileKey, body, { contentType });
     } catch (uploadErr) {
-      console.error("Failed to upload document to storage:", uploadErr);
+      const errMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+      console.error("Failed to upload document to storage:", errMsg, "bodySize:", body.length, "contentType:", contentType, "fileKey:", fileKey);
       resp.writeHead(500, { "Content-Type": "application/json" });
-      resp.end(JSON.stringify({ error: "failed to upload document to storage" }));
+      resp.end(JSON.stringify({ code: "internal", message: "failed to upload document to storage: " + errMsg }));
       return;
     }
 
@@ -120,13 +119,13 @@ export const uploadWorkerDocument = api.raw(
     } catch (dbErr) {
       console.error("Failed to insert worker_document record:", dbErr);
       resp.writeHead(500, { "Content-Type": "application/json" });
-      resp.end(JSON.stringify({ error: "failed to record document in database" }));
+      resp.end(JSON.stringify({ code: "internal", message: "failed to record document in database: " + (dbErr instanceof Error ? dbErr.message : String(dbErr)) }));
       return;
     }
 
     if (!row) {
       resp.writeHead(500, { "Content-Type": "application/json" });
-      resp.end(JSON.stringify({ error: "failed to record document" }));
+      resp.end(JSON.stringify({ code: "internal", message: "failed to record document" }));
       return;
     }
 
