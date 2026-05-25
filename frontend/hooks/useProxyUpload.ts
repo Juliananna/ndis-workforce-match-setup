@@ -26,12 +26,15 @@ export function useProxyUpload() {
 
   const uploadAvatar = useCallback(async (file: File): Promise<{ avatarUrl: string }> => {
     if (!client) throw new Error("Not authenticated");
-    const resp = await client.uploads.uploadWorkerAvatar({
-      headers: { "Content-Type": file.type || "application/octet-stream" },
+    const { uploadUrl, fileKey } = await client.workers.getAvatarUploadUrl({ fileName: file.name });
+    await fetch(uploadUrl, {
+      method: "PUT",
       body: file,
-      query: { fileName: file.name },
+      headers: { "Content-Type": file.type || "image/jpeg" },
     });
-    return resp.json() as Promise<{ avatarUrl: string }>;
+    const { avatarUrl } = await client.workers.confirmAvatarUpload({ fileKey });
+    if (!avatarUrl) throw new Error("Avatar upload failed: no URL returned");
+    return { avatarUrl };
   }, [client]);
 
   const uploadVideo = useCallback(async (file: File): Promise<{ videoUrl: string }> => {
