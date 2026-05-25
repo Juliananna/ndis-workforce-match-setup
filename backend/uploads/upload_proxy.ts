@@ -191,19 +191,55 @@ export const uploadWorkerAvatar = api.raw(
     const fileName = url.searchParams.get("fileName") ?? "avatar.jpg";
     const ext = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
 
-    const workerId = await getWorkerIdForUser(auth.userID);
+    let workerId: string;
+    try {
+      workerId = await getWorkerIdForUser(auth.userID);
+    } catch (workerErr) {
+      const errMsg = workerErr instanceof Error ? workerErr.message : String(workerErr);
+      console.error("Failed to find worker for user:", auth.userID, errMsg);
+      resp.writeHead(404, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "not_found", message: "worker not found" }));
+      return;
+    }
+
     const fileKey = `avatars/worker-${workerId}.${ext}`;
     const contentType = req.headers["content-type"] ?? "image/jpeg";
-    const body = await readBody(req);
 
-    await profilePhotosBucket.upload(fileKey, body, { contentType });
+    let body: Buffer;
+    try {
+      body = await readBody(req);
+    } catch (readErr) {
+      const errMsg = readErr instanceof Error ? readErr.message : String(readErr);
+      console.error("Failed to read avatar body:", errMsg);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "internal", message: "failed to read uploaded file" }));
+      return;
+    }
+
+    try {
+      await profilePhotosBucket.upload(fileKey, body, { contentType });
+    } catch (uploadErr) {
+      const errMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+      console.error("Failed to upload avatar to storage:", errMsg, "bodySize:", body.length, "fileKey:", fileKey);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "internal", message: "failed to upload avatar: " + errMsg }));
+      return;
+    }
 
     const avatarUrl = profilePhotosBucket.publicUrl(fileKey);
 
-    await db.exec`
-      UPDATE workers SET avatar_url = ${avatarUrl}, updated_at = NOW()
-      WHERE worker_id = ${workerId}
-    `;
+    try {
+      await db.exec`
+        UPDATE workers SET avatar_url = ${avatarUrl}, updated_at = NOW()
+        WHERE worker_id = ${workerId}
+      `;
+    } catch (dbErr) {
+      const errMsg = dbErr instanceof Error ? dbErr.message : String(dbErr);
+      console.error("Failed to update avatar_url in DB:", errMsg);
+      resp.writeHead(500, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "internal", message: "failed to save avatar url" }));
+      return;
+    }
 
     resp.writeHead(200, { "Content-Type": "application/json" });
     resp.end(JSON.stringify({ avatarUrl }));
