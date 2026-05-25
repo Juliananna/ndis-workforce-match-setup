@@ -412,20 +412,25 @@ async function renderFlyerToCanvas(
   ctx.beginPath(); ctx.moveTo(tagCX - 4 * S, tagCY + 4 * S); ctx.lineTo(tagCX + 2 * S, tagCY - 2 * S); ctx.stroke();
   ctx.lineCap = "butt"; ctx.lineJoin = "miter";
 
+  // draw "REFERRAL CODE" label character by character for reliable spacing
   ctx.fillStyle = "#065f46";
-  ctx.font = `700 ${9.5 * S}px Arial`;
-  ctx.letterSpacing = `${1 * S}px`;
-  ctx.fillText("REFERRAL CODE", RX + 72 * S, CODE_Y + 22 * S);
-  ctx.letterSpacing = "0px";
+  ctx.font = `700 ${11 * S}px Arial`;
+  const labelText = "REFERRAL CODE";
+  let lx = RX + 72 * S;
+  const letterGap = 1.5 * S;
+  for (const ch of labelText) {
+    ctx.fillText(ch, lx, CODE_Y + 24 * S);
+    lx += ctx.measureText(ch).width + letterGap;
+  }
 
   ctx.fillStyle = "#064e38";
-  ctx.font = `900 ${24 * S}px "Courier New", monospace`;
-  ctx.fillText(partner.referralCode, RX + 72 * S, CODE_Y + 48 * S);
+  ctx.font = `900 ${26 * S}px "Courier New", monospace`;
+  ctx.fillText(partner.referralCode, RX + 72 * S, CODE_Y + 52 * S);
 
   ctx.fillStyle = "#16a34a";
-  ctx.font = `400 ${10.5 * S}px Arial`;
+  ctx.font = `500 ${11 * S}px Arial`;
   ctx.textAlign = "right";
-  ctx.fillText("Use at kizazihire.com.au", W - PAD - 8 * S, CODE_Y + 48 * S);
+  ctx.fillText("Use at kizazihire.com.au", W - PAD - 10 * S, CODE_Y + 52 * S);
   ctx.textAlign = "left";
 
   // ── Footer ────────────────────────────────────────────────────────────────
