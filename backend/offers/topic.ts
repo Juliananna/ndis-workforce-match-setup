@@ -1,6 +1,6 @@
 import { Topic } from "encore.dev/pubsub";
 
-export type OfferEventType = "OFFER_RECEIVED" | "OFFER_ACCEPTED" | "RATE_PROPOSED";
+export type OfferEventType = "OFFER_SENT" | "OFFER_RECEIVED" | "OFFER_ACCEPTED" | "RATE_PROPOSED";
 
 export interface OfferEmailEvent {
   eventType: OfferEventType;

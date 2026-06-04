@@ -132,6 +132,19 @@ export const createOffer = api<CreateOfferRequest, Offer>(
       });
     }
 
+    await offerEmailTopic.publish({
+      eventType: "OFFER_SENT",
+      offerId: row.offer_id,
+      jobId: row.job_id,
+      recipientUserId: auth.userID,
+      recipientRole: "EMPLOYER",
+      location: row.snapshot_location,
+      shiftDate: row.snapshot_shift_date,
+      shiftStartTime: row.snapshot_shift_start_time,
+      offeredRate: row.offered_rate,
+      notes: row.additional_notes ?? undefined,
+    });
+
     return mapOfferRow(row);
   }
 );

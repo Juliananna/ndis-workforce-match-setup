@@ -4,6 +4,7 @@ import { offerEmailTopic, type OfferEventType } from "../offers/topic";
 import { sendEmail } from "./sender";
 
 const SUBJECTS: Record<OfferEventType, string> = {
+  OFFER_SENT: "Your shift offer has been sent",
   OFFER_RECEIVED: "You have received a new shift offer",
   OFFER_ACCEPTED: "Your offer has been accepted",
   RATE_PROPOSED: "A new rate has been proposed for your offer",
@@ -28,6 +29,7 @@ function buildOfferHtml(
     : "";
 
   const callToAction: Record<OfferEventType, string> = {
+    OFFER_SENT: "Your offer has been sent to the worker. We will notify you when they respond.",
     OFFER_RECEIVED: "Log in to review the offer details, accept, decline, or propose a different rate.",
     OFFER_ACCEPTED: "Great news! Log in to view the confirmed shift details.",
     RATE_PROPOSED: "Log in to review the proposed rate and respond.",
