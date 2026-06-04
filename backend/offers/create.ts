@@ -50,13 +50,10 @@ export const createOffer = api<CreateOfferRequest, Offer>(
     if (!job) throw APIError.notFound("job request not found or not owned by this employer");
     if (job.status === "Cancelled") throw APIError.failedPrecondition("cannot send offer for a cancelled job");
 
-    const worker = await db.queryRow<{ worker_id: string; onboarding_status: string }>`
-      SELECT worker_id, onboarding_status FROM workers WHERE worker_id = ${req.workerId}
+    const worker = await db.queryRow<{ worker_id: string }>`
+      SELECT worker_id FROM workers WHERE worker_id = ${req.workerId}
     `;
     if (!worker) throw APIError.notFound("worker not found");
-    if (worker.onboarding_status !== "active") {
-      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
-    }
 
     const hasDoc = await db.queryRow<{ exists: boolean }>`
       SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${req.workerId}) AS exists
