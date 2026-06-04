@@ -9,8 +9,8 @@ export interface OfferEmailEvent {
   recipientUserId: string;
   recipientRole: "WORKER" | "EMPLOYER";
   location: string;
-  shiftDate: string;
-  shiftStartTime: string;
+  shiftDate: string | null;
+  shiftStartTime: string | null;
   offeredRate: number;
   proposedRate?: number;
   notes?: string;

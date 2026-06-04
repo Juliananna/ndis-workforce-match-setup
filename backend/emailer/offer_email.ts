@@ -13,8 +13,8 @@ const SUBJECTS: Record<OfferEventType, string> = {
 function buildOfferHtml(
   eventType: OfferEventType,
   location: string,
-  shiftDate: string,
-  shiftStartTime: string,
+  shiftDate: string | null,
+  shiftStartTime: string | null,
   offeredRate: number,
   proposedRate?: number,
   notes?: string
@@ -23,6 +23,14 @@ function buildOfferHtml(
     eventType === "RATE_PROPOSED" && proposedRate != null
       ? `<tr><td style="padding:6px 0; color:#555; width:40%;">Proposed rate</td><td style="padding:6px 0; font-weight:bold;">$${proposedRate}/hr</td></tr>`
       : `<tr><td style="padding:6px 0; color:#555; width:40%;">Offered rate</td><td style="padding:6px 0; font-weight:bold;">$${offeredRate}/hr</td></tr>`;
+
+  const shiftDateRow = shiftDate
+    ? `<tr><td style="padding:6px 0; color:#555;">Shift date</td><td style="padding:6px 0; font-weight:bold;">${shiftDate}</td></tr>`
+    : `<tr><td style="padding:6px 0; color:#555;">Shift date</td><td style="padding:6px 0; font-weight:bold;">Ongoing / TBD</td></tr>`;
+
+  const shiftTimeRow = shiftStartTime
+    ? `<tr><td style="padding:6px 0; color:#555;">Start time</td><td style="padding:6px 0; font-weight:bold;">${shiftStartTime}</td></tr>`
+    : "";
 
   const notesSection = notes
     ? `<p style="color:#555; font-size:14px;"><strong>Note:</strong> ${notes}</p>`
@@ -40,8 +48,8 @@ function buildOfferHtml(
       <h2 style="color: #1a1a1a;">${SUBJECTS[eventType]}</h2>
       <table style="width:100%; border-collapse:collapse; margin: 16px 0;">
         <tr><td style="padding:6px 0; color:#555; width:40%;">Location</td><td style="padding:6px 0; font-weight:bold;">${location}</td></tr>
-        <tr><td style="padding:6px 0; color:#555;">Shift date</td><td style="padding:6px 0; font-weight:bold;">${shiftDate}</td></tr>
-        <tr><td style="padding:6px 0; color:#555;">Start time</td><td style="padding:6px 0; font-weight:bold;">${shiftStartTime}</td></tr>
+        ${shiftDateRow}
+        ${shiftTimeRow}
         ${rateRow}
       </table>
       ${notesSection}
@@ -65,8 +73,8 @@ new Subscription(offerEmailTopic, "email-offer-events", {
       html: buildOfferHtml(
         event.eventType,
         event.location,
-        event.shiftDate,
-        event.shiftStartTime,
+        event.shiftDate ?? null,
+        event.shiftStartTime ?? null,
         event.offeredRate,
         event.proposedRate,
         event.notes

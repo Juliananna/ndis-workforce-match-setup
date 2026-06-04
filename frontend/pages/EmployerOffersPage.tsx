@@ -56,7 +56,7 @@ export default function EmployerOffersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-foreground">Sent Offers</h2>
+        <h2 className="text-base font-semibold text-foreground">Job Offers</h2>
       </div>
 
       {view === "list" && (

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Loader2, MapPin, Clock, Search, CheckCircle, Zap,
-  SlidersHorizontal, Navigation, CalendarDays, Plus
+  SlidersHorizontal, Navigation, CalendarDays, Bell, ChevronRight
 } from "lucide-react";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { OfferDetail } from "../components/offers/OfferDetail";
+import { OfferStatusBadge } from "../components/offers/OfferStatusBadge";
 import { JobDetailModal } from "../components/matching/JobDetailModal";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { Offer, OfferStatus } from "~backend/offers/types";
@@ -37,6 +38,67 @@ function categoryFromTags(tags: string[]): string {
   if (cat.toLowerCase().includes("community")) return "Community Access";
   if (cat.toLowerCase().includes("high")) return "High Intensity";
   return cat;
+}
+
+function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
+  const isPending = offer.status === "Pending";
+  const currentRate = offer.negotiatedRate ?? offer.offeredRate;
+
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-white rounded-2xl border p-5 flex items-center gap-4 hover:shadow-sm transition-all cursor-pointer ${
+        isPending ? "border-blue-300 shadow-sm shadow-blue-100" : "border-gray-200 hover:border-blue-200"
+      }`}
+    >
+      <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
+        isPending
+          ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+          : "bg-gradient-to-br from-gray-400 to-gray-500"
+      }`}>
+        <Bell className="h-6 w-6 text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+          <p className="font-bold text-gray-900 text-sm truncate">{offer.snapshotLocation}</p>
+          <OfferStatusBadge status={offer.status} />
+          {isPending && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">ACTION NEEDED</span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
+          {offer.snapshotShiftDate && (
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              {toDateStr(offer.snapshotShiftDate)}
+            </span>
+          )}
+          {offer.snapshotShiftDurationHours && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              {offer.snapshotShiftDurationHours}hrs
+              {offer.snapshotShiftStartTime ? ` · ${offer.snapshotShiftStartTime}` : ""}
+            </span>
+          )}
+          {offer.snapshotSupportTypeTags.length > 0 && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              {categoryFromTags(offer.snapshotSupportTypeTags)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 text-right flex flex-col items-end gap-2">
+        <div>
+          <span className="text-xl font-extrabold text-gray-900">${currentRate.toFixed(2)}</span>
+          <span className="text-sm text-gray-400">/hr</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs font-semibold text-blue-600">
+          View <ChevronRight className="h-3.5 w-3.5" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function JobCard({ job, onViewDetails }: { job: MatchedJob; onViewDetails: (job: MatchedJob) => void }) {
@@ -125,6 +187,7 @@ export default function WorkerOffersPage() {
   const [loading, setLoading] = useState(true);
 
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [offersTab, setOffersTab] = useState<OfferStatus | "all">("all");
   const [view, setView] = useState<View>("list");
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [selectedJob, setSelectedJob] = useState<MatchedJob | null>(null);
@@ -160,14 +223,20 @@ export default function WorkerOffersPage() {
       if (minRate !== null && job.weekdayRate < minRate) return false;
       if (hasGeoFilter && job.distanceKm != null && job.distanceKm > maxDistanceKm) return false;
       if (selectedCategories.size > 0) {
-        const hasCategory = job.supportTypeTags.some((t) => selectedCategories.has(t) || selectedCategories.has(categoryFromTags([t])));
         const categoryNames = job.supportTypeTags.map((t) => categoryFromTags([t]));
-        const hasCategoryName = categoryNames.some((c) => selectedCategories.has(c));
-        if (!hasCategory && !hasCategoryName) return false;
+        const hasCategory = job.supportTypeTags.some((t) => selectedCategories.has(t)) || categoryNames.some((c) => selectedCategories.has(c));
+        if (!hasCategory) return false;
       }
       return true;
     });
   }, [matchedJobs, minRate, maxDistanceKm, selectedCategories, hasGeoFilter]);
+
+  const filteredOffers = useMemo(() => {
+    if (offersTab === "all") return offers;
+    return offers.filter((o) => o.status === offersTab);
+  }, [offers, offersTab]);
+
+  const pendingOffers = offers.filter((o) => o.status === "Pending" || o.status === "Negotiating");
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) => {
@@ -186,6 +255,12 @@ export default function WorkerOffersPage() {
 
   const handleViewJobDetails = (job: MatchedJob) => {
     setSelectedJob(job);
+  };
+
+  const handleViewOffer = async (offer: Offer) => {
+    const full = await api!.offers.getOffer({ offerId: offer.offerId });
+    setSelectedOffer(full);
+    setView("offer-detail");
   };
 
   const handleWorkerAction = async (req: Omit<WorkerRespondRequest, "offerId">): Promise<Offer> => {
@@ -214,13 +289,19 @@ export default function WorkerOffersPage() {
     );
   }
 
-  const pendingOffers = offers.filter((o) => o.status === "Pending" || o.status === "Negotiating");
+  const OFFER_STATUS_TABS: Array<{ label: string; value: OfferStatus | "all" }> = [
+    { label: "All", value: "all" },
+    { label: "Pending", value: "Pending" },
+    { label: "Negotiating", value: "Negotiating" },
+    { label: "Accepted", value: "Accepted" },
+    { label: "Declined", value: "Declined" },
+  ];
 
   return (
     <div className="flex gap-6 min-h-screen">
       <aside className="w-60 shrink-0 space-y-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <p className="font-bold text-gray-900 mb-4">Filter Offers</p>
+          <p className="font-bold text-gray-900 mb-4">Filter Jobs</p>
 
           <div className="mb-5">
             <div className="flex items-center justify-between mb-2">
@@ -316,111 +397,125 @@ export default function WorkerOffersPage() {
             Upgrade Now
           </button>
         </div>
-
-        {pendingOffers.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4">
-            <p className="text-sm font-bold text-gray-900 mb-3">Received Offers</p>
-            <div className="space-y-2">
-              {pendingOffers.slice(0, 3).map((offer) => (
-                <button
-                  key={offer.offerId}
-                  onClick={async () => {
-                    const full = await api!.offers.getOffer({ offerId: offer.offerId });
-                    setSelectedOffer(full);
-                    setView("offer-detail");
-                  }}
-                  className="w-full text-left p-2.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all"
-                >
-                  <p className="text-xs font-semibold text-gray-800 truncate">{offer.snapshotLocation}</p>
-                  <p className="text-xs text-blue-600 font-bold mt-0.5">${(offer.negotiatedRate ?? offer.offeredRate).toFixed(2)}/hr</p>
-                </button>
-              ))}
-              {pendingOffers.length > 3 && (
-                <p className="text-xs text-gray-400 text-center">+{pendingOffers.length - 3} more</p>
-              )}
-            </div>
-          </div>
-        )}
       </aside>
 
-      <div className="flex-1 min-w-0 space-y-5">
-        <div className="bg-white rounded-2xl border border-gray-200 p-7 flex items-center justify-between gap-6 relative overflow-hidden">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-pink-500 text-white text-xs font-bold rounded-full mb-3">
-              <Zap className="h-3 w-3" />
-              NEW OFFERS
-            </div>
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
-              {filteredJobs.length > 0
-                ? `You have ${filteredJobs.length} new match${filteredJobs.length !== 1 ? "es" : ""} today!`
-                : "No matches with current filters"}
-            </h2>
-            <p className="text-sm text-gray-500 max-w-sm">
-              {hasGeoFilter
-                ? "Based on your location and skills, these providers are looking for your expertise."
-                : "Add your location in Profile to see distance-sorted matches near you."}
-            </p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm text-xs font-semibold text-gray-600">
-              {hasGeoFilter
-                ? <><Navigation className="h-3.5 w-3.5 text-blue-600" />Matching…</>
-                : <><Search className="h-3.5 w-3.5 text-gray-400" />Location needed</>}
-            </div>
-          </div>
-        </div>
-
-        {filteredJobs.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 py-16 flex flex-col items-center gap-3">
-            <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center">
-              <Search className="h-7 w-7 text-gray-400" />
-            </div>
-            <p className="font-semibold text-gray-700">Looking for something specific?</p>
-            <p className="text-sm text-gray-400 text-center max-w-xs">
-              Adjust your filters or{" "}
-              <button onClick={resetFilters} className="text-blue-600 font-semibold hover:underline">
-                update your preferences
-              </button>{" "}
-              to find more matches.
-            </p>
-            <button
-              onClick={resetFilters}
-              className="mt-2 px-5 py-2 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <SlidersHorizontal className="h-4 w-4" /> Reset Filters
-            </button>
-          </div>
-        ) : (
+      <div className="flex-1 min-w-0 space-y-6">
+        {offers.length > 0 && (
           <div className="space-y-3">
-            {filteredJobs.map((job) => (
-              <JobCard key={job.jobId} job={job} onViewDetails={handleViewJobDetails} />
-            ))}
-          </div>
-        )}
-
-        {filteredJobs.length > 0 && (
-          <div className="py-10 flex flex-col items-center gap-2">
-            <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-              <Search className="h-6 w-6 text-gray-400" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-extrabold text-gray-900">Your Offers</h2>
+                {pendingOffers.length > 0 && (
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-600 text-white text-xs font-bold">
+                    {pendingOffers.length}
+                  </span>
+                )}
+              </div>
             </div>
-            <p className="font-semibold text-gray-600 text-sm">Looking for something specific?</p>
-            <p className="text-xs text-gray-400">
-              Adjust your filters or{" "}
-              <button onClick={resetFilters} className="text-blue-600 underline font-medium">
-                update your preferences
-              </button>{" "}
-              to find more matches.
-            </p>
+
+            {pendingOffers.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <Bell className="h-5 w-5 text-blue-600 shrink-0" />
+                <p className="text-sm font-semibold text-blue-800">
+                  You have {pendingOffers.length} offer{pendingOffers.length !== 1 ? "s" : ""} waiting for your response.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {OFFER_STATUS_TABS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setOffersTab(f.value)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                    offersTab === f.value
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "border-gray-200 text-gray-500 hover:border-blue-300 hover:text-gray-800"
+                  }`}
+                >
+                  {f.label}
+                  {f.value === "Pending" && pendingOffers.filter(o => o.status === "Pending").length > 0 && (
+                    <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
+                      {pendingOffers.filter(o => o.status === "Pending").length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              {filteredOffers.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-200 py-8 flex flex-col items-center gap-2">
+                  <Bell className="h-8 w-8 text-gray-300" />
+                  <p className="text-sm text-gray-500">No offers with this status</p>
+                </div>
+              ) : (
+                filteredOffers.map((offer) => (
+                  <OfferCard key={offer.offerId} offer={offer} onClick={() => handleViewOffer(offer)} />
+                ))
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-2" />
           </div>
         )}
-      </div>
 
-      <button
-        onClick={() => {}}
-        className="fixed bottom-8 right-8 flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-2xl shadow-xl transition-colors"
-      >
-        <Plus className="h-4 w-4" /> Set Availability
-      </button>
+        <div className="space-y-3">
+          <div className="bg-white rounded-2xl border border-gray-200 p-7 flex items-center justify-between gap-6 relative overflow-hidden">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-pink-500 text-white text-xs font-bold rounded-full mb-3">
+                <Zap className="h-3 w-3" />
+                MATCHED JOBS
+              </div>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">
+                {filteredJobs.length > 0
+                  ? `${filteredJobs.length} job match${filteredJobs.length !== 1 ? "es" : ""} for you`
+                  : "No matches with current filters"}
+              </h2>
+              <p className="text-sm text-gray-500 max-w-sm">
+                {hasGeoFilter
+                  ? "Based on your location and skills, these providers are looking for your expertise."
+                  : "Add your location in Profile to see distance-sorted matches near you."}
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm text-xs font-semibold text-gray-600">
+                {hasGeoFilter
+                  ? <><Navigation className="h-3.5 w-3.5 text-blue-600" />Matching…</>
+                  : <><Search className="h-3.5 w-3.5 text-gray-400" />Location needed</>}
+              </div>
+            </div>
+          </div>
+
+          {filteredJobs.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-200 py-16 flex flex-col items-center gap-3">
+              <div className="h-14 w-14 rounded-full bg-gray-100 flex items-center justify-center">
+                <Search className="h-7 w-7 text-gray-400" />
+              </div>
+              <p className="font-semibold text-gray-700">Looking for something specific?</p>
+              <p className="text-sm text-gray-400 text-center max-w-xs">
+                Adjust your filters or{" "}
+                <button onClick={resetFilters} className="text-blue-600 font-semibold hover:underline">
+                  update your preferences
+                </button>{" "}
+                to find more matches.
+              </p>
+              <button
+                onClick={resetFilters}
+                className="mt-2 px-5 py-2 bg-blue-600 text-white font-semibold text-sm rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <SlidersHorizontal className="h-4 w-4" /> Reset Filters
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredJobs.map((job) => (
+                <JobCard key={job.jobId} job={job} onViewDetails={handleViewJobDetails} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       <JobDetailModal job={selectedJob} onClose={() => setSelectedJob(null)} />
     </div>

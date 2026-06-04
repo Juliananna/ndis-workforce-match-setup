@@ -192,7 +192,7 @@ const EMPLOYER_NAV: { id: Tab; label: string; icon: React.FC<{ className?: strin
   { id: "home", label: "Dashboard", icon: BadgeCheck },
   { id: "browse", label: "Browse Workers", icon: Compass },
   { id: "saved", label: "Saved Workers", icon: Heart },
-  { id: "offers", label: "Messages", icon: MessageSquare },
+  { id: "offers", label: "Offers", icon: MessageSquare },
   { id: "employer", label: "Jobs & Profile", icon: Briefcase },
   { id: "upgrade", label: "Subscription", icon: Sparkles },
 ];
@@ -236,7 +236,7 @@ function EmployerLayout({
     { id: "browse", label: "Explore", icon: Compass },
     { id: "saved", label: "Saved", icon: Heart },
     { id: "home", label: "Home", icon: BadgeCheck },
-    { id: "offers", label: "Messages", icon: MessageSquare },
+    { id: "offers", label: "Offers", icon: MessageSquare },
     { id: "employer", label: "Jobs", icon: Briefcase },
   ];
 

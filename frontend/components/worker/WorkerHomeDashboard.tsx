@@ -13,6 +13,7 @@ import { JobDetailModal } from "../matching/JobDetailModal";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { VerificationScoreResponse } from "~backend/workers/verification_score";
+import type { Offer } from "~backend/offers/types";
 
 
 type SidebarTab = "home" | "jobs" | "profile";
@@ -244,6 +245,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const [verificationScore, setVerificationScore] = useState<VerificationScoreResponse | null>(null);
   const [workerName, setWorkerName] = useState<string | null>(null);
   const [hasGeoFilter, setHasGeoFilter] = useState(false);
+  const [pendingOffers, setPendingOffers] = useState<Offer[]>([]);
   const [selectedJob, setSelectedJob] = useState<MatchedJob | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -252,11 +254,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
 
   const load = useCallback(async () => {
     if (!api) return;
-    const [profileRes, docsRes, jobsRes, scoreRes] = await Promise.allSettled([
+    const [profileRes, docsRes, jobsRes, scoreRes, offersRes] = await Promise.allSettled([
       api.workers.getWorkerProfile(),
       api.workers.listWorkerDocuments(),
       api.matching.matchJobsForWorker(),
       api.workers.getVerificationScore(),
+      api.offers.listOffers({}),
     ]);
     if (profileRes.status === "fulfilled" && profileRes.value.fullName) {
       setWorkerName(profileRes.value.fullName);
@@ -267,6 +270,9 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
       setHasGeoFilter(jobsRes.value.hasGeoFilter);
     }
     if (scoreRes.status === "fulfilled") setVerificationScore(scoreRes.value);
+    if (offersRes.status === "fulfilled") {
+      setPendingOffers(offersRes.value.offers.filter((o) => o.status === "Pending" || o.status === "Negotiating"));
+    }
   }, [api]);
 
   useEffect(() => { load(); }, [load]);
@@ -309,7 +315,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              <span className="flex-1">{label}</span>
+              {id === "jobs" && pendingOffers.length > 0 && (
+                <span className="h-5 w-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+                  {pendingOffers.length}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -413,6 +424,24 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
 
           {!user?.hasPassword && <SetPasswordBanner />}
+
+          {pendingOffers.length > 0 && (
+            <button
+              onClick={() => onTabChange("offers")}
+              className="w-full flex items-center gap-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-5 py-4 text-left transition-colors shadow-sm"
+            >
+              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <Bell className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm">You have {pendingOffers.length} offer{pendingOffers.length !== 1 ? "s" : ""} waiting!</p>
+                <p className="text-xs text-blue-200 mt-0.5">Tap to review and respond to your job offers.</p>
+              </div>
+              <span className="h-7 w-7 rounded-full bg-white text-blue-600 text-sm font-extrabold flex items-center justify-center shrink-0">
+                {pendingOffers.length}
+              </span>
+            </button>
+          )}
 
           {/* ── Hero: verification score + welcome ── */}
           <div className={`relative rounded-2xl bg-gradient-to-r ${cfg.gradient} p-5 sm:p-7 text-white overflow-hidden`}>
