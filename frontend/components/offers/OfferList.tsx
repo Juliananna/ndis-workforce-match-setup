@@ -6,7 +6,7 @@ function toDateStr(v: unknown): string {
   if (!v) return "—";
   if (v instanceof Date) return v.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
   const d = new Date(String(v));
-  if (!isNaN(d.getTime())) return d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+  if (!isNaN(d.getTime())) return  d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
   return String(v);
 }
 
