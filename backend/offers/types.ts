@@ -17,6 +17,7 @@ export interface Offer {
   jobId: string;
   employerId: string;
   workerId: string;
+  workerName: string | null;
   snapshotLocation: string;
   snapshotShiftDate: string | null;
   snapshotShiftStartTime: string | null;

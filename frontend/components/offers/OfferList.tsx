@@ -1,6 +1,6 @@
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import type { Offer, OfferStatus } from "~backend/offers/types";
-import { MapPin, Clock, Calendar, DollarSign, ChevronRight, User, Briefcase } from "lucide-react";
+import { MapPin, Clock, Calendar, DollarSign, ChevronRight, Briefcase } from "lucide-react";
 
 function toDateStr(v: unknown): string {
   if (!v) return "—";
@@ -19,7 +19,12 @@ function formatTime(t: string | null): string {
   return `${h12}:${m} ${ampm}`;
 }
 
-function initials(id: string): string {
+function initials(name: string | null, id: string): string {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
   return id.slice(0, 2).toUpperCase();
 }
 
@@ -125,7 +130,7 @@ export function OfferList({ offers, statusFilter, onStatusFilter, onView, role }
 
                   <div className="flex items-start gap-3.5">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColor(entityId)}`}>
-                      {role === "EMPLOYER" ? <User className="w-4 h-4" /> : initials(entityId)}
+                      {role === "EMPLOYER" ? initials(offer.workerName, offer.workerId) : initials(null, entityId)}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -133,7 +138,9 @@ export function OfferList({ offers, statusFilter, onStatusFilter, onView, role }
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-semibold text-foreground">
-                              {role === "EMPLOYER" ? `Worker #${entityId.slice(0, 6).toUpperCase()}` : `Job #${entityId.slice(0, 6).toUpperCase()}`}
+                              {role === "EMPLOYER"
+                                ? (offer.workerName || `Worker #${entityId.slice(0, 6).toUpperCase()}`)
+                                : `Job #${entityId.slice(0, 6).toUpperCase()}`}
                             </span>
                             <OfferStatusBadge status={offer.status} />
                           </div>

@@ -105,6 +105,9 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
               <h2 className="font-semibold text-foreground">{offer.snapshotLocation}</h2>
               <OfferStatusBadge status={offer.status} />
             </div>
+            {role === "EMPLOYER" && offer.workerName && (
+              <p className="text-sm font-medium text-foreground mt-0.5">{offer.workerName}</p>
+            )}
             <p className="text-sm text-muted-foreground mt-0.5">
               {toDateStr(offer.snapshotShiftDate)} &bull; {offer.snapshotShiftStartTime} &bull; {offer.snapshotShiftDurationHours}h
             </p>

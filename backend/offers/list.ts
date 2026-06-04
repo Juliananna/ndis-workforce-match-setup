@@ -22,6 +22,7 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
       job_id: string;
       employer_id: string;
       worker_id: string;
+      worker_name: string | null;
       snapshot_location: string;
       snapshot_shift_date: string;
       snapshot_shift_start_time: string;
@@ -50,23 +51,29 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
       let rows;
       if (req.status) {
         rows = db.query<OfferRow>`
-          SELECT offer_id, job_id, employer_id, worker_id,
-            snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
-            snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-            offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at
-          FROM offers
-          WHERE employer_id = ${employer.employer_id} AND status = ${req.status}
-          ORDER BY created_at DESC
+          SELECT o.offer_id, o.job_id, o.employer_id, o.worker_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS worker_name,
+            o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
+            o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at
+          FROM offers o
+          JOIN workers w ON w.worker_id = o.worker_id
+          JOIN users u ON u.user_id = w.user_id
+          WHERE o.employer_id = ${employer.employer_id} AND o.status = ${req.status}
+          ORDER BY o.created_at DESC
         `;
       } else {
         rows = db.query<OfferRow>`
-          SELECT offer_id, job_id, employer_id, worker_id,
-            snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
-            snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-            offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at
-          FROM offers
-          WHERE employer_id = ${employer.employer_id}
-          ORDER BY created_at DESC
+          SELECT o.offer_id, o.job_id, o.employer_id, o.worker_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS worker_name,
+            o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
+            o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at
+          FROM offers o
+          JOIN workers w ON w.worker_id = o.worker_id
+          JOIN users u ON u.user_id = w.user_id
+          WHERE o.employer_id = ${employer.employer_id}
+          ORDER BY o.created_at DESC
         `;
       }
       for await (const row of rows) {
@@ -81,23 +88,29 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
       let rows;
       if (req.status) {
         rows = db.query<OfferRow>`
-          SELECT offer_id, job_id, employer_id, worker_id,
-            snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
-            snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-            offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at
-          FROM offers
-          WHERE worker_id = ${worker.worker_id} AND status = ${req.status}
-          ORDER BY created_at DESC
+          SELECT o.offer_id, o.job_id, o.employer_id, o.worker_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS worker_name,
+            o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
+            o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at
+          FROM offers o
+          JOIN workers w ON w.worker_id = o.worker_id
+          JOIN users u ON u.user_id = w.user_id
+          WHERE o.worker_id = ${worker.worker_id} AND o.status = ${req.status}
+          ORDER BY o.created_at DESC
         `;
       } else {
         rows = db.query<OfferRow>`
-          SELECT offer_id, job_id, employer_id, worker_id,
-            snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
-            snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-            offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at
-          FROM offers
-          WHERE worker_id = ${worker.worker_id}
-          ORDER BY created_at DESC
+          SELECT o.offer_id, o.job_id, o.employer_id, o.worker_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS worker_name,
+            o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
+            o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at
+          FROM offers o
+          JOIN workers w ON w.worker_id = o.worker_id
+          JOIN users u ON u.user_id = w.user_id
+          WHERE o.worker_id = ${worker.worker_id}
+          ORDER BY o.created_at DESC
         `;
       }
       for await (const row of rows) {

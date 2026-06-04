@@ -6,6 +6,7 @@ export function mapOfferRow(row: {
   job_id: string;
   employer_id: string;
   worker_id: string;
+  worker_name?: string | null;
   snapshot_location: string;
   snapshot_shift_date: string | null;
   snapshot_shift_start_time: string | null;
@@ -27,6 +28,7 @@ export function mapOfferRow(row: {
     jobId: row.job_id,
     employerId: row.employer_id,
     workerId: row.worker_id,
+    workerName: row.worker_name ?? null,
     snapshotLocation: row.snapshot_location,
     snapshotShiftDate: row.snapshot_shift_date,
     snapshotShiftStartTime: row.snapshot_shift_start_time,
