@@ -7,9 +7,9 @@ export function mapOfferRow(row: {
   employer_id: string;
   worker_id: string;
   snapshot_location: string;
-  snapshot_shift_date: string;
-  snapshot_shift_start_time: string;
-  snapshot_shift_duration_hours: number;
+  snapshot_shift_date: string | null;
+  snapshot_shift_start_time: string | null;
+  snapshot_shift_duration_hours: number | null;
   snapshot_support_type_tags: string[] | null;
   snapshot_client_notes: string | null;
   snapshot_behavioural_considerations: string | null;

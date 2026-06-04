@@ -32,9 +32,9 @@ export const createOffer = api<CreateOfferRequest, Offer>(
       job_id: string;
       employer_id: string;
       location: string;
-      shift_date: string;
-      shift_start_time: string;
-      shift_duration_hours: number;
+      shift_date: string | null;
+      shift_start_time: string | null;
+      shift_duration_hours: number | null;
       support_type_tags: string[] | null;
       client_notes: string | null;
       behavioural_considerations: string | null;
@@ -98,7 +98,7 @@ export const createOffer = api<CreateOfferRequest, Offer>(
         offered_rate, latest_proposed_by, status, additional_notes
       ) VALUES (
         ${req.jobId}, ${employer.employer_id}, ${req.workerId},
-        ${job.location}, ${job.shift_date}::date, ${job.shift_start_time}, ${job.shift_duration_hours},
+        ${job.location}, ${job.shift_date ? job.shift_date : null}::date, ${job.shift_start_time ?? null}, ${job.shift_duration_hours ?? null},
         ${tags}, ${job.client_notes ?? null}, ${job.behavioural_considerations ?? null}, ${job.medical_requirements ?? null},
         ${req.offeredRate}, 'EMPLOYER', 'Pending', ${req.additionalNotes ?? null}
       )

@@ -18,9 +18,9 @@ export interface Offer {
   employerId: string;
   workerId: string;
   snapshotLocation: string;
-  snapshotShiftDate: string;
-  snapshotShiftStartTime: string;
-  snapshotShiftDurationHours: number;
+  snapshotShiftDate: string | null;
+  snapshotShiftStartTime: string | null;
+  snapshotShiftDurationHours: number | null;
   snapshotSupportTypeTags: string[];
   snapshotClientNotes: string | null;
   snapshotBehaviouralConsiderations: string | null;
