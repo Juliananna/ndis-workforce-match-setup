@@ -153,6 +153,7 @@ export interface AdminWorkerDocumentView {
   verifiedBy: string | null;
   verifiedAt: Date | null;
   rejectionReason: string | null;
+  flagReason: string | null;
 }
 
 export interface GetWorkerDocumentsRequest {
@@ -180,9 +181,10 @@ export const adminGetWorkerDocuments = api<GetWorkerDocumentsRequest, GetWorkerD
       verified_by: string | null;
       verified_at: Date | null;
       rejection_reason: string | null;
+      flag_reason: string | null;
     }>`
       SELECT id, worker_id, document_type, file_key, upload_date, expiry_date,
-             verification_status, verified_by, verified_at, rejection_reason
+             verification_status, verified_by, verified_at, rejection_reason, flag_reason
       FROM worker_documents
       WHERE worker_id = ${req.workerId}
       ORDER BY upload_date DESC
@@ -200,6 +202,7 @@ export const adminGetWorkerDocuments = api<GetWorkerDocumentsRequest, GetWorkerD
         verifiedBy: r.verified_by,
         verifiedAt: r.verified_at,
         rejectionReason: r.rejection_reason,
+        flagReason: r.flag_reason,
       })),
     };
   }

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   FileText, Upload, Trash2, Loader2, AlertTriangle,
-  CheckCircle, Clock, X, ShieldCheck, Pencil, Check, Eye, PenLine,
+  CheckCircle, Clock, X, ShieldCheck, Pencil, Check, Eye, PenLine, Flag,
 } from "lucide-react";
 import { DocumentPreviewModal, type PreviewDoc } from "../DocumentPreviewModal";
 import { NdisCocSigningModal } from "./NdisCocSigningModal";
@@ -35,7 +35,14 @@ const OTHER_TRAINING = "Other relevant training";
 
 const ALL_DOCUMENT_TYPES = [...MANDATORY_DOCUMENT_TYPES, ...OPTIONAL_DOCUMENT_TYPES];
 
-type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired";
+type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired" | "Flagged";
+
+const FLAG_REASON_LABELS: Record<string, string> = {
+  expired: "Document appears to be expired",
+  unclear: "Document is unclear or difficult to read",
+  wrong_doc: "Incorrect document type uploaded",
+  missing_info: "Document is missing required information",
+};
 
 interface Props {
   documents: WorkerDocument[];
@@ -52,6 +59,7 @@ function StatusChip({ status }: { status: VerificationStatus }) {
     Missing:        { color: "border-red-500/40 text-red-400",       icon: <X className="h-3 w-3" /> },
     Expired:        { color: "border-red-600/60 text-red-500",       icon: <AlertTriangle className="h-3 w-3" /> },
     "Expiring Soon":{ color: "border-orange-500/40 text-orange-400", icon: <AlertTriangle className="h-3 w-3" /> },
+    Flagged:        { color: "border-red-500/60 text-red-400 bg-red-500/10", icon: <Flag className="h-3 w-3" /> },
   };
   const c = cfg[status] ?? cfg["Pending"];
   return (
@@ -66,6 +74,7 @@ function rowIcon(status: VerificationStatus | undefined) {
   if (status === "Verified")       return <CheckCircle className="h-3.5 w-3.5 text-green-400" />;
   if (status === "Expired")        return <AlertTriangle className="h-3.5 w-3.5 text-red-500" />;
   if (status === "Expiring Soon")  return <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />;
+  if (status === "Flagged")        return <Flag className="h-3.5 w-3.5 text-red-400" />;
   return <Clock className="h-3.5 w-3.5 text-amber-400" />;
 }
 
@@ -74,6 +83,7 @@ function rowColor(status: VerificationStatus | undefined) {
   if (status === "Verified")       return "text-green-400";
   if (status === "Expired")        return "text-red-500";
   if (status === "Expiring Soon")  return "text-orange-400";
+  if (status === "Flagged")        return "text-red-400";
   return "text-amber-400";
 }
 
@@ -90,6 +100,7 @@ interface DocRowProps {
   onUpdateExpiry: (id: string, expiry: string | null) => Promise<void>;
   onQuickView: (doc: WorkerDocument) => void;
 }
+
 
 function DocRow({ doc, onDelete, onUpdateExpiry, onQuickView }: DocRowProps) {
   const [editing, setEditing] = useState(false);
@@ -120,8 +131,19 @@ function DocRow({ doc, onDelete, onUpdateExpiry, onQuickView }: DocRowProps) {
     }
   };
 
+  const isFlagged = doc.verificationStatus === "Flagged";
+
   return (
-    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 space-y-2">
+    <div className={`rounded-lg border px-3 py-2.5 space-y-2 ${isFlagged ? "border-red-500/40 bg-red-500/5" : "border-border bg-muted/30"}`}>
+      {isFlagged && doc.flagReason && (
+        <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-2 text-xs text-red-400">
+          <Flag className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Action required — please re-upload this document</p>
+            <p className="mt-0.5 text-red-400/80">{FLAG_REASON_LABELS[doc.flagReason] ?? doc.flagReason}</p>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="flex-1 min-w-0">
@@ -289,9 +311,27 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
 
   const allNonTrainingUploaded = availableTypes.filter((t) => t !== OTHER_TRAINING && t !== NDIS_COC_TYPE).length === 0;
 
+  const flaggedDocs = documents.filter((d) => d.verificationStatus === "Flagged");
+
   return (
     <div>
       <div className="space-y-5">
+
+        {flaggedDocs.length > 0 && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">
+            <Flag className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
+            <div>
+              <p className="font-semibold text-red-300">
+                {flaggedDocs.length === 1
+                  ? "1 document needs your attention"
+                  : `${flaggedDocs.length} documents need your attention`}
+              </p>
+              <p className="mt-0.5 text-red-400/80">
+                Our compliance team has flagged one or more of your documents. Please review the details below and re-upload the corrected documents.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-start gap-2.5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-300">
           <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-blue-400" />

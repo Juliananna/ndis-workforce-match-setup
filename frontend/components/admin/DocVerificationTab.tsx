@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Loader2, CheckCircle, X, Eye, MessageSquare, AlertTriangle, Search,
-  FileText, Clock, Filter, RefreshCw, User, History, ChevronLeft,
+  FileText, Clock, Filter, RefreshCw, User, History, ChevronLeft, Flag,
 } from "lucide-react";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import type { AdminWorkerDocumentView } from "~backend/admin/workers";
 import type { ComplianceMessageLogEntry } from "~backend/admin/document_message";
+import type { FlagReason } from "~backend/admin/verify_document";
 import { DocumentPreviewModal, type PreviewDoc } from "../DocumentPreviewModal";
 
 interface DocWithWorker extends AdminWorkerDocumentView {
@@ -22,7 +23,15 @@ const STATUS_COLORS: Record<string, string> = {
   Verified: "bg-green-500/15 text-green-400 border-transparent",
   Missing: "bg-red-500/15 text-red-400 border-transparent",
   "Expiring Soon": "bg-orange-500/15 text-orange-400 border-transparent",
+  Flagged: "bg-red-500/15 text-red-400 border-transparent",
 };
+
+const FLAG_REASON_OPTIONS: { value: FlagReason; label: string }[] = [
+  { value: "expired", label: "Document appears to be expired" },
+  { value: "unclear", label: "Document is unclear or difficult to read" },
+  { value: "wrong_doc", label: "Incorrect document type uploaded" },
+  { value: "missing_info", label: "Document is missing required information" },
+];
 
 const QUICK_TEMPLATES = [
   { label: "Expired doc", text: `Hi {FirstName},\n\nYour {docType} appears to be expired. Please upload a current, valid copy to continue with your application.\n\nThanks,\nCompliance Team` },
@@ -130,10 +139,12 @@ export function DocVerificationTab() {
   const [docs, setDocs] = useState<DocWithWorker[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Verified">("Pending");
+  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Verified" | "Flagged">("Pending");
   const [verifying, setVerifying] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [flagId, setFlagId] = useState<string | null>(null);
+  const [flagReason, setFlagReason] = useState<FlagReason>("expired");
   const [error, setError] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc] = useState<PreviewDoc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -165,7 +176,7 @@ export function DocVerificationTab() {
         })
       );
       allDocs.sort((a, b) => {
-        const order = { Pending: 0, "Expiring Soon": 1, Missing: 2, Verified: 3 };
+        const order = { Pending: 0, Flagged: 1, "Expiring Soon": 2, Missing: 3, Verified: 4 };
         const oa = order[a.verificationStatus as keyof typeof order] ?? 99;
         const ob = order[b.verificationStatus as keyof typeof order] ?? 99;
         if (oa !== ob) return oa - ob;
@@ -197,7 +208,7 @@ export function DocVerificationTab() {
       setDocs((prev) =>
         prev.map((d) =>
           d.id === docId
-            ? { ...d, verificationStatus: res.verificationStatus, verifiedAt: res.verifiedAt, rejectionReason: null }
+            ? { ...d, verificationStatus: res.verificationStatus, verifiedAt: res.verifiedAt, rejectionReason: null, flagReason: null }
             : d
         )
       );
@@ -223,7 +234,7 @@ export function DocVerificationTab() {
       setDocs((prev) =>
         prev.map((d) =>
           d.id === docId
-            ? { ...d, verificationStatus: res.verificationStatus, rejectionReason: res.rejectionReason }
+            ? { ...d, verificationStatus: res.verificationStatus, rejectionReason: res.rejectionReason, flagReason: null }
             : d
         )
       );
@@ -237,6 +248,28 @@ export function DocVerificationTab() {
     } catch (e: unknown) {
       console.error(e);
       setError(e instanceof Error ? e.message : "Reject failed");
+    } finally {
+      setVerifying(null);
+    }
+  };
+
+  const handleFlag = async (docId: string) => {
+    if (!api) return;
+    setVerifying(docId);
+    setError(null);
+    try {
+      const res = await api.admin.adminVerifyDocument({ documentId: docId, action: "flag", flagReason });
+      setDocs((prev) =>
+        prev.map((d) =>
+          d.id === docId
+            ? { ...d, verificationStatus: res.verificationStatus, flagReason: res.flagReason, rejectionReason: null }
+            : d
+        )
+      );
+      setFlagId(null);
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Flag failed");
     } finally {
       setVerifying(null);
     }
@@ -278,6 +311,7 @@ export function DocVerificationTab() {
   });
 
   const pendingCount = docs.filter((d) => d.verificationStatus === "Pending").length;
+  const flaggedCount = docs.filter((d) => d.verificationStatus === "Flagged").length;
 
   if (showLog) {
     return (
@@ -311,6 +345,7 @@ export function DocVerificationTab() {
               className="h-8 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring"
             >
               <option value="Pending">Pending only</option>
+              <option value="Flagged">Flagged only</option>
               <option value="Verified">Verified only</option>
               <option value="all">All statuses</option>
             </select>
@@ -319,6 +354,11 @@ export function DocVerificationTab() {
             {pendingCount > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium">
                 {pendingCount} pending
+              </span>
+            )}
+            {flaggedCount > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium">
+                {flaggedCount} flagged
               </span>
             )}
             <span className="text-xs text-muted-foreground">{filtered.length} shown</span>
@@ -365,7 +405,9 @@ export function DocVerificationTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-foreground">{doc.documentType}</p>
                     <Badge className={`text-xs flex items-center gap-1 ${STATUS_COLORS[doc.verificationStatus] ?? "bg-muted text-muted-foreground border-transparent"}`}>
-                      {doc.verificationStatus === "Pending" ? <Clock className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                      {doc.verificationStatus === "Pending" ? <Clock className="h-3 w-3" /> :
+                       doc.verificationStatus === "Flagged" ? <Flag className="h-3 w-3" /> :
+                       <CheckCircle className="h-3 w-3" />}
                       {doc.verificationStatus}
                     </Badge>
                   </div>
@@ -382,6 +424,12 @@ export function DocVerificationTab() {
                   </div>
                   {doc.rejectionReason && (
                     <p className="text-xs text-destructive mt-1">Rejection reason: {doc.rejectionReason}</p>
+                  )}
+                  {doc.flagReason && (
+                    <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                      <Flag className="h-3 w-3 shrink-0" />
+                      {FLAG_REASON_OPTIONS.find((o) => o.value === doc.flagReason)?.label ?? doc.flagReason}
+                    </p>
                   )}
                 </div>
 
@@ -405,6 +453,7 @@ export function DocVerificationTab() {
                     className="h-7 text-xs"
                     onClick={() => {
                       setRejectId(null);
+                      setFlagId(null);
                       setMessageDocId(messageDocId === doc.id ? null : doc.id);
                       setMessageText("");
                       setMessageTemplateLabel(null);
@@ -438,6 +487,23 @@ export function DocVerificationTab() {
                       Verify
                     </Button>
                   )}
+                  {doc.verificationStatus !== "Flagged" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs text-amber-500 border-amber-500/30 hover:bg-amber-500/10"
+                      disabled={verifying === doc.id}
+                      onClick={() => {
+                        setMessageDocId(null);
+                        setRejectId(null);
+                        setFlagId(flagId === doc.id ? null : doc.id);
+                        setFlagReason("expired");
+                        setError(null);
+                      }}
+                    >
+                      <Flag className="h-3 w-3 mr-1" />Flag
+                    </Button>
+                  )}
                   {doc.verificationStatus !== "Missing" && (
                     <Button
                       size="sm"
@@ -446,6 +512,7 @@ export function DocVerificationTab() {
                       disabled={verifying === doc.id}
                       onClick={() => {
                         setMessageDocId(null);
+                        setFlagId(null);
                         setRejectId(rejectId === doc.id ? null : doc.id);
                         setRejectReason("");
                         setError(null);
@@ -456,6 +523,50 @@ export function DocVerificationTab() {
                   )}
                 </div>
               </div>
+
+              {flagId === doc.id && (
+                <div className="space-y-2 pt-3 border-t border-border mt-3">
+                  <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <Flag className="h-3.5 w-3.5 text-amber-500" />
+                    Flag document: <span className="text-amber-500 font-semibold">{doc.documentType}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    The worker will be notified by email and in-app with the flag reason and a link to update their document.
+                  </p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground font-medium">Reason for flagging:</p>
+                    <div className="flex flex-col gap-1.5">
+                      {FLAG_REASON_OPTIONS.map((opt) => (
+                        <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`flag-reason-${doc.id}`}
+                            value={opt.value}
+                            checked={flagReason === opt.value}
+                            onChange={() => setFlagReason(opt.value)}
+                            className="accent-amber-500"
+                          />
+                          <span className="text-xs text-foreground">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1"
+                      disabled={verifying === doc.id}
+                      onClick={() => handleFlag(doc.id)}
+                    >
+                      {verifying === doc.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Flag className="h-3 w-3" />}
+                      Confirm Flag & Notify Worker
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setFlagId(null); setError(null); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {messageDocId === doc.id && (
                 <div className="space-y-2 pt-3 border-t border-border mt-3">

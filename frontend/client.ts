@@ -773,6 +773,7 @@ export namespace admin {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
                 action:          params.action,
+                flagReason:      params.flagReason,
                 rejectionReason: params.rejectionReason,
             }
 

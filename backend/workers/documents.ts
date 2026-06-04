@@ -30,7 +30,8 @@ export const DOCUMENT_TYPES = [
 
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
-export type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired";
+export type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired" | "Flagged";
+export type FlagReason = "expired" | "unclear" | "wrong_doc" | "missing_info";
 
 export interface WorkerDocument {
   id: string;
@@ -41,6 +42,7 @@ export interface WorkerDocument {
   uploadDate: Date;
   expiryDate: Date | null;
   verificationStatus: VerificationStatus;
+  flagReason: FlagReason | null;
   createdAt: Date;
 }
 
@@ -76,14 +78,14 @@ export interface UpdateDocumentExpiryRequest {
 }
 
 function resolveStatus(expiryDate: Date | null, currentStatus: VerificationStatus = "Pending"): VerificationStatus {
-  if (!expiryDate) return currentStatus === "Verified" ? "Verified" : "Pending";
+  if (!expiryDate) return currentStatus === "Verified" ? "Verified" : (currentStatus === "Flagged" ? "Flagged" : "Pending");
   const now = new Date();
   const diffMs = expiryDate.getTime() - now.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   if (diffDays < 0) return "Expired";
   if (diffDays <= 30) return "Expiring Soon";
   if (diffDays <= 60) return "Expiring Soon";
-  return currentStatus === "Verified" ? "Verified" : "Pending";
+  return currentStatus === "Verified" ? "Verified" : (currentStatus === "Flagged" ? "Flagged" : "Pending");
 }
 
 async function getWorkerIdForUser(userId: string): Promise<string> {
@@ -173,11 +175,12 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       upload_date: Date;
       expiry_date: Date | null;
       verification_status: string;
+      flag_reason: string | null;
       created_at: Date;
     }>`
       INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
       VALUES (${workerId}, ${req.documentType}, ${title}, ${req.fileKey}, ${expiryDate}, ${status})
-      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at
+      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
     `;
 
     if (!row) {
@@ -197,6 +200,7 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       uploadDate: row.upload_date,
       expiryDate: row.expiry_date,
       verificationStatus: row.verification_status as VerificationStatus,
+      flagReason: (row.flag_reason as FlagReason | null),
       createdAt: row.created_at,
     };
   }
@@ -222,10 +226,11 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
       upload_date: Date;
       expiry_date: Date | null;
       verification_status: string;
+      flag_reason: string | null;
       created_at: Date;
       is_demo_url: boolean;
     }>`
-      SELECT id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at, is_demo_url
+      SELECT id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at, is_demo_url
       FROM worker_documents
       WHERE worker_id = ${workerId}
       ORDER BY created_at DESC
@@ -261,6 +266,7 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
         uploadDate: row.upload_date,
         expiryDate: row.expiry_date,
         verificationStatus: status,
+        flagReason: (row.flag_reason as FlagReason | null),
         createdAt: row.created_at,
       });
     }
@@ -341,12 +347,13 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
       upload_date: Date;
       expiry_date: Date | null;
       verification_status: string;
+      flag_reason: string | null;
       created_at: Date;
     }>`
       UPDATE worker_documents
       SET expiry_date = ${expiryDate}, verification_status = ${newStatus}, updated_at = NOW()
       WHERE id = ${req.documentId}
-      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at
+      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
     `;
 
     if (!row) throw APIError.internal("failed to update document");
@@ -362,6 +369,7 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
       uploadDate: row.upload_date,
       expiryDate: row.expiry_date,
       verificationStatus: row.verification_status as VerificationStatus,
+      flagReason: (row.flag_reason as FlagReason | null),
       createdAt: row.created_at,
     };
   }
