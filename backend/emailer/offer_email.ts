@@ -3,6 +3,8 @@ import db from "../db";
 import { offerEmailTopic, type OfferEventType } from "../offers/topic";
 import { sendEmail } from "./sender";
 
+const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+
 const SUBJECTS: Record<OfferEventType, string> = {
   OFFER_SENT: "Your shift offer has been sent",
   OFFER_RECEIVED: "You have received a new shift offer",
@@ -43,6 +45,20 @@ function buildOfferHtml(
     RATE_PROPOSED: "Log in to review the proposed rate and respond.",
   };
 
+  const ctaPath: Record<OfferEventType, string> = {
+    OFFER_SENT: "/employer",
+    OFFER_RECEIVED: "/offers",
+    OFFER_ACCEPTED: "/offers",
+    RATE_PROPOSED: "/offers",
+  };
+
+  const ctaLabel: Record<OfferEventType, string> = {
+    OFFER_SENT: "View Employer Dashboard",
+    OFFER_RECEIVED: "Review Offer",
+    OFFER_ACCEPTED: "View Offer Details",
+    RATE_PROPOSED: "Review Proposed Rate",
+  };
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
       <h2 style="color: #1a1a1a;">${SUBJECTS[eventType]}</h2>
@@ -54,6 +70,9 @@ function buildOfferHtml(
       </table>
       ${notesSection}
       <p style="color: #555; font-size: 14px;">${callToAction[eventType]}</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}${ctaPath[eventType]}" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">${ctaLabel[eventType]}</a>
+      </div>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="color: #999; font-size: 12px;">Kizazi Hire &mdash; Connecting disability support workers with employers.</p>
     </div>

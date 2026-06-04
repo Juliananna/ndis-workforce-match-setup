@@ -3,6 +3,8 @@ import db from "../db";
 import { emergencyShiftTopic } from "../notifications/topic";
 import { sendEmail } from "./sender";
 
+const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+
 function buildEmergencyShiftHtml(event: {
   location: string;
   shiftDate: string;
@@ -35,6 +37,9 @@ function buildEmergencyShiftHtml(event: {
       ${tags}
       ${deadline}
       <p style="color: #555; font-size: 14px;">Log in to your account to express interest before the deadline.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#c0392b,#e74c3c);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Express Interest Now</a>
+      </div>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="color: #999; font-size: 12px;">Kizazi Hire &mdash; ref: ${event.jobId}</p>
     </div>

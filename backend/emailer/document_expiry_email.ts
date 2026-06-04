@@ -3,6 +3,8 @@ import db from "../db";
 import { documentExpiryTopic, type NotificationType } from "../notifications/topic";
 import { sendEmail } from "./sender";
 
+const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+
 const SUBJECTS: Record<NotificationType, string> = {
   DOCUMENT_EXPIRING_60: "Action Required: Your document expires in 60 days",
   DOCUMENT_EXPIRING_30: "Urgent: Your document expires in 30 days",
@@ -28,6 +30,9 @@ function buildDocumentEmailHtml(
       <h2 style="color: #1a1a1a;">${SUBJECTS[type]}</h2>
       <p style="color: #333; font-size: 15px;">${message}</p>
       <p style="color: #555; font-size: 14px;">Log in to your Kizazi Hire account to upload your renewed document.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}/dashboard" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Upload Renewed Document</a>
+      </div>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="color: #999; font-size: 12px;">NDIS Workforce Match &mdash; Keeping compliance simple.</p>
     </div>

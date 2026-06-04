@@ -7,9 +7,19 @@ import {
   paymentSucceededTopic,
 } from "../notifications/lifecycle_topics";
 
+const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+
+function loginButton(text: string, path: string): string {
+  return `<div style="text-align:center;margin:24px 0;">
+    <a href="${APP_URL}${path}" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">${text}</a>
+  </div>`;
+}
+
 new Subscription(userVerifiedTopic, "email-welcome-on-verify", {
   handler: async (event) => {
     const isWorker = event.role === "WORKER";
+    const dashboardPath = isWorker ? "/dashboard" : "/employer";
+    const dashboardLabel = isWorker ? "Go to My Dashboard" : "Go to Employer Dashboard";
 
     const html = isWorker
       ? `
@@ -20,6 +30,7 @@ new Subscription(userVerifiedTopic, "email-welcome-on-verify", {
       </div>
 
       <p style="color: #374151; font-size: 15px;">Here's how to get started and land your first shift:</p>
+      ${loginButton("Go to My Dashboard", "/dashboard")}
 
       <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin: 20px 0;">
         <div style="display: flex; align-items: flex-start; padding: 16px; border-bottom: 1px solid #f3f4f6;">
@@ -56,6 +67,7 @@ new Subscription(userVerifiedTopic, "email-welcome-on-verify", {
       </div>
 
       <p style="color: #374151; font-size: 15px;">You're one step away from accessing our verified workforce. Here's what to do next:</p>
+      ${loginButton("Go to Employer Dashboard", "/employer")}
 
       <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin: 20px 0;">
         <div style="display: flex; align-items: flex-start; padding: 16px; border-bottom: 1px solid #f3f4f6;">
@@ -123,6 +135,10 @@ new Subscription(employerSubscribedTopic, "email-employer-subscribed", {
         <li>Access worker compliance documents</li>
       </ul>
 
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}/employer" style="display:inline-block;background:linear-gradient(135deg,#059669,#0d9488);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Browse Workers Now</a>
+      </div>
+
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="color: #9ca3af; font-size: 12px; text-align: center;">Kizazi Hire &mdash; Connecting disability support workers with employers.</p>
     </div>`;
@@ -155,6 +171,10 @@ new Subscription(offerDeclinedTopic, "email-offer-declined", {
       </table>
 
       <p style="color: #555; font-size: 14px;">You can browse other qualified workers and send a new offer from your dashboard.</p>
+
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}/employer" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Browse Workers</a>
+      </div>
 
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="color: #9ca3af; font-size: 12px;">Kizazi Hire &mdash; Connecting disability support workers with employers.</p>
@@ -208,6 +228,10 @@ new Subscription(paymentSucceededTopic, "email-payment-receipt", {
       </table>
 
       <p style="color: #6b7280; font-size: 13px; text-align: center;">Please keep this email as your receipt. If you have questions, contact our support team.</p>
+
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${APP_URL}/employer" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Go to Dashboard</a>
+      </div>
 
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="color: #9ca3af; font-size: 12px; text-align: center;">Kizazi Hire &mdash; Connecting disability support workers with employers.</p>

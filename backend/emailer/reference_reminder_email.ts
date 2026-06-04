@@ -3,6 +3,8 @@ import { CronJob } from "encore.dev/cron";
 import db from "../db";
 import { sendEmail } from "./sender";
 
+const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+
 export const sendReferenceCallReminders = api(
   { expose: false, method: "POST", path: "/emailer/internal/reference-call-reminders" },
   async (): Promise<void> => {
@@ -142,6 +144,10 @@ function buildReminderEmail(params: {
     <p style="color: #6b7280; font-size: 13px;">
       Log in to the Compliance Portal to record the outcome of the call once completed.
     </p>
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${APP_URL}/compliance" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Open Compliance Portal</a>
+    </div>
 
     <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
     <p style="color: #9ca3af; font-size: 12px;">Kizazi Hire &mdash; Compliance Portal</p>
