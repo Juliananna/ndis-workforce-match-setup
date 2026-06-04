@@ -295,6 +295,25 @@ export function JobRequestDetail({ job, onBack, onUpdate, onCancel, onSendOffer 
                 ))}
               </div>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Worker Gender Preference</Label>
+              <div className="flex gap-2">
+                {(["No preference", "Male", "Female"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, genderPreference: f.genderPreference === g ? undefined : g }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                      form.genderPreference === g
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label className="text-xs">Client Notes</Label>
