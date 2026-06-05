@@ -38,6 +38,8 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
   const api = useAuthedBackend();
   const [view, setView] = useState<DrawerView>("profile");
   const [refSummary, setRefSummary] = useState<ReferencesSummary | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
 
   const [jobs, setJobs] = useState<JobRequest[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
@@ -71,10 +73,18 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
       setOfferedRate("");
       setOfferNotes("");
       setRefSummary(null);
+      setVideoUrl(null);
       if (api) {
         api.workers.getReferencesForEmployer({ workerId: worker.workerId })
           .then((res) => setRefSummary(res.summary))
           .catch(() => {});
+        if (worker.introVideoUrl) {
+          setVideoLoading(true);
+          api.workers.getWorkerVideoForEmployer({ workerId: worker.workerId })
+            .then((res) => setVideoUrl(res.videoUrl))
+            .catch(() => {})
+            .finally(() => setVideoLoading(false));
+        }
       }
     }
   }, [worker, api]);
@@ -353,11 +363,19 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
             {worker.introVideoUrl && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Intro Video</p>
-                <video
-                  src={worker.introVideoUrl}
-                  controls
-                  className="w-full rounded-lg border border-border"
-                />
+                {videoLoading ? (
+                  <div className="flex items-center justify-center h-24 rounded-lg border border-border bg-muted/20">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : videoUrl ? (
+                  <video
+                    src={videoUrl}
+                    controls
+                    className="w-full rounded-lg border border-border"
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Video unavailable</p>
+                )}
               </div>
             )}
 

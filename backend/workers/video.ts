@@ -104,6 +104,33 @@ export const getWorkerVideo = api<void, WorkerVideoResponse>(
   }
 );
 
+export interface GetWorkerVideoForEmployerRequest {
+  workerId: string;
+}
+
+// Returns a signed playback URL for a worker's intro video — accessible by employers.
+export const getWorkerVideoForEmployer = api<GetWorkerVideoForEmployerRequest, WorkerVideoResponse>(
+  { expose: true, auth: true, method: "GET", path: "/workers/:workerId/video" },
+  async (req) => {
+    const auth = getAuthData()!;
+    if (auth.role !== "EMPLOYER") {
+      throw APIError.permissionDenied("only employers can access this endpoint");
+    }
+
+    const row = await db.queryRow<{ intro_video_url: string | null }>`
+      SELECT intro_video_url FROM workers WHERE worker_id = ${req.workerId}
+    `;
+
+    if (!row || !row.intro_video_url) {
+      return { videoUrl: null };
+    }
+
+    const { url: videoUrl } = await workerVideosBucket.signedDownloadUrl(row.intro_video_url, { ttl: 3600 });
+
+    return { videoUrl };
+  }
+);
+
 // Removes the worker's intro video.
 export const deleteWorkerVideo = api<void, void>(
   { expose: true, auth: true, method: "DELETE", path: "/workers/video" },
