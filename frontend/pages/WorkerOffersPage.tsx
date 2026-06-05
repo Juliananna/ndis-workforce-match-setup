@@ -41,60 +41,64 @@ function categoryFromTags(tags: string[]): string {
 }
 
 function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
-  const isPending = offer.status === "Pending";
   const currentRate = offer.negotiatedRate ?? offer.offeredRate;
+  const hasNegotiated = offer.negotiatedRate != null && offer.negotiatedRate !== offer.offeredRate;
+  const needsAction = offer.status === "Pending" || (offer.status === "Negotiating" && offer.latestProposedBy === "EMPLOYER");
 
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-2xl border p-5 flex items-center gap-4 hover:shadow-sm transition-all cursor-pointer ${
-        isPending ? "border-blue-300 shadow-sm shadow-blue-100" : "border-gray-200 hover:border-blue-200"
+      className={`bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md overflow-hidden ${
+        needsAction ? "border-amber-300 ring-1 ring-amber-200" : "border-gray-200 hover:border-gray-300"
       }`}
     >
-      <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
-        isPending
-          ? "bg-gradient-to-br from-blue-500 to-indigo-600"
-          : "bg-gradient-to-br from-gray-400 to-gray-500"
-      }`}>
-        <Bell className="h-6 w-6 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-          <p className="font-bold text-gray-900 text-sm truncate">{offer.snapshotLocation}</p>
-          <OfferStatusBadge status={offer.status} />
-          {isPending && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">ACTION NEEDED</span>
-          )}
+      {needsAction && <div className="h-1 bg-gradient-to-r from-amber-400 to-orange-400" />}
+      <div className="p-4 flex items-center gap-4">
+        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${
+          needsAction ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-gradient-to-br from-gray-300 to-gray-400"
+        }`}>
+          <Bell className="h-5 w-5 text-white" />
         </div>
-        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
-          {offer.snapshotShiftDate && (
-            <span className="flex items-center gap-1">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-              {toDateStr(offer.snapshotShiftDate)}
-            </span>
-          )}
-          {offer.snapshotShiftDurationHours && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              {offer.snapshotShiftDurationHours}hrs
-              {offer.snapshotShiftStartTime ? ` · ${offer.snapshotShiftStartTime}` : ""}
-            </span>
-          )}
-          {offer.snapshotSupportTypeTags.length > 0 && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              {categoryFromTags(offer.snapshotSupportTypeTags)}
-            </span>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <p className="font-bold text-gray-900 text-sm truncate">{offer.snapshotLocation}</p>
+            <OfferStatusBadge status={offer.status} />
+            {needsAction && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                ACTION NEEDED
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
+            {offer.snapshotShiftDate && (
+              <span className="flex items-center gap-1">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                {toDateStr(offer.snapshotShiftDate)}
+              </span>
+            )}
+            {offer.snapshotShiftDurationHours && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                {offer.snapshotShiftDurationHours}h{offer.snapshotShiftStartTime ? ` · ${offer.snapshotShiftStartTime}` : ""}
+              </span>
+            )}
+            {offer.snapshotSupportTypeTags.length > 0 && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                {categoryFromTags(offer.snapshotSupportTypeTags)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="shrink-0 text-right flex flex-col items-end gap-2">
-        <div>
-          <span className="text-xl font-extrabold text-gray-900">${currentRate.toFixed(2)}</span>
-          <span className="text-sm text-gray-400">/hr</span>
-        </div>
-        <div className="flex items-center gap-1 text-xs font-semibold text-blue-600">
-          View <ChevronRight className="h-3.5 w-3.5" />
+        <div className="shrink-0 text-right">
+          <p className="text-xl font-extrabold text-gray-900">${currentRate.toFixed(2)}<span className="text-sm font-normal text-gray-400">/hr</span></p>
+          {hasNegotiated && (
+            <p className="text-[10px] text-gray-400 line-through">${offer.offeredRate.toFixed(2)}</p>
+          )}
+          <div className="flex items-center justify-end gap-1 text-xs font-semibold text-blue-600 mt-1">
+            View <ChevronRight className="h-3.5 w-3.5" />
+          </div>
         </div>
       </div>
     </div>
