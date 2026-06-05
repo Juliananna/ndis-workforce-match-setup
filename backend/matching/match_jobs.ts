@@ -27,9 +27,11 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
       longitude: number | null;
       travel_radius_km: number | null;
     }>`
-      SELECT worker_id, latitude, longitude, travel_radius_km
-      FROM workers
-      WHERE user_id = ${auth.userID}
+      SELECT w.worker_id, w.latitude, w.longitude, w.travel_radius_km
+      FROM workers w
+      JOIN users u ON u.user_id = w.user_id
+      WHERE w.user_id = ${auth.userID}
+        AND u.is_suspended = FALSE
     `;
     if (!workerRow) throw APIError.notFound("worker profile not found");
 
@@ -49,7 +51,12 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
     const skillSet = new Set(skills.map((s) => s.skill));
 
     const hasGeoFilter = workerRow.latitude != null && workerRow.longitude != null;
-    const maxDist = availability?.max_travel_distance_km ?? workerRow.travel_radius_km ?? 50;
+
+    const effectiveTravelRadius =
+      availability?.max_travel_distance_km ??
+      workerRow.travel_radius_km ??
+      50;
+
     const minPay = availability?.minimum_pay_rate ?? 0;
 
     type JobRow = {
@@ -94,11 +101,11 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
           j.is_emergency, j.response_deadline, j.latitude, j.longitude, j.created_at, j.updated_at,
           CASE
             WHEN j.latitude IS NOT NULL AND j.longitude IS NOT NULL THEN
-              6371 * 2 * ASIN(SQRT(
+              ROUND((6371 * 2 * ASIN(SQRT(
                 POWER(SIN(RADIANS(j.latitude - ${lat}) / 2), 2) +
                 COS(RADIANS(${lat})) * COS(RADIANS(j.latitude)) *
                 POWER(SIN(RADIANS(j.longitude - ${lon}) / 2), 2)
-              ))
+              )))::numeric, 1)::double precision
             ELSE NULL
           END AS distance_km
         FROM job_requests j
@@ -108,13 +115,14 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
           j.status = 'Open'
           AND j.weekday_rate >= ${minPay}
           AND u.is_demo = FALSE
+          AND u.is_suspended = FALSE
           AND (
             j.latitude IS NULL OR j.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
               POWER(SIN(RADIANS(j.latitude - ${lat}) / 2), 2) +
               COS(RADIANS(${lat})) * COS(RADIANS(j.latitude)) *
               POWER(SIN(RADIANS(j.longitude - ${lon}) / 2), 2)
-            )) <= ${maxDist}
+            )) <= ${effectiveTravelRadius}
           )
         ORDER BY distance_km ASC NULLS LAST
         LIMIT 50
@@ -131,7 +139,10 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
         FROM job_requests j
         JOIN employers e ON e.employer_id = j.employer_id
         JOIN users u ON u.user_id = e.user_id
-        WHERE j.status = 'Open' AND j.weekday_rate >= ${minPay} AND u.is_demo = FALSE
+        WHERE j.status = 'Open'
+          AND j.weekday_rate >= ${minPay}
+          AND u.is_demo = FALSE
+          AND u.is_suspended = FALSE
         ORDER BY j.created_at DESC
         LIMIT 50
       `;
@@ -176,6 +187,8 @@ export const matchJobsForWorker = api<void, MatchJobsResponse>(
         const scoreB = b.matchScore * 10 - b.distanceKm;
         return scoreB - scoreA;
       }
+      if (a.distanceKm != null) return -1;
+      if (b.distanceKm != null) return 1;
       return b.matchScore - a.matchScore;
     });
 

@@ -5,6 +5,7 @@ import db from "../db";
 export interface MatchedWorker {
   workerId: string;
   name: string;
+  fullName: string | null;
   location: string | null;
   distanceKm: number | null;
   skills: string[];
@@ -58,7 +59,7 @@ function computeCompatibility(params: {
     : 35;
   score += skillScore;
   if (skillMatches.length > 0) {
-    reasons.push(`${skillMatches.length} of ${params.jobTags.size} skills matched`);
+    reasons.push(`${skillMatches.length} of ${params.jobTags.size} skill${params.jobTags.size !== 1 ? "s" : ""} matched`);
   }
 
   if (params.jobShiftDate) {
@@ -78,6 +79,8 @@ function computeCompatibility(params: {
       const proximity = Math.round((1 - params.distanceKm / (radius || 50)) * 25);
       score += Math.max(0, proximity);
       reasons.push(`${params.distanceKm}km away`);
+    } else {
+      reasons.push(`${params.distanceKm}km — outside travel radius`);
     }
   } else {
     score += 10;
@@ -137,8 +140,10 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
     type WorkerRow = {
       worker_id: string;
       name: string;
+      full_name: string | null;
       location: string | null;
       travel_radius_km: number | null;
+      max_travel_distance_km: number | null;
       drivers_license: boolean;
       vehicle_access: boolean;
       experience_years: number | null;
@@ -163,39 +168,57 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
       const lon = job.longitude!;
       workers = await db.queryAll<WorkerRow>`
         SELECT
-          w.worker_id, w.name, w.location, w.travel_radius_km,
-          w.drivers_license, w.vehicle_access, w.experience_years, w.bio,
-          w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
-          wa.available_days, wa.minimum_pay_rate,
+          w.worker_id,
+          w.name,
+          w.full_name,
+          w.location,
+          w.travel_radius_km,
+          wa.max_travel_distance_km,
+          w.drivers_license,
+          w.vehicle_access,
+          w.experience_years,
+          w.bio,
+          w.priority_boost,
+          w.docs_verified_purchased,
+          w.refs_purchased,
+          wa.available_days,
+          wa.minimum_pay_rate,
           CASE
             WHEN w.latitude IS NOT NULL AND w.longitude IS NOT NULL THEN
-              6371 * 2 * ASIN(SQRT(
+              ROUND((6371 * 2 * ASIN(SQRT(
                 POWER(SIN(RADIANS(w.latitude - ${lat}) / 2), 2) +
                 COS(RADIANS(${lat})) * COS(RADIANS(w.latitude)) *
                 POWER(SIN(RADIANS(w.longitude - ${lon}) / 2), 2)
-              ))
+              )))::numeric, 1)::double precision
             ELSE NULL
           END AS distance_km,
           EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
           EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
           EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
-          ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
+          (
+            (w.full_name IS NOT NULL AND w.full_name <> '') AND
+            (w.location IS NOT NULL AND w.location <> '') AND
+            (w.bio IS NOT NULL AND w.bio <> '') AND
+            (w.experience_years IS NOT NULL) AND
+            (w.phone IS NOT NULL AND w.phone <> '')
+          ) AS profile_complete
         FROM workers w
         JOIN users u ON u.user_id = w.user_id
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
         WHERE
           u.is_demo = FALSE
+          AND u.is_suspended = FALSE
           AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
+          AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
               POWER(SIN(RADIANS(w.latitude - ${lat}) / 2), 2) +
               COS(RADIANS(${lat})) * COS(RADIANS(w.latitude)) *
               POWER(SIN(RADIANS(w.longitude - ${lon}) / 2), 2)
-            )) <= ${maxDist}
+            )) <= COALESCE(wa.max_travel_distance_km, w.travel_radius_km, ${maxDist})
           )
-          AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
         ORDER BY
           w.priority_boost DESC,
           (
@@ -211,20 +234,39 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
     } else {
       workers = await db.queryAll<WorkerRow>`
         SELECT
-          w.worker_id, w.name, w.location, w.travel_radius_km,
-          w.drivers_license, w.vehicle_access, w.experience_years, w.bio,
-          w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
-          wa.available_days, wa.minimum_pay_rate,
+          w.worker_id,
+          w.name,
+          w.full_name,
+          w.location,
+          w.travel_radius_km,
+          wa.max_travel_distance_km,
+          w.drivers_license,
+          w.vehicle_access,
+          w.experience_years,
+          w.bio,
+          w.priority_boost,
+          w.docs_verified_purchased,
+          w.refs_purchased,
+          wa.available_days,
+          wa.minimum_pay_rate,
           NULL::double precision AS distance_km,
           EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
           EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
           EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
-          ((w.full_name IS NOT NULL AND w.full_name <> '') AND (w.location IS NOT NULL AND w.location <> '') AND (w.bio IS NOT NULL AND w.bio <> '') AND (w.experience_years IS NOT NULL) AND (w.phone IS NOT NULL AND w.phone <> '')) AS profile_complete
+          (
+            (w.full_name IS NOT NULL AND w.full_name <> '') AND
+            (w.location IS NOT NULL AND w.location <> '') AND
+            (w.bio IS NOT NULL AND w.bio <> '') AND
+            (w.experience_years IS NOT NULL) AND
+            (w.phone IS NOT NULL AND w.phone <> '')
+          ) AS profile_complete
         FROM workers w
         JOIN users u ON u.user_id = w.user_id
         LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
-        WHERE u.is_demo = FALSE
+        WHERE
+          u.is_demo = FALSE
+          AND u.is_suspended = FALSE
           AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
         ORDER BY
@@ -273,8 +315,14 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
       } catch { /* empty */ }
 
       const distanceKm = w.distance_km != null ? Math.round(w.distance_km * 10) / 10 : null;
+      const effectiveTravelRadius = w.max_travel_distance_km ?? w.travel_radius_km;
 
-      const workerVerifScore = (w.profile_complete ? 20 : 0) + (w.has_id_doc ? 20 : 0) + (w.has_cert_doc ? 20 : 0) + (w.has_refs ? 20 : 0) + (w.has_avail ? 20 : 0);
+      const workerVerifScore =
+        (w.profile_complete ? 20 : 0) +
+        (w.has_id_doc ? 20 : 0) +
+        (w.has_cert_doc ? 20 : 0) +
+        (w.has_refs ? 20 : 0) +
+        (w.has_avail ? 20 : 0);
 
       const { score, reasons } = computeCompatibility({
         jobTags,
@@ -285,18 +333,19 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         workerMinPay: w.minimum_pay_rate,
         workerExpYears: w.experience_years,
         distanceKm,
-        travelRadiusKm: w.travel_radius_km,
+        travelRadiusKm: effectiveTravelRadius,
         verificationScore: workerVerifScore,
       });
 
       result.push({
         workerId: w.worker_id,
-        name: w.name,
+        name: w.full_name || w.name,
+        fullName: w.full_name,
         location: w.location,
         distanceKm,
         skills: skillList,
         availableDays: availDays,
-        travelRadiusKm: w.travel_radius_km,
+        travelRadiusKm: effectiveTravelRadius,
         minimumPayRate: w.minimum_pay_rate,
         driversLicense: w.drivers_license,
         vehicleAccess: w.vehicle_access,

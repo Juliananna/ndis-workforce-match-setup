@@ -32,6 +32,8 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
         email: profile.email ?? "",
         fullName: profile.fullName ?? "",
         location: profile.location ?? "",
+        latitude: profile.latitude ?? undefined,
+        longitude: profile.longitude ?? undefined,
         travelRadiusKm: profile.travelRadiusKm ?? undefined,
         driversLicense: profile.driversLicense,
         vehicleAccess: profile.vehicleAccess,

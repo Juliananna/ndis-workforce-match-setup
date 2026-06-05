@@ -33,7 +33,7 @@ function matchedWorkerToSummary(w: MatchedWorker): WorkerSummary {
   return {
     workerId: w.workerId,
     name: w.name,
-    fullName: null,
+    fullName: w.fullName,
     location: w.location,
     bio: w.bio,
     experienceYears: w.experienceYears,
