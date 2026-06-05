@@ -10,9 +10,11 @@ function computeCompatibility(params: {
   workerExpYears: number | null;
   distanceKm: number | null;
   travelRadiusKm: number | null;
+  verificationScore?: number;
 }): { score: number; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
+  const max = 100;
 
   const skillMatches = params.workerSkills.filter((s) => params.jobTags.has(s));
   const skillScore =
@@ -49,12 +51,23 @@ function computeCompatibility(params: {
   }
 
   if (params.workerExpYears != null && params.workerExpYears >= 1) {
-    const expScore = Math.min(15, params.workerExpYears * 3);
+    const expScore = Math.min(10, params.workerExpYears * 2);
     score += expScore;
     reasons.push(`${params.workerExpYears} yr${params.workerExpYears !== 1 ? "s" : ""} experience`);
   }
 
-  return { score: Math.min(100, score), reasons };
+  const verificationScore = params.verificationScore ?? 0;
+  if (verificationScore === 100) {
+    score += 15;
+    reasons.push("Fully verified worker");
+  } else if (verificationScore >= 80) {
+    score += 8;
+    reasons.push("High verification score");
+  } else if (verificationScore >= 60) {
+    score += 4;
+  }
+
+  return { score: Math.min(max, score), reasons };
 }
 
 describe("computeCompatibility", () => {
@@ -129,6 +142,7 @@ describe("computeCompatibility", () => {
       workerExpYears: 10,
       distanceKm: 1,
       travelRadiusKm: 50,
+      verificationScore: 100,
     });
     expect(score).toBeLessThanOrEqual(100);
   });
@@ -157,5 +171,33 @@ describe("computeCompatibility", () => {
       travelRadiusKm: 20,
     });
     expect(inside).toBeGreaterThan(outside);
+  });
+
+  it("awards verification bonus for fully verified worker", () => {
+    const { score: full } = computeCompatibility({
+      jobTags: new Set(),
+      jobWeekdayRate: 40,
+      jobShiftDate: null,
+      workerSkills: [],
+      workerAvailDays: [],
+      workerMinPay: null,
+      workerExpYears: null,
+      distanceKm: null,
+      travelRadiusKm: null,
+      verificationScore: 100,
+    });
+    const { score: none } = computeCompatibility({
+      jobTags: new Set(),
+      jobWeekdayRate: 40,
+      jobShiftDate: null,
+      workerSkills: [],
+      workerAvailDays: [],
+      workerMinPay: null,
+      workerExpYears: null,
+      distanceKm: null,
+      travelRadiusKm: null,
+      verificationScore: 0,
+    });
+    expect(full).toBeGreaterThan(none);
   });
 });

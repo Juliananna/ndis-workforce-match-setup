@@ -393,6 +393,8 @@ export function JobRequestDetail({ job, onBack, onUpdate, onCancel, onSendOffer 
                       variant="outline"
                       className="shrink-0 h-7 text-xs"
                       onClick={() => {
+                        setPendingWorkerId(r.workerId);
+                        setPendingWorkerName(r.workerName);
                         setOfferModalOpen(true);
                       }}
                     >

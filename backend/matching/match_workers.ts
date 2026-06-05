@@ -245,12 +245,22 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
     const requiredSkills = req.requiredSkills ?? [];
     const jobShiftDate = job.shift_date ? new Date(job.shift_date) : null;
 
+    const workerIds = workers.map((w) => w.worker_id);
+    const allSkillRows = workerIds.length > 0
+      ? await db.queryAll<{ worker_id: string; skill: string }>`
+          SELECT worker_id, skill FROM worker_skills WHERE worker_id = ANY(${workerIds})
+        `
+      : [];
+    const skillsByWorkerId = new Map<string, string[]>();
+    for (const row of allSkillRows) {
+      const list = skillsByWorkerId.get(row.worker_id) ?? [];
+      list.push(row.skill);
+      skillsByWorkerId.set(row.worker_id, list);
+    }
+
     const result: MatchedWorker[] = [];
     for (const w of workers) {
-      const skills = await db.queryAll<{ skill: string }>`
-        SELECT skill FROM worker_skills WHERE worker_id = ${w.worker_id}
-      `;
-      const skillList = skills.map((s) => s.skill);
+      const skillList = skillsByWorkerId.get(w.worker_id) ?? [];
 
       if (requiredSkills.length > 0) {
         const skillSet = new Set(skillList);

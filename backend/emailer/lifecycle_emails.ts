@@ -165,7 +165,7 @@ new Subscription(offerDeclinedTopic, "email-offer-declined", {
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Shift date</td>
-          <td style="padding: 8px 0; font-weight: 600; color: #111827; font-size: 14px;">${event.shiftDate}</td>
+          <td style="padding: 8px 0; font-weight: 600; color: #111827; font-size: 14px;">${event.shiftDate ?? "Ongoing / TBD"}</td>
         </tr>
         ${event.notes ? `<tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Worker note</td><td style="padding: 8px 0; color: #374151; font-size: 14px; font-style: italic;">"${event.notes}"</td></tr>` : ""}
       </table>
@@ -190,7 +190,7 @@ new Subscription(offerDeclinedTopic, "email-offer-declined", {
 
     await sendEmail({
       to: email,
-      subject: `Offer declined — shift on ${event.shiftDate} at ${event.location}`,
+      subject: `Offer declined — ${event.shiftDate ? `shift on ${event.shiftDate} at` : "shift at"} ${event.location}`,
       html,
     });
   },

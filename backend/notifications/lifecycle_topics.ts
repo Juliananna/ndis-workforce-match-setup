@@ -28,7 +28,7 @@ export interface OfferDeclinedEvent {
   recipientUserId: string;
   declinedByRole: "WORKER" | "EMPLOYER";
   location: string;
-  shiftDate: string;
+  shiftDate: string | null;
   notes?: string;
 }
 
