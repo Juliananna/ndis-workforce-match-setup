@@ -15,7 +15,7 @@ const TEAL      = "#0d9488";
 const TEAL_MID  = "#0a7a70";
 const TEAL_DARK = "#063d36";
 const TEAL_TEXT = "#0d7a6e";
-const PREVIEW_BASE = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const PREVIEW_BASE = "https://kizazihire.com.au";
 
 function getStudentUrl(partner: RtoPartner) {
   return `${PREVIEW_BASE}/rto/${partner.slug}`;

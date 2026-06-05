@@ -52,7 +52,7 @@ export async function sendAdminPasswordResetEmail(to: string, temporaryPassword:
       </div>
 
       <div style="text-align:center;margin:24px 0;">
-        <a href="https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev/login" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Log In Now</a>
+        <a href="https://kizazihire.com.au/login" style="display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600;">Log In Now</a>
       </div>
 
       <p style="color: #aaa; font-size: 12px; text-align: center; margin-top: 8px;">

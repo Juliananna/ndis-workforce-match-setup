@@ -18,7 +18,7 @@ export interface SeedDemoResponse {
 
 const DEMO_PASSWORD = "DemoNDIS2026!";
 
-const FRONTEND_BASE_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const FRONTEND_BASE_URL = "https://kizazihire.com.au";
 
 function docUrl(filename: string): string {
   return `${FRONTEND_BASE_URL}/sample-docs/${encodeURIComponent(filename)}`;

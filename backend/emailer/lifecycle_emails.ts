@@ -7,7 +7,7 @@ import {
   paymentSucceededTopic,
 } from "../notifications/lifecycle_topics";
 
-const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const APP_URL = "https://kizazihire.com.au";
 
 function loginButton(text: string, path: string): string {
   return `<div style="text-align:center;margin:24px 0;">

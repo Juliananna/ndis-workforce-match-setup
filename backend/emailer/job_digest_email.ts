@@ -71,7 +71,7 @@ export function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: s
       <p style="color:#6b7280;font-size:14px;margin:0 0 20px;">Hi ${name}, here are the latest open jobs matching your profile.</p>
       ${jobCards}
       <div style="text-align:center;margin-top:20px;">
-        <a href="https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev/dashboard" style="display:inline-block;background:#2563eb;color:#fff;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:600;text-decoration:none;">
+        <a href="https://kizazihire.com.au/dashboard" style="display:inline-block;background:#2563eb;color:#fff;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:600;text-decoration:none;">
           View All Jobs &amp; Apply
         </a>
       </div>

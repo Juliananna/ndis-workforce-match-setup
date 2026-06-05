@@ -5,7 +5,7 @@ import db from "../db";
 import { sendEmail, sendEmailsBulk } from "./sender";
 import { workerSignedUpTopic } from "../notifications/lifecycle_topics";
 
-const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const APP_URL = "https://kizazihire.com.au";
 
 function ctaButton(text: string, url: string): string {
   return `<div style="text-align:center;margin:28px 0;">

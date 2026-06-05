@@ -3,7 +3,7 @@ import db from "../db";
 import { documentExpiryTopic, type NotificationType } from "../notifications/topic";
 import { sendEmail } from "./sender";
 
-const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const APP_URL = "https://kizazihire.com.au";
 
 const SUBJECTS: Record<NotificationType, string> = {
   DOCUMENT_EXPIRING_60: "Action Required: Your document expires in 60 days",

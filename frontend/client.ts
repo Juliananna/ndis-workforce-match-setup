@@ -2475,7 +2475,8 @@ import { getVerificationScore as api_workers_verification_score_getVerificationS
 import {
     confirmVideoUpload as api_workers_video_confirmVideoUpload,
     getVideoUploadUrl as api_workers_video_getVideoUploadUrl,
-    getWorkerVideo as api_workers_video_getWorkerVideo
+    getWorkerVideo as api_workers_video_getWorkerVideo,
+    getWorkerVideoForEmployer as api_workers_video_getWorkerVideoForEmployer
 } from "~backend/workers/video";
 
 export namespace workers {
@@ -2512,6 +2513,7 @@ export namespace workers {
             this.getWorkerResume = this.getWorkerResume.bind(this)
             this.getWorkerSkills = this.getWorkerSkills.bind(this)
             this.getWorkerVideo = this.getWorkerVideo.bind(this)
+            this.getWorkerVideoForEmployer = this.getWorkerVideoForEmployer.bind(this)
             this.listDocumentTypes = this.listDocumentTypes.bind(this)
             this.listSkillTags = this.listSkillTags.bind(this)
             this.listWorkerDocuments = this.listWorkerDocuments.bind(this)
@@ -2711,6 +2713,15 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/video`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_video_getWorkerVideo>
+        }
+
+        /**
+         * Returns a signed playback URL for a worker's intro video — accessible by employers.
+         */
+        public async getWorkerVideoForEmployer(params: { workerId: string }): Promise<ResponseType<typeof api_workers_video_getWorkerVideoForEmployer>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/${encodeURIComponent(params.workerId)}/video`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_video_getWorkerVideoForEmployer>
         }
 
         /**

@@ -3,7 +3,7 @@ import { CronJob } from "encore.dev/cron";
 import db from "../db";
 import { sendEmail } from "./sender";
 
-const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const APP_URL = "https://kizazihire.com.au";
 
 export const sendReferenceCallReminders = api(
   { expose: false, method: "POST", path: "/emailer/internal/reference-call-reminders" },

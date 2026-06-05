@@ -3,7 +3,7 @@ import db from "../db";
 import { emergencyShiftTopic } from "../notifications/topic";
 import { sendEmail } from "./sender";
 
-const APP_URL = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev";
+const APP_URL = "https://kizazihire.com.au";
 
 function buildEmergencyShiftHtml(event: {
   location: string;

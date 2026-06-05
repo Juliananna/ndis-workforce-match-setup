@@ -104,7 +104,7 @@ export const adminVerifyDocument = api<VerifyDocumentRequest, VerifyDocumentResp
           VALUES (${workerUser.user_id}, 'ADMIN_DOCUMENT_MESSAGE', ${req.documentId}, ${notifTitle}, ${notifBody}, 'Compliance Team')
         `;
 
-        const appUrl = "https://ndis-workforce-match-setup-d6t4j0c82vjgmsb23vrg.lp.dev/dashboard";
+        const appUrl = "https://kizazihire.com.au/dashboard";
 
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
