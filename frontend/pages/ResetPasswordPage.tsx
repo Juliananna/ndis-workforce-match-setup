@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff, RefreshCw } from "lucide-react";
 import backend from "~backend/client";
 
 export default function ResetPasswordPage() {
@@ -15,6 +15,7 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokenInvalid, setTokenInvalid] = useState(false);
   const [done, setDone] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +43,12 @@ export default function ResetPasswordPage() {
       setTimeout(() => navigate(loginDest), 3000);
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      if (msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("expired")) {
+        setTokenInvalid(true);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -55,9 +61,43 @@ export default function ResetPasswordPage() {
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-gray-900">Invalid Reset Link</h1>
           <p className="text-gray-500 text-sm mt-2 mb-6">This reset link is invalid or has expired.</p>
-          <Link to="/forgot-password" className="text-blue-600 hover:underline font-semibold text-sm">
-            Request a new reset link
+          <Link to="/forgot-password" className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors">
+            <RefreshCw className="h-4 w-4" /> Request a new link
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (tokenInvalid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-7 w-7 text-amber-600" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            {isWelcome ? "Activation link expired" : "Reset link expired"}
+          </h1>
+          <p className="text-gray-500 text-sm mb-6">
+            {isWelcome
+              ? "Your account activation link has expired or already been used. Request a new password reset link to set your password and log in."
+              : "This password reset link has expired or already been used. Reset links are only valid for 1 hour."}
+          </p>
+          <div className="space-y-3">
+            <Link
+              to="/forgot-password"
+              className="flex items-center justify-center gap-2 w-full bg-blue-600 text-white px-5 py-3 rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" /> Request a new {isWelcome ? "activation" : "reset"} link
+            </Link>
+            <Link
+              to="/login"
+              className="block text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Already have a password? Log in
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -87,7 +127,7 @@ export default function ResetPasswordPage() {
                 <CheckCircle className="h-7 w-7 text-green-600" />
               </div>
               <div className="text-center">
-                <p className="font-semibold text-gray-900">Password reset successfully!</p>
+                <p className="font-semibold text-gray-900">Password set successfully!</p>
                 <p className="text-sm text-gray-500 mt-1">Redirecting you to login…</p>
               </div>
               <Link to={onboarding ? `/login?onboarding=${onboarding}` : "/login"} className="text-sm text-blue-600 hover:underline font-medium mt-2">
@@ -148,7 +188,7 @@ export default function ResetPasswordPage() {
                   className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/25 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Reset Password
+                  {isWelcome ? "Activate My Account" : "Reset Password"}
                 </button>
               </form>
 
