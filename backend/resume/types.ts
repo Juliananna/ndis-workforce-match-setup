@@ -92,6 +92,7 @@ export interface ResumeSession {
   aiInterviewPrompts: string[];
   aiGenerationCount: number;
   convertedWorkerId: string | null;
+  photoKey: string | null;
 }
 
 export interface ConsentRecord {

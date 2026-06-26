@@ -3,9 +3,10 @@ import type { SessionData } from "./types";
 
 interface Props {
   session: SessionData;
+  photoUrl?: string | null;
 }
 
-export function ResumePreviewCard({ session }: Props) {
+export function ResumePreviewCard({ session, photoUrl }: Props) {
   const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Your Name";
   const location = [session.suburb, session.state].filter(Boolean).join(", ");
   const currentChecks = session.checks.filter((c) => c.status === "Current");
@@ -13,6 +14,15 @@ export function ResumePreviewCard({ session }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden" id="resume-preview">
       <div className="bg-gradient-to-br from-teal-600 to-emerald-700 px-6 py-8 text-white">
+        <div className="flex items-start gap-5">
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt={fullName}
+              className="h-20 w-20 rounded-full object-cover border-3 border-white/30 shadow-lg shrink-0"
+            />
+          )}
+          <div className="flex-1">
         <h1 className="text-2xl font-bold mb-0.5">{fullName}</h1>
         <p className="text-teal-100 font-medium">{session.targetRole || "NDIS Support Worker"}</p>
         <div className="flex flex-wrap gap-3 mt-3 text-sm text-teal-100">
@@ -31,6 +41,8 @@ export function ResumePreviewCard({ session }: Props) {
           {session.languages.length > 1 && (
             <span>Languages: {session.languages.join(", ")}</span>
           )}
+        </div>
+          </div>
         </div>
       </div>
 

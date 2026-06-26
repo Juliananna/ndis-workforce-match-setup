@@ -9,6 +9,7 @@ import { EmailConsentForm } from "../components/resume/EmailConsentForm";
 import { DocumentUploadSection } from "../components/resume/DocumentUploadSection";
 import { RefereeSection } from "../components/resume/RefereeSection";
 import { GetHiredFasterModal } from "../components/resume/GetHiredFasterModal";
+import { ResumePhotoUpload } from "../components/resume/ResumePhotoUpload";
 import type { SessionData } from "../components/resume/types";
 import type { RefereeRecord } from "~backend/resume/types";
 
@@ -37,6 +38,7 @@ export default function ResumeBuilderPreviewPage() {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showHiredModal, setShowHiredModal] = useState(false);
   const [profileJustCreated, setProfileJustCreated] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const loadSession = async () => {
     if (!id) return;
@@ -44,6 +46,9 @@ export default function ResumeBuilderPreviewPage() {
       const { session: s, referees: r } = await backend.resume.getSession({ id });
       setSession(s as SessionData);
       setReferees(r as RefereeRecord[]);
+      if ((s as any).photoKey) {
+        setPhotoUrl(null);
+      }
     } catch {
       toast({ title: "Session not found", variant: "destructive" });
       navigate("/resume-builder");
@@ -266,7 +271,7 @@ export default function ResumeBuilderPreviewPage() {
             </div>
           )}
 
-          <ResumePreviewCard session={session} />
+          <ResumePreviewCard session={session} photoUrl={photoUrl} />
 
           {hasEmail && (profileJustCreated || hasProfile) && (
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
@@ -348,6 +353,26 @@ export default function ResumeBuilderPreviewPage() {
                   <p>Click "Calculate score" to see how your resume stacks up.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {hasEmail && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+              <ResumePhotoUpload
+                sessionId={id!}
+                currentPhotoUrl={photoUrl}
+                onPhotoUploaded={(url) => setPhotoUrl(url)}
+              />
+            </div>
+          )}
+
+          {!hasEmail && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+              <ResumePhotoUpload
+                sessionId={id!}
+                currentPhotoUrl={photoUrl}
+                onPhotoUploaded={(url) => setPhotoUrl(url)}
+              />
             </div>
           )}
 

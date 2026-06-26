@@ -48,6 +48,7 @@ export function rowToSession(row: Record<string, any>): ResumeSession {
     aiInterviewPrompts: parseJsonField(row.ai_interview_prompts, []),
     aiGenerationCount: row.ai_generation_count ?? 0,
     convertedWorkerId: row.converted_worker_id,
+    photoKey: row.photo_key ?? null,
   };
 }
 

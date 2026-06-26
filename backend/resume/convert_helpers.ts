@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import db from "../db";
 import { sendEmail } from "../emailer/sender";
 import { workerDocumentsBucket } from "../workers/storage";
+import { profilePhotosBucket } from "../workers/storage";
 import { syncOnboardingStatus } from "../workers/compliance_status";
 import type { ResumeSession } from "./types";
 
@@ -167,6 +168,30 @@ async function migrateResumeDocs(sessionId: string, workerId: string): Promise<n
   return migratedCount;
 }
 
+async function migrateResumePhoto(sessionId: string, workerId: string): Promise<string | null> {
+  const sessionRow = await db.queryRow<{ photo_key: string | null }>`
+    SELECT photo_key FROM resume_sessions WHERE id = ${sessionId}
+  `;
+  if (!sessionRow?.photo_key) return null;
+
+  const photoKey = sessionRow.photo_key;
+  try {
+    const exists = await profilePhotosBucket.exists(photoKey);
+    if (!exists) return null;
+
+    const newKey = `avatars/worker-${workerId}.jpg`;
+    const attrs = await profilePhotosBucket.attrs(photoKey);
+    const data = await profilePhotosBucket.download(photoKey);
+    await profilePhotosBucket.upload(newKey, data, { contentType: attrs.contentType ?? "image/jpeg" });
+
+    const avatarUrl = profilePhotosBucket.publicUrl(newKey);
+    await db.exec`UPDATE workers SET avatar_url = ${avatarUrl}, updated_at = NOW() WHERE worker_id = ${workerId}`;
+    return avatarUrl;
+  } catch {
+    return null;
+  }
+}
+
 export async function convertSessionToProfile(
   sessionId: string,
   session: ResumeSession
@@ -175,6 +200,20 @@ export async function convertSessionToProfile(
     SELECT user_id FROM users WHERE email = ${session.email}
   `;
 
+  const supportSettingsJson = JSON.stringify(session.supportSettings);
+  const supportTasksJson = JSON.stringify(session.supportTasks);
+  const languagesJson = JSON.stringify(session.languages);
+  const workHistoryJson = JSON.stringify(session.workHistory);
+  const qualificationsJsonVal = JSON.stringify(session.qualifications);
+  const trainingJson = JSON.stringify(session.training);
+  const checksJson = JSON.stringify(session.checks);
+  const capabilityStoriesJson = JSON.stringify(session.capabilityStories);
+  const availabilityDays = session.availability.map((a) => a.day);
+  const availabilityShifts = [...new Set(session.availability.flatMap((a) => a.shifts))];
+  const location = [session.suburb, session.state].filter(Boolean).join(", ");
+  const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ");
+  const name = session.firstName ?? session.email!.split("@")[0];
+
   if (existingUser) {
     const existingWorker = await db.queryRow<{ worker_id: string }>`
       SELECT worker_id FROM workers WHERE user_id = ${existingUser.user_id}
@@ -182,32 +221,69 @@ export async function convertSessionToProfile(
 
     if (existingWorker) {
       await db.exec`
+        UPDATE workers SET
+          target_role = COALESCE(${session.targetRole ?? null}, target_role),
+          experience_level = COALESCE(${session.experienceLevel ?? null}, experience_level),
+          suburb = COALESCE(${session.suburb ?? null}, suburb),
+          postcode = COALESCE(${session.postcode ?? null}, postcode),
+          support_settings = COALESCE(${supportSettingsJson}::jsonb, support_settings),
+          support_tasks = COALESCE(${supportTasksJson}::jsonb, support_tasks),
+          support_style = COALESCE(${session.supportStyle ?? null}, support_style),
+          languages = COALESCE(${languagesJson}::jsonb, languages),
+          work_history = COALESCE(${workHistoryJson}::jsonb, work_history),
+          qualifications_json = COALESCE(${qualificationsJsonVal}::jsonb, qualifications_json),
+          training = COALESCE(${trainingJson}::jsonb, training),
+          checks = COALESCE(${checksJson}::jsonb, checks),
+          capability_stories = COALESCE(${capabilityStoriesJson}::jsonb, capability_stories),
+          resume_session_id = ${sessionId},
+          updated_at = NOW()
+        WHERE worker_id = ${existingWorker.worker_id}
+      `;
+
+      await db.exec`
         UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
         WHERE id = ${sessionId}
       `;
+      await migrateResumePhoto(sessionId, existingWorker.worker_id);
       await syncOnboardingStatus(existingWorker.worker_id);
       return { workerId: existingWorker.worker_id, userId: existingUser.user_id, alreadyExists: true };
     }
 
     const worker = await db.queryRow<{ worker_id: string }>`
       INSERT INTO workers (
-        user_id, name, phone, full_name, location,
-        bio, experience_years, qualifications,
+        user_id, name, phone, full_name, location, suburb, postcode,
+        bio, experience_years, experience_level, target_role, qualifications,
         drivers_license, vehicle_access, ndis_screening_number,
-        onboarding_status
+        support_settings, support_tasks, support_style, languages,
+        work_history, qualifications_json, training, checks, capability_stories,
+        resume_session_id, onboarding_status
       )
       VALUES (
         ${existingUser.user_id},
-        ${session.firstName ?? session.email!.split("@")[0]},
+        ${name},
         ${session.phone ?? ""},
-        ${[session.firstName, session.lastName].filter(Boolean).join(" ") || (session.firstName ?? session.email!.split("@")[0])},
-        ${[session.suburb, session.state].filter(Boolean).join(", ") || null},
+        ${fullName || name},
+        ${location || null},
+        ${session.suburb ?? null},
+        ${session.postcode ?? null},
         ${session.aiBio ?? session.aiSummary ?? null},
         ${session.experienceYears ?? null},
+        ${session.experienceLevel ?? null},
+        ${session.targetRole ?? null},
         ${session.qualifications.map((q) => q.name).join(", ") || null},
         ${session.driversLicence},
         ${session.ownVehicle},
         ${session.ndisScreeningNumber ?? null},
+        ${supportSettingsJson}::jsonb,
+        ${supportTasksJson}::jsonb,
+        ${session.supportStyle ?? null},
+        ${languagesJson}::jsonb,
+        ${workHistoryJson}::jsonb,
+        ${qualificationsJsonVal}::jsonb,
+        ${trainingJson}::jsonb,
+        ${checksJson}::jsonb,
+        ${capabilityStoriesJson}::jsonb,
+        ${sessionId},
         'compliance_required'
       )
       RETURNING worker_id
@@ -215,7 +291,7 @@ export async function convertSessionToProfile(
 
     if (!worker) throw APIError.internal("failed to create worker profile for existing user");
 
-    await buildWorkerExtras(session, worker.worker_id);
+    await buildWorkerExtras(session, worker.worker_id, availabilityDays, availabilityShifts);
 
     await db.exec`
       UPDATE resume_sessions SET converted_worker_id = ${worker.worker_id}, status = 'converted', updated_at = NOW()
@@ -223,6 +299,7 @@ export async function convertSessionToProfile(
     `;
 
     const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
+    await migrateResumePhoto(sessionId, worker.worker_id);
     await syncOnboardingStatus(worker.worker_id);
 
     await db.exec`
@@ -239,9 +316,6 @@ export async function convertSessionToProfile(
   }
 
   const verificationToken = randomUUID();
-  const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ");
-  const name = session.firstName ?? session.email!.split("@")[0];
-  const location = [session.suburb, session.state].filter(Boolean).join(", ");
 
   const user = await db.queryRow<{ user_id: string }>`
     INSERT INTO users (email, password_hash, role, is_verified, verification_token)
@@ -253,10 +327,12 @@ export async function convertSessionToProfile(
 
   const worker = await db.queryRow<{ worker_id: string }>`
     INSERT INTO workers (
-      user_id, name, phone, full_name, location,
-      bio, experience_years, qualifications,
+      user_id, name, phone, full_name, location, suburb, postcode,
+      bio, experience_years, experience_level, target_role, qualifications,
       drivers_license, vehicle_access, ndis_screening_number,
-      onboarding_status
+      support_settings, support_tasks, support_style, languages,
+      work_history, qualifications_json, training, checks, capability_stories,
+      resume_session_id, onboarding_status
     )
     VALUES (
       ${user.user_id},
@@ -264,12 +340,26 @@ export async function convertSessionToProfile(
       ${session.phone ?? ""},
       ${fullName || name},
       ${location || null},
+      ${session.suburb ?? null},
+      ${session.postcode ?? null},
       ${session.aiBio ?? session.aiSummary ?? null},
       ${session.experienceYears ?? null},
+      ${session.experienceLevel ?? null},
+      ${session.targetRole ?? null},
       ${session.qualifications.map((q) => q.name).join(", ") || null},
       ${session.driversLicence},
       ${session.ownVehicle},
       ${session.ndisScreeningNumber ?? null},
+      ${supportSettingsJson}::jsonb,
+      ${supportTasksJson}::jsonb,
+      ${session.supportStyle ?? null},
+      ${languagesJson}::jsonb,
+      ${workHistoryJson}::jsonb,
+      ${qualificationsJsonVal}::jsonb,
+      ${trainingJson}::jsonb,
+      ${checksJson}::jsonb,
+      ${capabilityStoriesJson}::jsonb,
+      ${sessionId},
       'compliance_required'
     )
     RETURNING worker_id
@@ -277,7 +367,7 @@ export async function convertSessionToProfile(
 
   if (!worker) throw APIError.internal("failed to create worker profile");
 
-  await buildWorkerExtras(session, worker.worker_id);
+  await buildWorkerExtras(session, worker.worker_id, availabilityDays, availabilityShifts);
 
   await db.exec`
     UPDATE resume_sessions
@@ -291,6 +381,7 @@ export async function convertSessionToProfile(
   `;
 
   const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
+  await migrateResumePhoto(sessionId, worker.worker_id);
   await syncOnboardingStatus(worker.worker_id);
 
   await db.exec`
@@ -307,7 +398,12 @@ export async function convertSessionToProfile(
   return { workerId: worker.worker_id, userId: user.user_id, alreadyExists: false };
 }
 
-async function buildWorkerExtras(session: ResumeSession, workerId: string): Promise<void> {
+async function buildWorkerExtras(
+  session: ResumeSession,
+  workerId: string,
+  availabilityDays: string[],
+  availabilityShifts: string[]
+): Promise<void> {
   for (const skill of session.supportTasks) {
     await db.exec`
       INSERT INTO worker_skills (worker_id, skill) VALUES (${workerId}, ${skill})
@@ -315,12 +411,10 @@ async function buildWorkerExtras(session: ResumeSession, workerId: string): Prom
     `;
   }
 
-  if (session.availability.length > 0) {
-    const days = session.availability.map((a) => a.day);
-    const shifts = [...new Set(session.availability.flatMap((a) => a.shifts))];
+  if (availabilityDays.length > 0) {
     await db.exec`
       INSERT INTO worker_availability (worker_id, available_days, preferred_shift_types, max_travel_distance_km)
-      VALUES (${workerId}, ${JSON.stringify(days)}, ${JSON.stringify(shifts)}, ${session.travelRadiusKm ?? 20})
+      VALUES (${workerId}, ${JSON.stringify(availabilityDays)}, ${JSON.stringify(availabilityShifts)}, ${session.travelRadiusKm ?? 20})
       ON CONFLICT (worker_id) DO NOTHING
     `;
   }

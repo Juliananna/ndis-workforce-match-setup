@@ -1,0 +1,18 @@
+ALTER TABLE workers
+  ADD COLUMN IF NOT EXISTS target_role TEXT,
+  ADD COLUMN IF NOT EXISTS experience_level TEXT CHECK (experience_level IN ('entry', 'intermediate', 'experienced', 'senior')),
+  ADD COLUMN IF NOT EXISTS suburb TEXT,
+  ADD COLUMN IF NOT EXISTS postcode TEXT,
+  ADD COLUMN IF NOT EXISTS support_settings JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS support_tasks JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS support_style TEXT,
+  ADD COLUMN IF NOT EXISTS languages JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS work_history JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS qualifications_json JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS training JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS checks JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS capability_stories JSONB NOT NULL DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS resume_session_id UUID REFERENCES resume_sessions(id) ON DELETE SET NULL;
+
+ALTER TABLE resume_sessions
+  ADD COLUMN IF NOT EXISTS photo_key TEXT;
