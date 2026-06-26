@@ -18,6 +18,9 @@ import {
   HelpCircle,
   ChevronDown,
   MessageSquare,
+  FileSpreadsheet,
+  Brain,
+  Download,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
@@ -143,6 +146,7 @@ export default function LandingPage() {
             {[
               { href: "#how-it-works", label: "How it works" },
               { href: "#whats-included", label: "What's included" },
+              { href: "#resume-builder", label: "Resume Builder" },
               { href: "#faq", label: "FAQ" },
             ].map(({ href, label }) => (
               <a
@@ -279,6 +283,13 @@ export default function LandingPage() {
                 style={{ borderColor: "var(--brand-border)", backgroundColor: "white", color: "var(--brand-ink)" }}
               >
                 Join as a Support Worker
+              </Link>
+              <Link
+                to="/resume-builder"
+                className="flex items-center justify-center gap-2 rounded-2xl border px-7 py-4 text-sm font-bold transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                style={{ borderColor: "rgba(151,100,199,0.4)", backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Build My Resume
               </Link>
             </div>
 
@@ -736,6 +747,110 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SECTION 6B: RESUME BUILDER ── */}
+      <section id="resume-builder" className="relative overflow-hidden py-28 md:py-36" style={{ backgroundColor: "var(--brand-canvas)" }}>
+        <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 55% 50% at 50% 100%, rgba(151,100,199,0.07) 0%, transparent 70%)" }} />
+        <div className="relative mx-auto max-w-5xl px-6">
+          <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
+
+            <Reveal delay={80}>
+              <div className="flex flex-col gap-4">
+                <div
+                  className="group flex items-start gap-5 rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: "var(--brand-purple-tint)" }}>
+                    <FileSpreadsheet className="h-5 w-5" style={{ color: "var(--brand-purple)" }} />
+                  </div>
+                  <div>
+                    <p className="mb-1 font-black text-sm" style={{ color: "var(--brand-ink)" }}>Answer a few questions</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>Walk through 8 quick steps — your experience, skills, availability, checks, and qualifications. No blank page staring back at you.</p>
+                  </div>
+                </div>
+
+                <div
+                  className="group flex items-start gap-5 rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: "var(--brand-cyan-tint)" }}>
+                    <Brain className="h-5 w-5" style={{ color: "var(--brand-cyan-deep)" }} />
+                  </div>
+                  <div>
+                    <p className="mb-1 font-black text-sm" style={{ color: "var(--brand-ink)" }}>AI writes your resume content</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>Get a professional summary, key achievement bullet points, and a bio — written in NDIS-aligned Australian English. No writing experience needed.</p>
+                  </div>
+                </div>
+
+                <div
+                  className="group flex items-start gap-5 rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                  style={{ borderColor: "var(--brand-border)", backgroundColor: "white" }}
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: "#D1FAE5" }}>
+                    <Download className="h-5 w-5" style={{ color: "#10B981" }} />
+                  </div>
+                  <div>
+                    <p className="mb-1 font-black text-sm" style={{ color: "var(--brand-ink)" }}>Download your PDF — then go further</p>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>Download your resume as a PDF instantly. Or convert it into a full KizaziHire profile so providers can find you directly — no re-entering anything.</p>
+                  </div>
+                </div>
+
+                <div
+                  className="overflow-hidden rounded-2xl p-px"
+                  style={{ background: "var(--brand-purple-grad)" }}
+                >
+                  <div className="rounded-[calc(1rem-1px)] px-6 py-5" style={{ backgroundColor: "var(--brand-purple-tint)" }}>
+                    <p className="text-sm font-black" style={{ color: "var(--brand-ink)" }}>Free to use. No account required to start.</p>
+                    <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--brand-muted)" }}>Start building in seconds. Enter your email only when you're ready to download or create your profile.</p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal>
+              <div>
+                <span className="mb-4 inline-block rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-widest" style={{ backgroundColor: "var(--brand-purple-tint)", color: "var(--brand-purple)" }}>
+                  Free Resume Builder
+                </span>
+                <h2 className="mb-5 text-3xl font-black leading-tight md:text-[2.3rem]" style={{ color: "var(--brand-ink)" }}>
+                  Build an NDIS-ready resume in minutes
+                </h2>
+                <p className="mb-6 text-base leading-relaxed" style={{ color: "var(--brand-muted)" }}>
+                  Not sure how to write a support worker resume? Our free builder walks you through it — step by step — and uses AI to write your professional content for you.
+                </p>
+
+                <div className="mb-8 space-y-3">
+                  {[
+                    "Guided 8-step questionnaire built for NDIS roles",
+                    "AI-generated summary, bullet points & bio",
+                    "Include your checks, qualifications & availability",
+                    "Resume strength score with improvement tips",
+                    "Download as PDF — or convert to a KizaziHire profile",
+                    "Your data pre-fills your worker profile automatically",
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "var(--brand-purple)" }} />
+                      <span className="text-sm leading-relaxed" style={{ color: "var(--brand-ink)" }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link
+                    to="/resume-builder"
+                    className="group inline-flex items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+                    style={{ background: "var(--brand-purple-grad)", boxShadow: "0 6px 20px rgba(151,100,199,0.28)" }}
+                  >
+                    Build My Resume Free <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                  <span className="text-xs" style={{ color: "var(--brand-muted)" }}>No account needed · Takes about 10 minutes</span>
+                </div>
+              </div>
+            </Reveal>
+
+          </div>
+        </div>
+      </section>
+
       {/* ── SECTION 7: FAQ ── */}
       <section id="faq" className="relative overflow-hidden py-28 md:py-36" style={{ backgroundColor: "var(--brand-canvas)" }}>
         <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(ellipse 60% 40% at 50% 100%, rgba(58,146,223,0.06) 0%, transparent 70%)" }} />
@@ -825,6 +940,13 @@ export default function LandingPage() {
               >
                 Join as a Support Worker
               </Link>
+              <Link
+                to="/resume-builder"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border px-8 py-4 text-sm font-black text-white backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 sm:w-auto"
+                style={{ borderColor: "rgba(255,255,255,0.35)", backgroundColor: "rgba(255,255,255,0.12)" }}
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Free Resume Builder
+              </Link>
             </div>
           </div>
         </Reveal>
@@ -840,6 +962,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6 text-sm" style={{ color: "var(--brand-muted)" }}>
             <Link to="/privacy-policy" className="transition-colors hover:text-[var(--brand-ink)]">Privacy Policy</Link>
             <Link to="/contact" className="transition-colors hover:text-[var(--brand-ink)]">Contact</Link>
+            <Link to="/resume-builder" className="transition-colors hover:text-[var(--brand-ink)]">Resume Builder</Link>
             <a href="#faq" className="transition-colors hover:text-[var(--brand-ink)]">FAQ</a>
           </div>
           <p className="text-xs" style={{ color: "var(--brand-muted)" }}>
