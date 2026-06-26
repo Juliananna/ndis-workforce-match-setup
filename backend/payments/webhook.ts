@@ -84,6 +84,23 @@ export const stripeWebhook = api.raw(
         }
       }
 
+      const resumeSessionId = session.metadata?.resume_session_id;
+      const purchaseType = session.metadata?.purchase_type;
+
+      if (resumeSessionId && purchaseType === "resume_premium") {
+        await db.exec`
+          UPDATE resume_premium_purchases
+          SET status = 'paid',
+              stripe_payment_intent = ${session.payment_intent as string | null},
+              paid_at = NOW()
+          WHERE stripe_session_id = ${session.id}
+        `;
+        await db.exec`
+          UPDATE resume_sessions SET is_premium = TRUE, updated_at = NOW()
+          WHERE id = ${resumeSessionId}
+        `;
+      }
+
       const employerId = session.metadata?.employer_id;
       const employerPlan = session.metadata?.employer_plan as "monthly" | "biannual" | "annual" | undefined;
       const months = session.metadata?.months ? parseInt(session.metadata.months, 10) : null;

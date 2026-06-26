@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Download, ArrowLeft, Sparkles, RefreshCw, Mail, CheckCircle } from "lucide-react";
+import { Download, ArrowLeft, Sparkles, RefreshCw, Mail, CheckCircle, Crown } from "lucide-react";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
+import type { ResumeTheme } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
 import { EmailConsentForm } from "../components/resume/EmailConsentForm";
 import { DocumentUploadSection } from "../components/resume/DocumentUploadSection";
 import { RefereeSection } from "../components/resume/RefereeSection";
 import { GetHiredFasterModal } from "../components/resume/GetHiredFasterModal";
 import { ResumePhotoUpload } from "../components/resume/ResumePhotoUpload";
+import { ResumeThemePicker } from "../components/resume/ResumeThemePicker";
 import type { SessionData } from "../components/resume/types";
 import type { RefereeRecord } from "~backend/resume/types";
 
@@ -26,6 +28,7 @@ const defaultSession = (): SessionData => ({
 export default function ResumeBuilderPreviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   const [session, setSession] = useState<SessionData>(defaultSession());
@@ -40,15 +43,16 @@ export default function ResumeBuilderPreviewPage() {
   const [profileJustCreated, setProfileJustCreated] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
+  const [isPremium, setIsPremium] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<ResumeTheme>("classic_free");
+  const [premiumLoading, setPremiumLoading] = useState(true);
+
   const loadSession = async () => {
     if (!id) return;
     try {
       const { session: s, referees: r } = await backend.resume.getSession({ id });
       setSession(s as SessionData);
       setReferees(r as RefereeRecord[]);
-      if ((s as any).photoKey) {
-        setPhotoUrl(null);
-      }
     } catch {
       toast({ title: "Session not found", variant: "destructive" });
       navigate("/resume-builder");
@@ -57,7 +61,35 @@ export default function ResumeBuilderPreviewPage() {
     }
   };
 
-  useEffect(() => { loadSession(); }, [id]);
+  const loadPremium = async () => {
+    if (!id) return;
+    try {
+      const { isPremium: p, selectedTheme: t } = await backend.resume.getResumePremiumStatus({ id });
+      setIsPremium(p);
+      setSelectedTheme((t as ResumeTheme) || "classic_free");
+    } catch {
+    } finally {
+      setPremiumLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSession();
+    loadPremium();
+  }, [id]);
+
+  useEffect(() => {
+    const premiumParam = searchParams.get("premium");
+    if (premiumParam === "success") {
+      toast({ title: "Premium unlocked! 🎉", description: "You now have access to all resume designs and your PDF will have no KizaziHire branding." });
+      setIsPremium(true);
+      setSearchParams({}, { replace: true });
+      loadPremium();
+    } else if (premiumParam === "cancelled") {
+      toast({ title: "Upgrade cancelled", description: "You can upgrade anytime from the design picker." });
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const handleScore = async () => {
     if (!id) return;
@@ -185,6 +217,11 @@ export default function ResumeBuilderPreviewPage() {
             </button>
             <img src="/kizazi-hire-logo.png" alt="KizaziHire" className="h-7 w-auto" />
             <span className="text-sm font-medium text-slate-500 hidden sm:block">Resume Preview</span>
+            {isPremium && (
+              <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold">
+                <Crown size={11} /> Premium
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -271,7 +308,12 @@ export default function ResumeBuilderPreviewPage() {
             </div>
           )}
 
-          <ResumePreviewCard session={session} photoUrl={photoUrl} />
+          <ResumePreviewCard
+            session={session}
+            photoUrl={photoUrl}
+            theme={selectedTheme}
+            isPremium={isPremium}
+          />
 
           {hasEmail && (profileJustCreated || hasProfile) && (
             <div className="bg-gradient-to-r from-teal-600 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
@@ -333,6 +375,22 @@ export default function ResumeBuilderPreviewPage() {
             </div>
           )}
 
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            {premiumLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="h-5 w-5 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <ResumeThemePicker
+                sessionId={id!}
+                isPremium={isPremium}
+                selectedTheme={selectedTheme}
+                onThemeChange={setSelectedTheme}
+                onPremiumUnlocked={() => { setIsPremium(true); loadPremium(); }}
+              />
+            )}
+          </div>
+
           {hasEmail && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
               <div className="flex items-center justify-between mb-3">
@@ -356,25 +414,13 @@ export default function ResumeBuilderPreviewPage() {
             </div>
           )}
 
-          {hasEmail && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-              <ResumePhotoUpload
-                sessionId={id!}
-                currentPhotoUrl={photoUrl}
-                onPhotoUploaded={(url) => setPhotoUrl(url)}
-              />
-            </div>
-          )}
-
-          {!hasEmail && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-              <ResumePhotoUpload
-                sessionId={id!}
-                currentPhotoUrl={photoUrl}
-                onPhotoUploaded={(url) => setPhotoUrl(url)}
-              />
-            </div>
-          )}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <ResumePhotoUpload
+              sessionId={id!}
+              currentPhotoUrl={photoUrl}
+              onPhotoUploaded={(url) => setPhotoUrl(url)}
+            />
+          </div>
 
           {hasEmail && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
