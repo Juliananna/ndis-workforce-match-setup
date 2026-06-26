@@ -1629,11 +1629,20 @@ import {
 import { convertToProfile as api_resume_convert_to_profile_convertToProfile } from "~backend/resume/convert_to_profile";
 import { emailCapture as api_resume_email_capture_emailCapture } from "~backend/resume/email_capture";
 import {
+    createResumePremiumCheckout as api_resume_premium_createResumePremiumCheckout,
+    getResumePremiumStatus as api_resume_premium_getResumePremiumStatus,
+    saveResumeTheme as api_resume_premium_saveResumeTheme
+} from "~backend/resume/premium";
+import {
     addReferee as api_resume_referees_addReferee,
     updateReferee as api_resume_referees_updateReferee
 } from "~backend/resume/referees";
 import { createSession as api_resume_session_create_createSession } from "~backend/resume/session_create";
 import { getSession as api_resume_session_get_getSession } from "~backend/resume/session_get";
+import {
+    confirmSessionPhoto as api_resume_session_photo_confirmSessionPhoto,
+    getSessionPhotoUploadUrl as api_resume_session_photo_getSessionPhotoUploadUrl
+} from "~backend/resume/session_photo";
 import { scoreSession as api_resume_session_score_scoreSession } from "~backend/resume/session_score";
 import { updateSession as api_resume_session_update_updateSession } from "~backend/resume/session_update";
 import { getWorkerResumeSession as api_resume_worker_session_getWorkerResumeSession } from "~backend/resume/worker_session";
@@ -1646,7 +1655,9 @@ export namespace resume {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.addReferee = this.addReferee.bind(this)
+            this.confirmSessionPhoto = this.confirmSessionPhoto.bind(this)
             this.convertToProfile = this.convertToProfile.bind(this)
+            this.createResumePremiumCheckout = this.createResumePremiumCheckout.bind(this)
             this.createSession = this.createSession.bind(this)
             this.emailCapture = this.emailCapture.bind(this)
             this.generateBio = this.generateBio.bind(this)
@@ -1656,9 +1667,12 @@ export namespace resume {
             this.generateSearchCard = this.generateSearchCard.bind(this)
             this.generateSummary = this.generateSummary.bind(this)
             this.getLeadDetail = this.getLeadDetail.bind(this)
+            this.getResumePremiumStatus = this.getResumePremiumStatus.bind(this)
             this.getSession = this.getSession.bind(this)
+            this.getSessionPhotoUploadUrl = this.getSessionPhotoUploadUrl.bind(this)
             this.getWorkerResumeSession = this.getWorkerResumeSession.bind(this)
             this.listLeads = this.listLeads.bind(this)
+            this.saveResumeTheme = this.saveResumeTheme.bind(this)
             this.scoreSession = this.scoreSession.bind(this)
             this.updateReferee = this.updateReferee.bind(this)
             this.updateSession = this.updateSession.bind(this)
@@ -1686,10 +1700,33 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_addReferee>
         }
 
+        public async confirmSessionPhoto(params: RequestType<typeof api_resume_session_photo_confirmSessionPhoto>): Promise<ResponseType<typeof api_resume_session_photo_confirmSessionPhoto>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                photoKey: params.photoKey,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/photo-confirm`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_photo_confirmSessionPhoto>
+        }
+
         public async convertToProfile(params: { id: string }): Promise<ResponseType<typeof api_resume_convert_to_profile_convertToProfile>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/convert-to-profile`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_convert_to_profile_convertToProfile>
+        }
+
+        public async createResumePremiumCheckout(params: RequestType<typeof api_resume_premium_createResumePremiumCheckout>): Promise<ResponseType<typeof api_resume_premium_createResumePremiumCheckout>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                cancelUrl:  params.cancelUrl,
+                successUrl: params.successUrl,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/premium/checkout`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_premium_createResumePremiumCheckout>
         }
 
         /**
@@ -1781,6 +1818,12 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_getLeadDetail>
         }
 
+        public async getResumePremiumStatus(params: { id: string }): Promise<ResponseType<typeof api_resume_premium_getResumePremiumStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/premium`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_premium_getResumePremiumStatus>
+        }
+
         /**
          * Retrieves a resume builder session with all associated data.
          */
@@ -1788,6 +1831,17 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_get_getSession>
+        }
+
+        public async getSessionPhotoUploadUrl(params: RequestType<typeof api_resume_session_photo_getSessionPhotoUploadUrl>): Promise<ResponseType<typeof api_resume_session_photo_getSessionPhotoUploadUrl>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                fileName: params.fileName,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/photo-upload-url`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_photo_getSessionPhotoUploadUrl>
         }
 
         /**
@@ -1813,6 +1867,17 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_listLeads>
+        }
+
+        public async saveResumeTheme(params: RequestType<typeof api_resume_premium_saveResumeTheme>): Promise<ResponseType<typeof api_resume_premium_saveResumeTheme>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                theme: params.theme,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/theme`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_premium_saveResumeTheme>
         }
 
         /**
@@ -2682,9 +2747,6 @@ export namespace workers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_completion_getWorkerCompletion>
         }
 
-        /**
-         * Returns the authenticated worker's full profile.
-         */
         public async getWorkerProfile(): Promise<ResponseType<typeof api_workers_profile_get_getWorkerProfile>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/profile`, {method: "GET", body: undefined})
@@ -2787,9 +2849,6 @@ export namespace workers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_documents_updateDocumentExpiry>
         }
 
-        /**
-         * Updates the authenticated worker's profile details.
-         */
         public async updateWorkerProfile(params: RequestType<typeof api_workers_profile_update_updateWorkerProfile>): Promise<ResponseType<typeof api_workers_profile_update_updateWorkerProfile>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/profile`, {method: "PUT", body: JSON.stringify(params)})
