@@ -58,7 +58,7 @@ export default function AdminResumeLeadsPage() {
     }
   };
 
-  useEffect(() => { loadLeads(); }, [statusFilter]);
+  useEffect(() => { if (api) loadLeads(); }, [api, statusFilter]);
 
   const openDetail = async (lead: LeadSummary) => {
     if (!api) return;
