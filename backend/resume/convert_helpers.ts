@@ -6,6 +6,7 @@ import { sendEmail } from "../emailer/sender";
 import { workerDocumentsBucket } from "../workers/storage";
 import { profilePhotosBucket } from "../workers/storage";
 import { syncOnboardingStatus } from "../workers/compliance_status";
+import { upsertContact } from "../ghl/client";
 import type { ResumeSession } from "./types";
 
 const appBaseUrl = secret("AppBaseUrl");
@@ -192,6 +193,23 @@ async function migrateResumePhoto(sessionId: string, workerId: string): Promise<
   }
 }
 
+async function syncResumeLeadToGHL(email: string, name: string): Promise<void> {
+  try {
+    const nameParts = name.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? name;
+    const lastName = nameParts.slice(1).join(" ") || undefined;
+    await upsertContact({
+      email,
+      firstName,
+      lastName,
+      name,
+      tags: ["resume-lead", "resume-converted", "worker"],
+      source: "resume-builder",
+    });
+  } catch {
+  }
+}
+
 export async function convertSessionToProfile(
   sessionId: string,
   session: ResumeSession
@@ -246,6 +264,7 @@ export async function convertSessionToProfile(
       `;
       await migrateResumePhoto(sessionId, existingWorker.worker_id);
       await syncOnboardingStatus(existingWorker.worker_id);
+      await syncResumeLeadToGHL(session.email!, fullName || name);
       return { workerId: existingWorker.worker_id, userId: existingUser.user_id, alreadyExists: true };
     }
 
@@ -301,6 +320,7 @@ export async function convertSessionToProfile(
     const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
     await migrateResumePhoto(sessionId, worker.worker_id);
     await syncOnboardingStatus(worker.worker_id);
+    await syncResumeLeadToGHL(session.email!, fullName || name);
 
     await db.exec`
       INSERT INTO resume_audit_log (session_id, event_type, event_data)
@@ -383,6 +403,7 @@ export async function convertSessionToProfile(
   const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
   await migrateResumePhoto(sessionId, worker.worker_id);
   await syncOnboardingStatus(worker.worker_id);
+  await syncResumeLeadToGHL(session.email!, fullName || name);
 
   await db.exec`
     INSERT INTO resume_audit_log (session_id, event_type, event_data)

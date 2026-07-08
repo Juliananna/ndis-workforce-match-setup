@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
 import { convertSessionToProfile } from "./convert_helpers";
+import { upsertContact } from "../ghl/client";
 import type { ResumeSession } from "./types";
 
 interface EmailCaptureRequest {
@@ -64,6 +65,18 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
 
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
     const session = rowToSession(row!);
+
+    try {
+      const nameParts = req.email.split("@")[0].split(/[.\-_]/);
+      const firstName = nameParts[0] ?? req.email;
+      await upsertContact({
+        email: req.email,
+        firstName,
+        tags: ["resume-lead", "worker"],
+        source: "resume-builder",
+      });
+    } catch {
+    }
 
     let profileCreated = false;
     let workerId: string | null = null;

@@ -28,6 +28,19 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
         AND u.role IN ('WORKER', 'EMPLOYER')
     `;
 
+    const resumeLeads = await db.queryAll<{
+      email: string;
+      first_name: string | null;
+      last_name: string | null;
+      converted_worker_id: string | null;
+    }>`
+      SELECT email, first_name, last_name, converted_worker_id
+      FROM resume_sessions
+      WHERE email IS NOT NULL
+        AND status != 'abandoned'
+      ORDER BY created_at DESC
+    `;
+
     let synced = 0;
     let failed = 0;
 
@@ -43,6 +56,28 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
           lastName,
           name: user.name,
           tags: [user.role.toLowerCase(), "ndis-platform", "verified"],
+        });
+        synced++;
+      } catch {
+        failed++;
+      }
+    }
+
+    for (const lead of resumeLeads) {
+      try {
+        const firstName = lead.first_name ?? lead.email!.split("@")[0];
+        const lastName = lead.last_name ?? undefined;
+        const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || firstName;
+        const tags = ["resume-lead", "worker"];
+        if (lead.converted_worker_id) tags.push("resume-converted");
+
+        await upsertContact({
+          email: lead.email!,
+          firstName,
+          lastName,
+          name,
+          tags,
+          source: "resume-builder",
         });
         synced++;
       } catch {
