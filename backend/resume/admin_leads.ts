@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import { Query } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
+import { assertAdminOrCompliance } from "../admin/guard";
 import { rowToSession } from "./session_helpers";
 import type { ResumeSession, DocumentRecord, RefereeRecord } from "./types";
 
@@ -28,9 +29,7 @@ export const listLeads = api<ListLeadsParams, ListLeadsResponse>(
   { expose: true, auth: true, method: "GET", path: "/admin/resume-leads" },
   async (params) => {
     const auth = getAuthData()!;
-    if (auth.role !== "ADMIN" && auth.role !== "SYSADMIN") {
-      throw APIError.permissionDenied("admin access required");
-    }
+    await assertAdminOrCompliance(auth.userID);
 
     const limit = params.limit ?? 50;
     const offset = params.offset ?? 0;
@@ -84,9 +83,7 @@ export const getLeadDetail = api<GetLeadDetailParams, GetLeadDetailResponse>(
   { expose: true, auth: true, method: "GET", path: "/admin/resume-leads/:id" },
   async ({ id }) => {
     const auth = getAuthData()!;
-    if (auth.role !== "ADMIN" && auth.role !== "SYSADMIN") {
-      throw APIError.permissionDenied("admin access required");
-    }
+    await assertAdminOrCompliance(auth.userID);
 
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
     if (!row) throw APIError.notFound("lead not found");
@@ -143,9 +140,7 @@ export const verifyResumeDocument = api<VerifyDocumentRequest, VerifyDocumentRes
   { expose: true, auth: true, method: "PATCH", path: "/admin/resume-leads/:id/documents/:documentId/verify" },
   async (req) => {
     const auth = getAuthData()!;
-    if (auth.role !== "ADMIN" && auth.role !== "SYSADMIN") {
-      throw APIError.permissionDenied("admin access required");
-    }
+    await assertAdminOrCompliance(auth.userID);
 
     await db.exec`
       UPDATE resume_session_documents
