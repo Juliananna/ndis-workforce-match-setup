@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import {
   Search, Users, FileText, ShieldCheck, Clock, ArrowRight,
   CheckCircle, XCircle, RefreshCw, Download, Star
@@ -32,6 +32,7 @@ export default function AdminResumeLeadsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const api = useAuthedBackend();
 
   const [leads, setLeads] = useState<LeadSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -43,9 +44,10 @@ export default function AdminResumeLeadsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const loadLeads = async () => {
+    if (!api) return;
     setLoading(true);
     try {
-      const result = await backend.resume.listLeads({ status: statusFilter || undefined });
+      const result = await api.resume.listLeads({ status: statusFilter || undefined });
       setLeads(result.leads as LeadSummary[]);
       setTotal(result.total);
     } catch (err) {
@@ -59,10 +61,11 @@ export default function AdminResumeLeadsPage() {
   useEffect(() => { loadLeads(); }, [statusFilter]);
 
   const openDetail = async (lead: LeadSummary) => {
+    if (!api) return;
     setSelected(lead);
     setLoadingDetail(true);
     try {
-      const result = await backend.resume.getLeadDetail({ id: lead.session.id });
+      const result = await api.resume.getLeadDetail({ id: lead.session.id });
       setDetail(result);
     } catch (err) {
       console.error(err);
@@ -72,8 +75,9 @@ export default function AdminResumeLeadsPage() {
   };
 
   const verifyDocument = async (sessionId: string, documentId: string, verified: boolean) => {
+    if (!api) return;
     try {
-      await backend.resume.verifyResumeDocument({ id: sessionId, documentId, verified });
+      await api.resume.verifyResumeDocument({ id: sessionId, documentId, verified });
       toast({ title: verified ? "Document verified" : "Document rejected" });
       if (selected) openDetail(selected);
     } catch (err) {
