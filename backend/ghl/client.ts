@@ -15,6 +15,7 @@ export interface GHLContactPayload {
   companyName?: string;
   tags?: string[];
   source?: string;
+  website?: string;
   customFields?: { id: string; value: string }[];
 }
 

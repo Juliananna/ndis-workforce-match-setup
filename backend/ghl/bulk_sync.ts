@@ -29,12 +29,13 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
     `;
 
     const resumeLeads = await db.queryAll<{
+      id: string;
       email: string;
       first_name: string | null;
       last_name: string | null;
       converted_worker_id: string | null;
     }>`
-      SELECT email, first_name, last_name, converted_worker_id
+      SELECT id, email, first_name, last_name, converted_worker_id
       FROM resume_sessions
       WHERE email IS NOT NULL
         AND status != 'abandoned'
@@ -69,7 +70,12 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
         const lastName = lead.last_name ?? undefined;
         const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || firstName;
         const tags = ["resume-lead", "worker"];
-        if (lead.converted_worker_id) tags.push("resume-converted");
+        if (lead.converted_worker_id) {
+          tags.push("resume-converted");
+        } else {
+          tags.push("profile-not-created");
+        }
+        const resumeUrl = `https://kizazihire.com.au/resume-builder/preview/${lead.id}`;
 
         await upsertContact({
           email: lead.email!,
@@ -78,6 +84,7 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
           name,
           tags,
           source: "resume-builder",
+          website: resumeUrl,
         });
         synced++;
       } catch {

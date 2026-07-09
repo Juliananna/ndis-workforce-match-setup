@@ -66,18 +66,6 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
     const session = rowToSession(row!);
 
-    try {
-      const nameParts = req.email.split("@")[0].split(/[.\-_]/);
-      const firstName = nameParts[0] ?? req.email;
-      await upsertContact({
-        email: req.email,
-        firstName,
-        tags: ["resume-lead", "worker"],
-        source: "resume-builder",
-      });
-    } catch {
-    }
-
     let profileCreated = false;
     let workerId: string | null = null;
 
@@ -86,12 +74,34 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
         const result = await convertSessionToProfile(req.id, session);
         profileCreated = !result.alreadyExists;
         workerId = result.workerId;
-
-        const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
-        return { session: rowToSession(updatedRow!), profileCreated, workerId };
       } catch (err) {
         console.error("[email_capture] profile conversion failed for session", req.id, err);
       }
+    }
+
+    try {
+      const nameParts = req.email.split("@")[0].split(/[.\-_]/);
+      const firstName = nameParts[0] ?? req.email;
+      const tags = ["resume-lead", "worker"];
+      if (profileCreated || (req.consentProfileCreation && workerId)) {
+        tags.push("resume-converted");
+      } else {
+        tags.push("profile-not-created");
+      }
+      const resumeUrl = `https://kizazihire.com.au/resume-builder/preview/${req.id}`;
+      await upsertContact({
+        email: req.email,
+        firstName,
+        tags,
+        source: "resume-builder",
+        website: resumeUrl,
+      });
+    } catch {
+    }
+
+    if (profileCreated || workerId) {
+      const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
+      return { session: rowToSession(updatedRow!), profileCreated, workerId };
     }
 
     return { session, profileCreated, workerId };
