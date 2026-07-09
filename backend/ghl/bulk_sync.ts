@@ -9,11 +9,7 @@ export interface BulkSyncResponse {
   failed: number;
 }
 
-export const bulkSyncToGHL = api<void, BulkSyncResponse>(
-  { expose: true, auth: true, method: "POST", path: "/ghl/bulk-sync" },
-  async () => {
-    const auth = getAuthData()!;
-    await assertSysAdmin(auth.userID);
+export async function runBulkSync(): Promise<BulkSyncResponse> {
 
     const users = await db.queryAll<{ email: string; role: string; name: string }>`
       SELECT
@@ -92,6 +88,19 @@ export const bulkSyncToGHL = api<void, BulkSyncResponse>(
       }
     }
 
-    return { synced, failed };
+  return { synced, failed };
+}
+
+export const bulkSyncToGHL = api<void, BulkSyncResponse>(
+  { expose: true, auth: true, method: "POST", path: "/ghl/bulk-sync" },
+  async () => {
+    const auth = getAuthData()!;
+    await assertSysAdmin(auth.userID);
+    return runBulkSync();
   }
+);
+
+export const cronBulkSyncToGHL = api<void, BulkSyncResponse>(
+  { expose: false, method: "POST", path: "/ghl/cron-bulk-sync" },
+  async () => runBulkSync()
 );
