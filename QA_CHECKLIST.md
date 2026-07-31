@@ -39,7 +39,7 @@
 - [ ] Confirm status shows "Expired" (not "Missing")
 - [ ] Confirm all uploads show a "View" link that opens the document (signed URL)
 - [ ] Attempt to upload a `.docx` file — confirm error "file must be PDF, JPG, PNG, or WebP"
-- [ ] Delete a document and confirm it disappears from the list
+- [ ] Delete a document and confirm it disappears from the list .
 
 #### 6. Intro Video
 - [ ] Go to My Profile → Video Introduction section
