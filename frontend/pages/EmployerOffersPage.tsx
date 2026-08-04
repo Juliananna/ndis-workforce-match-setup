@@ -12,15 +12,20 @@ export default function EmployerOffersPage() {
   const api = useAuthedBackend();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OfferStatus | "all">("all");
   const [view, setView] = useState<View>("list");
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
+    setError(null);
     try {
       const res = await api.offers.listOffers({});
       setOffers(res.offers);
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to load offers");
     } finally {
       setLoading(false);
     }
@@ -49,6 +54,20 @@ export default function EmployerOffersPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+        <p className="text-sm font-semibold text-destructive">{error}</p>
+        <button
+          onClick={() => { setLoading(true); load(); }}
+          className="text-xs text-muted-foreground underline hover:text-foreground"
+        >
+          Try again
+        </button>
       </div>
     );
   }
