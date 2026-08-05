@@ -30,7 +30,7 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
   const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rateType, setRateType] = useState<"hourlyRate" | "casualLoadingRate" | "saturdayRate" | "sundayRate" | "publicHolidayRate" | "eveningRate">("hourlyRate");
+  const [rateType, setRateType] = useState<"ordinaryHourlyRate" | "saturdayRate" | "sundayRate" | "publicHolidayRate" | "afternoonShiftRate" | "nightShiftRate">("ordinaryHourlyRate");
 
   useEffect(() => {
     if (!open || rates.length > 0) return;
@@ -45,12 +45,12 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
   }, [open, rates.length]);
 
   const RATE_TYPE_OPTIONS = [
-    { key: "hourlyRate" as const,        label: "Ordinary" },
-    { key: "casualLoadingRate" as const, label: "Casual" },
-    { key: "eveningRate" as const,       label: "Evening" },
-    { key: "saturdayRate" as const,      label: "Saturday" },
-    { key: "sundayRate" as const,        label: "Sunday" },
-    { key: "publicHolidayRate" as const, label: "Public Holiday" },
+    { key: "ordinaryHourlyRate" as const, label: "Ordinary" },
+    { key: "afternoonShiftRate" as const, label: "Afternoon Shift" },
+    { key: "nightShiftRate" as const,     label: "Night Shift" },
+    { key: "saturdayRate" as const,       label: "Saturday" },
+    { key: "sundayRate" as const,         label: "Sunday" },
+    { key: "publicHolidayRate" as const,  label: "Public Holiday" },
   ];
 
   return (
@@ -108,7 +108,7 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Badge variant="outline" className="text-[10px] font-mono shrink-0">L{r.level}.{r.payPoint}</Badge>
-                        <span className="text-xs text-muted-foreground truncate">{r.classification}</span>
+                        <span className="text-xs text-muted-foreground truncate">{r.classificationName}</span>
                       </div>
                       <span className="text-xs font-bold text-primary shrink-0 ml-2 group-hover:underline">${val.toFixed(2)}</span>
                     </button>

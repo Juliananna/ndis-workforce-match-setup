@@ -22,12 +22,12 @@ import type { PublicSchadRate } from "~backend/offers/schads_rates";
 import backend from "~backend/client";
 
 const SCHADS_RATE_TYPES = [
-  { key: "hourlyRate" as const,        label: "Ordinary" },
-  { key: "casualLoadingRate" as const, label: "Casual" },
-  { key: "eveningRate" as const,       label: "Evening" },
-  { key: "saturdayRate" as const,      label: "Saturday" },
-  { key: "sundayRate" as const,        label: "Sunday" },
-  { key: "publicHolidayRate" as const, label: "Public Holiday" },
+  { key: "ordinaryHourlyRate" as const, label: "Ordinary" },
+  { key: "afternoonShiftRate" as const, label: "Afternoon Shift" },
+  { key: "nightShiftRate" as const,     label: "Night Shift" },
+  { key: "saturdayRate" as const,       label: "Saturday" },
+  { key: "sundayRate" as const,         label: "Sunday" },
+  { key: "publicHolidayRate" as const,  label: "Public Holiday" },
 ];
 
 function dateStrOrNull(v: unknown): string | null {
@@ -41,7 +41,7 @@ function SchadRateReference({ onSelect }: { onSelect: (rate: number) => void }) 
   const [rates, setRates] = useState<PublicSchadRate[]>([]);
   const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [rateType, setRateType] = useState<typeof SCHADS_RATE_TYPES[number]["key"]>("hourlyRate");
+  const [rateType, setRateType] = useState<typeof SCHADS_RATE_TYPES[number]["key"]>("ordinaryHourlyRate");
 
   useEffect(() => {
     if (!open || rates.length > 0) return;
@@ -105,7 +105,7 @@ function SchadRateReference({ onSelect }: { onSelect: (rate: number) => void }) 
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Badge variant="outline" className="text-[10px] font-mono shrink-0 border-blue-300 text-blue-700">L{r.level}.{r.payPoint}</Badge>
-                        <span className="text-[11px] text-gray-600 truncate">{r.classification}</span>
+                        <span className="text-[11px] text-gray-600 truncate">{r.classificationName}</span>
                       </div>
                       <span className="text-xs font-bold text-blue-700 shrink-0 ml-2">${val.toFixed(2)}</span>
                     </button>
