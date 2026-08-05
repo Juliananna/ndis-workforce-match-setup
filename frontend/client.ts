@@ -1483,6 +1483,7 @@ import { getOffer as api_offers_get_getOffer } from "~backend/offers/get";
 import { listOffers as api_offers_list_listOffers } from "~backend/offers/list";
 import { employerNegotiate as api_offers_negotiate_employerNegotiate } from "~backend/offers/negotiate";
 import { workerRespond as api_offers_respond_workerRespond } from "~backend/offers/respond";
+import { markOfferSeen as api_offers_seen_markOfferSeen } from "~backend/offers/seen";
 
 export namespace offers {
 
@@ -1495,6 +1496,7 @@ export namespace offers {
             this.employerNegotiate = this.employerNegotiate.bind(this)
             this.getOffer = this.getOffer.bind(this)
             this.listOffers = this.listOffers.bind(this)
+            this.markOfferSeen = this.markOfferSeen.bind(this)
             this.workerRespond = this.workerRespond.bind(this)
         }
 
@@ -1532,6 +1534,12 @@ export namespace offers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_list_listOffers>
+        }
+
+        public async markOfferSeen(params: { offerId: string }): Promise<ResponseType<typeof api_offers_seen_markOfferSeen>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/seen`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_seen_markOfferSeen>
         }
 
         public async workerRespond(params: RequestType<typeof api_offers_respond_workerRespond>): Promise<ResponseType<typeof api_offers_respond_workerRespond>> {
