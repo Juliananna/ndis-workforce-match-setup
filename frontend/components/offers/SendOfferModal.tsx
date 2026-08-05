@@ -54,11 +54,11 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
   ];
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5">
+    <div className="rounded-lg border border-blue-200 bg-blue-50/60">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-primary"
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700"
       >
         <span className="flex items-center gap-1.5">
           <Info className="h-3.5 w-3.5" />
@@ -68,17 +68,17 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
       </button>
 
       {open && (
-        <div className="px-3 pb-3 space-y-3 border-t border-primary/10">
+        <div className="px-3 pb-3 space-y-3 border-t border-blue-200">
           <div className="flex flex-wrap gap-1.5 pt-2">
             {RATE_TYPE_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
                 onClick={() => setRateType(opt.key)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
                   rateType === opt.key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-muted-foreground hover:border-primary/40"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "border-blue-300 text-blue-600 hover:bg-blue-100"
                 }`}
               >
                 {opt.label}
@@ -87,13 +87,13 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
           </div>
 
           {loading ? (
-            <p className="text-xs text-muted-foreground py-2 text-center">Loading rates…</p>
+            <p className="text-xs text-blue-500 py-2 text-center">Loading rates…</p>
           ) : rates.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2 text-center italic">No SCHADS rates configured yet.</p>
+            <p className="text-xs text-blue-400 py-2 text-center italic">No SCHADS rates configured yet.</p>
           ) : (
             <>
               {effectiveDate && (
-                <p className="text-[10px] text-muted-foreground">Effective {effectiveDate} · Click a rate to pre-fill</p>
+                <p className="text-[10px] text-blue-500">Effective {effectiveDate} · Click a rate to pre-fill</p>
               )}
               <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
                 {rates.map((r) => {
@@ -104,13 +104,13 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
                       key={r.id}
                       type="button"
                       onClick={() => { onSelect(val); setOpen(false); }}
-                      className="w-full text-left flex items-center justify-between px-2.5 py-2 rounded-md border border-transparent hover:border-primary/30 hover:bg-primary/10 transition-colors group"
+                      className="w-full text-left flex items-center justify-between px-2.5 py-2 rounded-md border border-transparent hover:border-blue-300 hover:bg-blue-100 transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <Badge variant="outline" className="text-[10px] font-mono shrink-0">L{r.level}.{r.payPoint}</Badge>
-                        <span className="text-xs text-muted-foreground truncate">{r.classificationName}</span>
+                        <Badge variant="outline" className="text-[10px] font-mono shrink-0 border-blue-300 text-blue-700">L{r.level}.{r.payPoint}</Badge>
+                        <span className="text-xs text-gray-600 truncate">{r.classificationName}</span>
                       </div>
-                      <span className="text-xs font-bold text-primary shrink-0 ml-2 group-hover:underline">${val.toFixed(2)}</span>
+                      <span className="text-xs font-bold text-blue-700 shrink-0 ml-2">${val.toFixed(2)}</span>
                     </button>
                   );
                 })}
