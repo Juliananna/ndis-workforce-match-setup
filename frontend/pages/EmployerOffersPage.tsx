@@ -41,7 +41,7 @@ export default function EmployerOffersPage() {
     } catch (e: unknown) {
       console.error(e);
     }
-  }; 
+  };  
 
   const handleEmployerAction = async (req: Omit<EmployerNegotiateRequest, "offerId">): Promise<Offer> => {
     const updated = await api!.offers.employerNegotiate({ ...req, offerId: selectedOffer!.offerId });
