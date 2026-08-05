@@ -90,7 +90,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
 
   const isWorkerActionable = role === "WORKER" && (offer.status === "Pending" || offer.status === "Negotiating");
   const isActiveOffer = ["Pending", "Negotiating", "Accepted"].includes(offer.status);
-  const isEmployerNegotiating = role === "EMPLOYER" && offer.status === "Negotiating";
+  const isEmployerNegotiating = role === "EMPLOYER" && offer.status === "Negotiating" && offer.latestProposedBy === "WORKER";
   const isEmployerCancellable = role === "EMPLOYER" && ["Pending", "Negotiating", "Accepted"].includes(offer.status);
 
   const workerNeedsAction = role === "WORKER" && (
