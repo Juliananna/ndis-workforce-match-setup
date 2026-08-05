@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, MapPin, Calendar, Clock, DollarSign,
   CheckCircle2, XCircle, TrendingUp,
   ChevronDown, ChevronUp, Shield, Eye, EyeOff,
-  FileText, Share2, ExternalLink
+  FileText, Share2, ExternalLink, Info
 } from "lucide-react";
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import { NegotiationHistory } from "./NegotiationHistory";
@@ -17,6 +18,101 @@ import type { Offer } from "~backend/offers/types";
 import type { EmployerNegotiateRequest } from "~backend/offers/negotiate";
 import type { WorkerRespondRequest } from "~backend/offers/respond";
 import type { ShareResumeRequest } from "~backend/offers/share_resume";
+import type { PublicSchadRate } from "~backend/offers/schads_rates";
+import backend from "~backend/client";
+
+const SCHADS_RATE_TYPES = [
+  { key: "hourlyRate" as const,        label: "Ordinary" },
+  { key: "casualLoadingRate" as const, label: "Casual" },
+  { key: "eveningRate" as const,       label: "Evening" },
+  { key: "saturdayRate" as const,      label: "Saturday" },
+  { key: "sundayRate" as const,        label: "Sunday" },
+  { key: "publicHolidayRate" as const, label: "Public Holiday" },
+];
+
+function SchadRateReference({ onSelect }: { onSelect: (rate: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [rates, setRates] = useState<PublicSchadRate[]>([]);
+  const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [rateType, setRateType] = useState<typeof SCHADS_RATE_TYPES[number]["key"]>("hourlyRate");
+
+  useEffect(() => {
+    if (!open || rates.length > 0) return;
+    setLoading(true);
+    backend.offers.listSchadRates()
+      .then((res) => { setRates(res.rates); setEffectiveDate(res.effectiveDate); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open, rates.length]);
+
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50/60">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-blue-700"
+      >
+        <span className="flex items-center gap-1.5">
+          <Info className="h-3.5 w-3.5" />
+          Reference SCHADS Award Rates
+        </span>
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-2.5 border-t border-blue-200">
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {SCHADS_RATE_TYPES.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setRateType(opt.key)}
+                className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                  rateType === opt.key
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "border-blue-300 text-blue-600 hover:bg-blue-100"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {loading ? (
+            <p className="text-xs text-muted-foreground py-1">Loading…</p>
+          ) : rates.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">No SCHADS rates configured.</p>
+          ) : (
+            <>
+              {effectiveDate && (
+                <p className="text-[10px] text-blue-500">eff. {effectiveDate} · click to pre-fill</p>
+              )}
+              <div className="space-y-1 max-h-36 overflow-y-auto">
+                {rates.map((r) => {
+                  const val = r[rateType] as number | null;
+                  if (val == null) return null;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => { onSelect(val); setOpen(false); }}
+                      className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded border border-transparent hover:border-blue-300 hover:bg-blue-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="outline" className="text-[10px] font-mono shrink-0 border-blue-300 text-blue-700">L{r.level}.{r.payPoint}</Badge>
+                        <span className="text-[11px] text-gray-600 truncate">{r.classification}</span>
+                      </div>
+                      <span className="text-xs font-bold text-blue-700 shrink-0 ml-2">${val.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function toDateStr(v: unknown): string {
   if (!v) return "—";
@@ -411,6 +507,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
             ) : (
               <div className="space-y-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
                 <p className="text-sm font-semibold text-gray-900">Propose a New Rate</p>
+                <SchadRateReference onSelect={(v) => setProposeRate(v.toFixed(2))} />
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-gray-500">Your Rate ($/hr)</Label>
@@ -480,6 +577,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
               {isEmployerNegotiating && showCounterForm && (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-gray-900">Send Counter Rate</p>
+                  <SchadRateReference onSelect={(v) => setCounterRate(v.toFixed(2))} />
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-gray-500">Counter Rate ($/hr)</Label>

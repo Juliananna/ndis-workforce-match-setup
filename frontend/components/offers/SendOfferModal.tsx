@@ -3,7 +3,11 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronUp, Info } from "lucide-react";
 import type { Offer } from "~backend/offers/types";
+import type { PublicSchadRate } from "~backend/offers/schads_rates";
+import backend from "~backend/client";
 
 interface Props {
   open: boolean;
@@ -13,6 +17,104 @@ interface Props {
   prefilledWorkerId?: string;
   prefilledWorkerName?: string;
   onSend: (workerId: string, offeredRate: number, notes: string) => Promise<Offer>;
+}
+
+function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
+  const [rates, setRates] = useState<PublicSchadRate[]>([]);
+  const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [rateType, setRateType] = useState<"hourlyRate" | "casualLoadingRate" | "saturdayRate" | "sundayRate" | "publicHolidayRate" | "eveningRate">("hourlyRate");
+
+  useEffect(() => {
+    if (!open || rates.length > 0) return;
+    setLoading(true);
+    backend.offers.listSchadRates()
+      .then((res) => {
+        setRates(res.rates);
+        setEffectiveDate(res.effectiveDate);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [open, rates.length]);
+
+  const RATE_TYPE_OPTIONS = [
+    { key: "hourlyRate" as const,        label: "Ordinary" },
+    { key: "casualLoadingRate" as const, label: "Casual" },
+    { key: "eveningRate" as const,       label: "Evening" },
+    { key: "saturdayRate" as const,      label: "Saturday" },
+    { key: "sundayRate" as const,        label: "Sunday" },
+    { key: "publicHolidayRate" as const, label: "Public Holiday" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-primary/20 bg-primary/5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-primary"
+      >
+        <span className="flex items-center gap-1.5">
+          <Info className="h-3.5 w-3.5" />
+          Use SCHADS Award Rate as reference
+        </span>
+        {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-3 border-t border-primary/10">
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {RATE_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setRateType(opt.key)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  rateType === opt.key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="text-xs text-muted-foreground py-2 text-center">Loading rates…</p>
+          ) : rates.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2 text-center italic">No SCHADS rates configured yet.</p>
+          ) : (
+            <>
+              {effectiveDate && (
+                <p className="text-[10px] text-muted-foreground">Effective {effectiveDate} · Click a rate to pre-fill</p>
+              )}
+              <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
+                {rates.map((r) => {
+                  const val = r[rateType] as number | null;
+                  if (val == null) return null;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => { onSelect(val); setOpen(false); }}
+                      className="w-full text-left flex items-center justify-between px-2.5 py-2 rounded-md border border-transparent hover:border-primary/30 hover:bg-primary/10 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="outline" className="text-[10px] font-mono shrink-0">L{r.level}.{r.payPoint}</Badge>
+                        <span className="text-xs text-muted-foreground truncate">{r.classification}</span>
+                      </div>
+                      <span className="text-xs font-bold text-primary shrink-0 ml-2 group-hover:underline">${val.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SendOfferModal({ open, onClose, jobId: _jobId, defaultRate, prefilledWorkerId, prefilledWorkerName, onSend }: Props) {
@@ -71,6 +173,9 @@ export function SendOfferModal({ open, onClose, jobId: _jobId, defaultRate, pref
                 />
               </div>
             )}
+
+            <SchadRatePicker onSelect={(v) => setRate(v.toFixed(2))} />
+
             <div className="space-y-1">
               <Label className="text-xs">Offered Rate ($/hr) *</Label>
               <Input

@@ -217,6 +217,12 @@ import {
     adminListRtoPartners as api_admin_rto_partners_adminListRtoPartners,
     adminUpdateRtoPartner as api_admin_rto_partners_adminUpdateRtoPartner
 } from "~backend/admin/rto_partners";
+import {
+    adminDeleteSchadRate as api_admin_schads_rates_adminDeleteSchadRate,
+    adminDeleteSchadRatesByDate as api_admin_schads_rates_adminDeleteSchadRatesByDate,
+    adminListSchadRates as api_admin_schads_rates_adminListSchadRates,
+    adminUploadSchadRatesCsv as api_admin_schads_rates_adminUploadSchadRatesCsv
+} from "~backend/admin/schads_rates";
 import { seed as api_admin_seed_seed } from "~backend/admin/seed";
 import {
     adminListAuditLog as api_admin_settings_adminListAuditLog,
@@ -259,6 +265,8 @@ export namespace admin {
             this.adminCreateSMSTemplate = this.adminCreateSMSTemplate.bind(this)
             this.adminDeleteEmailTemplate = this.adminDeleteEmailTemplate.bind(this)
             this.adminDeleteSMSTemplate = this.adminDeleteSMSTemplate.bind(this)
+            this.adminDeleteSchadRate = this.adminDeleteSchadRate.bind(this)
+            this.adminDeleteSchadRatesByDate = this.adminDeleteSchadRatesByDate.bind(this)
             this.adminDeleteUser = this.adminDeleteUser.bind(this)
             this.adminGetDocumentDownloadUrl = this.adminGetDocumentDownloadUrl.bind(this)
             this.adminGetPlatformStats = this.adminGetPlatformStats.bind(this)
@@ -279,6 +287,7 @@ export namespace admin {
             this.adminListRtoPartners = this.adminListRtoPartners.bind(this)
             this.adminListSMSLog = this.adminListSMSLog.bind(this)
             this.adminListSMSTemplates = this.adminListSMSTemplates.bind(this)
+            this.adminListSchadRates = this.adminListSchadRates.bind(this)
             this.adminListSettings = this.adminListSettings.bind(this)
             this.adminListUpcomingBookings = this.adminListUpcomingBookings.bind(this)
             this.adminListUserEmailLog = this.adminListUserEmailLog.bind(this)
@@ -303,6 +312,7 @@ export namespace admin {
             this.adminUpdateRtoPartner = this.adminUpdateRtoPartner.bind(this)
             this.adminUpdateSMSTemplate = this.adminUpdateSMSTemplate.bind(this)
             this.adminUpdateSetting = this.adminUpdateSetting.bind(this)
+            this.adminUploadSchadRatesCsv = this.adminUploadSchadRatesCsv.bind(this)
             this.adminVerifyDocument = this.adminVerifyDocument.bind(this)
             this.adminVerifyReference = this.adminVerifyReference.bind(this)
             this.adminVerifyUserEmail = this.adminVerifyUserEmail.bind(this)
@@ -377,6 +387,21 @@ export namespace admin {
 
         public async adminDeleteSMSTemplate(params: { id: string }): Promise<void> {
             await this.baseClient.callTypedAPI(`/admin/sms-templates/${encodeURIComponent(params.id)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async adminDeleteSchadRate(params: { id: string }): Promise<void> {
+            await this.baseClient.callTypedAPI(`/admin/schads-rates/${encodeURIComponent(params.id)}`, {method: "DELETE", body: undefined})
+        }
+
+        public async adminDeleteSchadRatesByDate(params: RequestType<typeof api_admin_schads_rates_adminDeleteSchadRatesByDate>): Promise<ResponseType<typeof api_admin_schads_rates_adminDeleteSchadRatesByDate>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                effectiveDate: params.effectiveDate,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/schads-rates/by-date`, {query, method: "DELETE", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_schads_rates_adminDeleteSchadRatesByDate>
         }
 
         public async adminDeleteUser(params: { userId: string }): Promise<void> {
@@ -534,6 +559,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/sms-templates`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_sms_comms_adminListSMSTemplates>
+        }
+
+        public async adminListSchadRates(): Promise<ResponseType<typeof api_admin_schads_rates_adminListSchadRates>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/schads-rates`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_schads_rates_adminListSchadRates>
         }
 
         public async adminListSettings(): Promise<ResponseType<typeof api_admin_settings_adminListSettings>> {
@@ -767,6 +798,12 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/settings/${encodeURIComponent(params.key)}`, {method: "PUT", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_settings_adminUpdateSetting>
+        }
+
+        public async adminUploadSchadRatesCsv(params: RequestType<typeof api_admin_schads_rates_adminUploadSchadRatesCsv>): Promise<ResponseType<typeof api_admin_schads_rates_adminUploadSchadRatesCsv>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/schads-rates/upload-csv`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_schads_rates_adminUploadSchadRatesCsv>
         }
 
         public async adminVerifyDocument(params: RequestType<typeof api_admin_verify_document_adminVerifyDocument>): Promise<ResponseType<typeof api_admin_verify_document_adminVerifyDocument>> {
@@ -1483,6 +1520,7 @@ import { getOffer as api_offers_get_getOffer } from "~backend/offers/get";
 import { listOffers as api_offers_list_listOffers } from "~backend/offers/list";
 import { employerNegotiate as api_offers_negotiate_employerNegotiate } from "~backend/offers/negotiate";
 import { workerRespond as api_offers_respond_workerRespond } from "~backend/offers/respond";
+import { listSchadRates as api_offers_schads_rates_listSchadRates } from "~backend/offers/schads_rates";
 import { markOfferSeen as api_offers_seen_markOfferSeen } from "~backend/offers/seen";
 import {
     getSharedResume as api_offers_share_resume_getSharedResume,
@@ -1501,6 +1539,7 @@ export namespace offers {
             this.getOffer = this.getOffer.bind(this)
             this.getSharedResume = this.getSharedResume.bind(this)
             this.listOffers = this.listOffers.bind(this)
+            this.listSchadRates = this.listSchadRates.bind(this)
             this.markOfferSeen = this.markOfferSeen.bind(this)
             this.shareResume = this.shareResume.bind(this)
             this.workerRespond = this.workerRespond.bind(this)
@@ -1546,6 +1585,12 @@ export namespace offers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_list_listOffers>
+        }
+
+        public async listSchadRates(): Promise<ResponseType<typeof api_offers_schads_rates_listSchadRates>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/schads-rates`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_schads_rates_listSchadRates>
         }
 
         public async markOfferSeen(params: { offerId: string }): Promise<ResponseType<typeof api_offers_seen_markOfferSeen>> {
