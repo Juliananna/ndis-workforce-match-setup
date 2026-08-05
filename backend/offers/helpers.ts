@@ -22,6 +22,7 @@ export function mapOfferRow(row: {
   additional_notes: string | null;
   created_at: Date;
   updated_at: Date;
+  seen_at: Date | null;
 }): Offer {
   return {
     offerId: row.offer_id,
@@ -44,6 +45,7 @@ export function mapOfferRow(row: {
     additionalNotes: row.additional_notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    seenAt: row.seen_at,
   };
 }
 

@@ -262,7 +262,13 @@ export default function WorkerOffersPage() {
   };
 
   const handleViewOffer = async (offer: Offer) => {
-    const full = await api!.offers.getOffer({ offerId: offer.offerId });
+    const [full] = await Promise.all([
+      api!.offers.getOffer({ offerId: offer.offerId }),
+      offer.seenAt == null ? api!.offers.markOfferSeen({ offerId: offer.offerId }).catch(() => null) : Promise.resolve(null),
+    ]);
+    if (offer.seenAt == null) {
+      setOffers((prev) => prev.map((o) => o.offerId === offer.offerId ? { ...o, seenAt: new Date() } : o));
+    }
     setSelectedOffer(full);
     setView("offer-detail");
   };

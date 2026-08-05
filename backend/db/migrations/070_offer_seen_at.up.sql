@@ -1,0 +1,1 @@
+ALTER TABLE offers ADD COLUMN seen_at TIMESTAMPTZ;

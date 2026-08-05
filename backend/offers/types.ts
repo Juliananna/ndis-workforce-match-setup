@@ -33,5 +33,6 @@ export interface Offer {
   additionalNotes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  seenAt: Date | null;
   history?: NegotiationEvent[];
 }

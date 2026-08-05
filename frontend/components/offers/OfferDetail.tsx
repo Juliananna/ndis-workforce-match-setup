@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, MapPin, Calendar, Clock, DollarSign,
   CheckCircle2, XCircle, MessageSquare, TrendingUp,
-  ChevronDown, ChevronUp, Shield
+  ChevronDown, ChevronUp, Shield, Eye, EyeOff
 } from "lucide-react";
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import { NegotiationHistory } from "./NegotiationHistory";
@@ -117,6 +117,16 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
                 <OfferStatusBadge status={offer.status} size="md" />
                 {role === "EMPLOYER" && offer.workerName && (
                   <span className="text-sm font-semibold text-gray-700">{offer.workerName}</span>
+                )}
+                {role === "EMPLOYER" && (
+                  offer.seenAt
+                    ? <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <Eye className="w-2.5 h-2.5" />
+                        Seen {new Date(offer.seenAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    : <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                        <EyeOff className="w-2.5 h-2.5" />Not seen yet
+                      </span>
                 )}
               </div>
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-1.5">

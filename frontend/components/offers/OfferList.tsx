@@ -1,6 +1,6 @@
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import type { Offer, OfferStatus } from "~backend/offers/types";
-import { MapPin, Clock, Calendar, DollarSign, ChevronRight, Briefcase, AlertCircle, TrendingUp } from "lucide-react";
+import { MapPin, Clock, Calendar, DollarSign, ChevronRight, Briefcase, AlertCircle, TrendingUp, Eye, EyeOff } from "lucide-react";
 
 function toDateStr(v: unknown): string {
   if (!v) return "";
@@ -165,6 +165,15 @@ export function OfferList({ offers, statusFilter, onStatusFilter, onView, role }
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                   ACTION NEEDED
                                 </span>
+                              )}
+                            {role === "EMPLOYER" && (
+                                offer.seenAt
+                                  ? <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                                      <Eye className="w-2.5 h-2.5" />Seen
+                                    </span>
+                                  : <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                                      <EyeOff className="w-2.5 h-2.5" />Not seen
+                                    </span>
                               )}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
