@@ -36,13 +36,12 @@ export const getOffer = api<GetOfferParams, Offer>(
       updated_at: Date;
     }>`
       SELECT o.offer_id, o.job_id, o.employer_id, o.worker_id,
-        CONCAT(u.first_name, ' ', u.last_name) AS worker_name,
+        w.name AS worker_name,
         o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
         o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
         o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at
       FROM offers o
       JOIN workers w ON w.worker_id = o.worker_id
-      JOIN users u ON u.user_id = w.user_id
       WHERE o.offer_id = ${offerId}
     `;
     if (!row) throw APIError.notFound("offer not found");
