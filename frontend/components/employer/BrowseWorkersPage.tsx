@@ -1,8 +1,13 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import {
   Search, MapPin, Star, Car, FileCheck, Loader2,
   ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle, Heart, GraduationCap,
+  Map, List,
 } from "lucide-react";
+
+const WorkerMapView = lazy(() =>
+  import("./WorkerMapView").then((m) => ({ default: m.WorkerMapView }))
+);
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +49,8 @@ export function BrowseWorkersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedWorker, setSelectedWorker] = useState<WorkerSummary | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
@@ -160,14 +167,41 @@ export function BrowseWorkersPage() {
   const activeFilterCount = selectedSkills.length + (driversLicense ? 1 : 0) + (vehicleAccess ? 1 : 0) + (verifiedOnly ? 1 : 0);
 
   const verifiedCount = workers.filter((w) => w.isFullyVerified).length;
+  const displayWorkers = isFallback ? fallbackWorkers : workers;
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-base font-semibold text-foreground">Browse Workers</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Search and filter NDIS support workers to find the right match for your clients.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Browse Workers</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Search and filter NDIS support workers to find the right match for your clients.
+          </p>
+        </div>
+        <div className="flex items-center rounded-lg border border-border bg-card p-0.5 shrink-0">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewMode === "list"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <List className="h-3.5 w-3.5" />
+            List
+          </button>
+          <button
+            onClick={() => setViewMode("map")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewMode === "map"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Map className="h-3.5 w-3.5" />
+            Map
+          </button>
+        </div>
       </div>
 
       <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
@@ -343,18 +377,37 @@ export function BrowseWorkersPage() {
               </p>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {fallbackWorkers.map((w) => (
-              <WorkerCard
-                key={w.workerId}
-                worker={w}
-                saved={savedIds.has(w.workerId)}
-                saving={savingIds.has(w.workerId)}
-                onClick={() => setSelectedWorker(w)}
-                onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+          {viewMode === "map" ? (
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-[540px] rounded-xl border border-border bg-muted/30">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            }>
+              <WorkerMapView
+                workers={fallbackWorkers}
+                highlightedId={hoveredId}
+                savedIds={savedIds}
+                savingIds={savingIds}
+                employerCenter={geoLocation}
+                radiusKm={geoLocation ? radiusKm : null}
+                onSelectWorker={setSelectedWorker}
+                onToggleSave={handleToggleSave}
               />
-            ))}
-          </div>
+            </Suspense>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {fallbackWorkers.map((w) => (
+                <WorkerCard
+                  key={w.workerId}
+                  worker={w}
+                  saved={savedIds.has(w.workerId)}
+                  saving={savingIds.has(w.workerId)}
+                  onClick={() => setSelectedWorker(w)}
+                  onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -375,18 +428,40 @@ export function BrowseWorkersPage() {
             </p>
             <p className="text-xs text-muted-foreground">Verified workers shown first</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {workers.map((w) => (
-              <WorkerCard
-                key={w.workerId}
-                worker={w}
-                saved={savedIds.has(w.workerId)}
-                saving={savingIds.has(w.workerId)}
-                onClick={() => setSelectedWorker(w)}
-                onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+
+          {viewMode === "map" ? (
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-[540px] rounded-xl border border-border bg-muted/30">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            }>
+              <WorkerMapView
+                workers={displayWorkers}
+                highlightedId={hoveredId}
+                savedIds={savedIds}
+                savingIds={savingIds}
+                employerCenter={geoLocation}
+                radiusKm={geoLocation ? radiusKm : null}
+                onSelectWorker={setSelectedWorker}
+                onToggleSave={handleToggleSave}
               />
-            ))}
-          </div>
+            </Suspense>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {workers.map((w) => (
+                <WorkerCard
+                  key={w.workerId}
+                  worker={w}
+                  saved={savedIds.has(w.workerId)}
+                  saving={savingIds.has(w.workerId)}
+                  onClick={() => setSelectedWorker(w)}
+                  onToggleSave={(e) => handleToggleSave(w.workerId, e)}
+                  onMouseEnter={() => setHoveredId(w.workerId)}
+                  onMouseLeave={() => setHoveredId(null)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -436,12 +511,16 @@ interface WorkerCardProps {
   saving: boolean;
   onClick: () => void;
   onToggleSave: (e: React.MouseEvent) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
-function WorkerCard({ worker, saved, saving, onClick, onToggleSave }: WorkerCardProps) {
+function WorkerCard({ worker, saved, saving, onClick, onToggleSave, onMouseEnter, onMouseLeave }: WorkerCardProps) {
   const days = Array.isArray(worker.availableDays) ? worker.availableDays : [];
   return (
     <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className={`rounded-lg border bg-card p-4 space-y-3 cursor-pointer transition-all ${
         worker.isFullyVerified
           ? "border-green-200 ring-1 ring-green-100 hover:border-green-400 hover:ring-green-200"

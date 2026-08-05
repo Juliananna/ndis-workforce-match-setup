@@ -54,6 +54,8 @@ export interface WorkerSummary {
   lastLoginAt: string | null;
   verificationScore: number;
   isFullyVerified: boolean;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface BrowseWorkersResponse {
@@ -101,6 +103,8 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       docs_verified: boolean;
       refs_verified: boolean;
       last_login_at: Date | null;
+      latitude: number | null;
+      longitude: number | null;
       has_id_doc: boolean;
       has_cert_doc: boolean;
       has_availability: boolean;
@@ -123,7 +127,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
           w.avatar_url, w.intro_video_url, w.seeking_placement, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
-          wa.available_days, wa.minimum_pay_rate, u.last_login_at,
+          wa.available_days, wa.minimum_pay_rate, u.last_login_at, w.latitude, w.longitude,
           CASE
             WHEN w.latitude IS NOT NULL AND w.longitude IS NOT NULL THEN
               6371 * 2 * ASIN(SQRT(
@@ -217,7 +221,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           w.worker_id, w.name, w.full_name, w.location, w.bio, w.experience_years,
           w.qualifications, w.drivers_license, w.vehicle_access, w.travel_radius_km,
           w.avatar_url, w.intro_video_url, w.seeking_placement, w.priority_boost, w.docs_verified_purchased, w.refs_purchased,
-          wa.available_days, wa.minimum_pay_rate, u.last_login_at,
+          wa.available_days, wa.minimum_pay_rate, u.last_login_at, w.latitude, w.longitude,
           NULL::double precision AS distance_km,
           AVG(r.rating) AS avg_rating,
           COUNT(r.id) AS review_count,
@@ -367,6 +371,8 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       lastLoginAt: r.last_login_at ? r.last_login_at.toISOString() : null,
       verificationScore: computeVerificationScore(r),
       isFullyVerified: computeVerificationScore(r) === 100,
+      latitude: r.latitude,
+      longitude: r.longitude,
     }));
 
     return { workers, total: workers.length };

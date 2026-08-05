@@ -267,6 +267,8 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
       lastLoginAt: r.last_login_at ? r.last_login_at.toISOString() : null,
       verificationScore: computeVerificationScore(r),
       isFullyVerified: computeVerificationScore(r) === 100,
+      latitude: null,
+      longitude: null,
     }));
 
     return { workers };

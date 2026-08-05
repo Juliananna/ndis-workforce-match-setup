@@ -58,6 +58,8 @@ function matchedWorkerToSummary(w: MatchedWorker): WorkerSummary {
     lastLoginAt: null,
     verificationScore: w.verificationScore,
     isFullyVerified: w.isFullyVerified,
+    latitude: null,
+    longitude: null,
   };
 }
 
