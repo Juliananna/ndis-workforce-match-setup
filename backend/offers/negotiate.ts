@@ -92,6 +92,8 @@ export const employerNegotiate = api<EmployerNegotiateRequest, Offer>(
       created_at: Date;
       updated_at: Date;
       seen_at: Date | null;
+      resume_shared_at: Date | null;
+      resume_session_id: string | null;
     };
 
     let updated: OfferRow | null;
@@ -103,7 +105,8 @@ export const employerNegotiate = api<EmployerNegotiateRequest, Offer>(
         RETURNING offer_id, job_id, employer_id, worker_id,
           snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
           snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-          offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at, seen_at
+          offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at, seen_at,
+          resume_shared_at, resume_session_id
       `;
     } else {
       updated = await db.queryRow<OfferRow>`
@@ -113,7 +116,8 @@ export const employerNegotiate = api<EmployerNegotiateRequest, Offer>(
         RETURNING offer_id, job_id, employer_id, worker_id,
           snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
           snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
-          offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at, seen_at
+          offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at, seen_at,
+          resume_shared_at, resume_session_id
       `;
     }
     if (!updated) throw APIError.internal("failed to update offer");

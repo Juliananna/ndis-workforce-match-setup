@@ -10,6 +10,7 @@ import { JobDetailModal } from "../components/matching/JobDetailModal";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { Offer, OfferStatus } from "~backend/offers/types";
 import type { WorkerRespondRequest } from "~backend/offers/respond";
+import type { ShareResumeRequest } from "~backend/offers/share_resume";
 
 type View = "list" | "offer-detail";
 
@@ -280,13 +281,25 @@ export default function WorkerOffersPage() {
     return updated;
   };
 
+  const handleShareResume = async (req: Omit<ShareResumeRequest, "offerId">): Promise<Offer> => {
+    const updated = await api!.offers.shareResume({ ...req, offerId: selectedOffer!.offerId });
+    setOffers((prev) => prev.map((o) => o.offerId === updated.offerId ? updated : o));
+    setSelectedOffer(updated);
+    return updated;
+  };
+
   if (view === "offer-detail" && selectedOffer) {
+    const resumePreviewUrl = selectedOffer.resumeSessionId
+      ? `/resume-builder/preview/${selectedOffer.resumeSessionId}`
+      : undefined;
     return (
       <OfferDetail
         offer={selectedOffer}
         role="WORKER"
         onBack={() => { setView("list"); setSelectedOffer(null); }}
         onWorkerAction={handleWorkerAction}
+        onShareResume={handleShareResume}
+        resumePreviewUrl={resumePreviewUrl}
       />
     );
   }

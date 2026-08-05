@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, MapPin, Calendar, Clock, DollarSign,
-  CheckCircle2, XCircle, MessageSquare, TrendingUp,
-  ChevronDown, ChevronUp, Shield, Eye, EyeOff
+  CheckCircle2, XCircle, TrendingUp,
+  ChevronDown, ChevronUp, Shield, Eye, EyeOff,
+  FileText, Share2, ExternalLink
 } from "lucide-react";
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import { NegotiationHistory } from "./NegotiationHistory";
@@ -15,6 +16,7 @@ import { ReviewPanel } from "./ReviewPanel";
 import type { Offer } from "~backend/offers/types";
 import type { EmployerNegotiateRequest } from "~backend/offers/negotiate";
 import type { WorkerRespondRequest } from "~backend/offers/respond";
+import type { ShareResumeRequest } from "~backend/offers/share_resume";
 
 function toDateStr(v: unknown): string {
   if (!v) return "—";
@@ -37,9 +39,11 @@ interface Props {
   onBack: () => void;
   onEmployerAction?: (req: Omit<EmployerNegotiateRequest, "offerId">) => Promise<Offer>;
   onWorkerAction?: (req: Omit<WorkerRespondRequest, "offerId">) => Promise<Offer>;
+  onShareResume?: (req: Omit<ShareResumeRequest, "offerId">) => Promise<Offer>;
+  resumePreviewUrl?: string;
 }
 
-export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerAction, onWorkerAction }: Props) {
+export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerAction, onWorkerAction, onShareResume, resumePreviewUrl }: Props) {
   const [offer, setOffer] = useState<Offer>(initialOffer);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +53,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
   const [showProposeForm, setShowProposeForm] = useState(false);
   const [showCounterForm, setShowCounterForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [sharingResume, setSharingResume] = useState(false);
 
   const currentRate = offer.negotiatedRate ?? offer.offeredRate;
   const hasNegotiated = offer.negotiatedRate != null && offer.negotiatedRate !== offer.offeredRate;
@@ -73,7 +78,18 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
     } finally { setSaving(false); }
   };
 
+  const doShareResume = async (share: boolean) => {
+    setSharingResume(true); setError(null);
+    try {
+      const updated = await onShareResume!({ share });
+      setOffer(updated);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to update resume sharing");
+    } finally { setSharingResume(false); }
+  };
+
   const isWorkerActionable = role === "WORKER" && (offer.status === "Pending" || offer.status === "Negotiating");
+  const isActiveOffer = ["Pending", "Negotiating", "Accepted"].includes(offer.status);
   const isEmployerNegotiating = role === "EMPLOYER" && offer.status === "Negotiating";
   const isEmployerCancellable = role === "EMPLOYER" && ["Pending", "Negotiating", "Accepted"].includes(offer.status);
 
@@ -243,6 +259,65 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
           </div>
         )}
 
+        {role === "WORKER" && onShareResume && isActiveOffer && (
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-3.5 w-3.5 text-gray-400" />
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Share Your Resume</p>
+            </div>
+            {offer.resumeSharedAt ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <Share2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-emerald-800">Resume shared with employer</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">
+                      Shared {new Date(offer.resumeSharedAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {resumePreviewUrl && (
+                    <a
+                      href={resumePreviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      View my resume
+                    </a>
+                  )}
+                  <button
+                    onClick={() => doShareResume(false)}
+                    disabled={sharingResume}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    {sharingResume ? "Removing…" : "Remove resume"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Share your resume with this employer to stand out during negotiations.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => doShareResume(true)}
+                  disabled={sharingResume}
+                  className="gap-1.5"
+                >
+                  <Share2 className="h-4 w-4" />
+                  {sharingResume ? "Sharing…" : "Share My Resume"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {role === "EMPLOYER" && (
           <div className="px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 mb-3">
@@ -254,6 +329,33 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
             ) : (
               <WorkerDocumentsLockedPlaceholder />
             )}
+          </div>
+        )}
+
+        {role === "EMPLOYER" && offer.resumeSharedAt && offer.resumeSessionId && (
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-3.5 w-3.5 text-gray-400" />
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Worker Resume</p>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+              <Share2 className="h-4 w-4 text-blue-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-blue-900">Worker has shared their resume</p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  Shared {new Date(offer.resumeSharedAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+              <a
+                href={`/resume-builder/preview/${offer.resumeSessionId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                View Resume
+              </a>
+            </div>
           </div>
         )}
 

@@ -39,6 +39,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
       created_at: Date;
       updated_at: Date;
       seen_at: Date | null;
+      resume_shared_at: Date | null;
+      resume_session_id: string | null;
     };
 
     const offers: Offer[] = [];
@@ -56,7 +58,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             w.name AS worker_name,
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
-            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
+            o.resume_shared_at, o.resume_session_id
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.employer_id = ${employer.employer_id} AND o.status = ${req.status}
@@ -68,7 +71,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             w.name AS worker_name,
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
-            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
+            o.resume_shared_at, o.resume_session_id
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.employer_id = ${employer.employer_id}
@@ -91,7 +95,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             w.name AS worker_name,
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
-            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
+            o.resume_shared_at, o.resume_session_id
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.worker_id = ${worker.worker_id} AND o.status = ${req.status}
@@ -103,7 +108,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             w.name AS worker_name,
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
-            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at
+            o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
+            o.resume_shared_at, o.resume_session_id
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.worker_id = ${worker.worker_id}

@@ -1484,6 +1484,10 @@ import { listOffers as api_offers_list_listOffers } from "~backend/offers/list";
 import { employerNegotiate as api_offers_negotiate_employerNegotiate } from "~backend/offers/negotiate";
 import { workerRespond as api_offers_respond_workerRespond } from "~backend/offers/respond";
 import { markOfferSeen as api_offers_seen_markOfferSeen } from "~backend/offers/seen";
+import {
+    getSharedResume as api_offers_share_resume_getSharedResume,
+    shareResume as api_offers_share_resume_shareResume
+} from "~backend/offers/share_resume";
 
 export namespace offers {
 
@@ -1495,8 +1499,10 @@ export namespace offers {
             this.createOffer = this.createOffer.bind(this)
             this.employerNegotiate = this.employerNegotiate.bind(this)
             this.getOffer = this.getOffer.bind(this)
+            this.getSharedResume = this.getSharedResume.bind(this)
             this.listOffers = this.listOffers.bind(this)
             this.markOfferSeen = this.markOfferSeen.bind(this)
+            this.shareResume = this.shareResume.bind(this)
             this.workerRespond = this.workerRespond.bind(this)
         }
 
@@ -1525,6 +1531,12 @@ export namespace offers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_get_getOffer>
         }
 
+        public async getSharedResume(params: { offerId: string }): Promise<ResponseType<typeof api_offers_share_resume_getSharedResume>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/shared-resume`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_share_resume_getSharedResume>
+        }
+
         public async listOffers(params: RequestType<typeof api_offers_list_listOffers>): Promise<ResponseType<typeof api_offers_list_listOffers>> {
             // Convert our params into the objects we need for the request
             const query = makeRecord<string, string | string[]>({
@@ -1540,6 +1552,17 @@ export namespace offers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/seen`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_seen_markOfferSeen>
+        }
+
+        public async shareResume(params: RequestType<typeof api_offers_share_resume_shareResume>): Promise<ResponseType<typeof api_offers_share_resume_shareResume>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                share: params.share,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/share-resume`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_share_resume_shareResume>
         }
 
         public async workerRespond(params: RequestType<typeof api_offers_respond_workerRespond>): Promise<ResponseType<typeof api_offers_respond_workerRespond>> {
