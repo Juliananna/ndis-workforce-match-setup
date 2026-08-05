@@ -9,6 +9,12 @@ import type { Offer } from "~backend/offers/types";
 import type { PublicSchadRate } from "~backend/offers/schads_rates";
 import backend from "~backend/client";
 
+function dateToStr(v: unknown): string | null {
+  if (v == null) return null;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v);
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -32,7 +38,7 @@ function SchadRatePicker({ onSelect }: { onSelect: (rate: number) => void }) {
     backend.offers.listSchadRates()
       .then((res) => {
         setRates(res.rates);
-        setEffectiveDate(res.effectiveDate);
+        setEffectiveDate(dateToStr(res.effectiveDate));
       })
       .catch(() => {})
       .finally(() => setLoading(false));

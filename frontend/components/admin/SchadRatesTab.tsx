@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+
+function toEffectiveDateStr(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  return String(v ?? "");
+}
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +67,7 @@ function rateToForm(r: SchadRate): RateFormData {
     eveningRate: r.eveningRate != null ? r.eveningRate.toFixed(4) : "",
     sleepooverRate: r.sleepooverRate != null ? r.sleepooverRate.toFixed(4) : "",
     notes: r.notes ?? "",
-    effectiveDate: r.effectiveDate,
+    effectiveDate: toEffectiveDateStr(r.effectiveDate),
   };
 }
 
@@ -184,7 +189,7 @@ function RateRow({ rate, onEdit, onDelete, expanded, onToggle }: RateRowProps) {
           <span className="text-sm font-bold text-primary shrink-0">${rate.hourlyRate.toFixed(2)}/hr</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-muted-foreground hidden sm:block">eff. {rate.effectiveDate}</span>
+          <span className="text-xs text-muted-foreground hidden sm:block">eff. {toEffectiveDateStr(rate.effectiveDate)}</span>
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
@@ -301,8 +306,9 @@ export function SchadRatesTab({ api }: { api: ReturnType<typeof useAuthedBackend
   };
 
   const groupedByDate = rates.reduce<Record<string, SchadRate[]>>((acc, r) => {
-    if (!acc[r.effectiveDate]) acc[r.effectiveDate] = [];
-    acc[r.effectiveDate].push(r);
+    const key = toEffectiveDateStr(r.effectiveDate);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
     return acc;
   }, {});
 

@@ -30,6 +30,12 @@ const SCHADS_RATE_TYPES = [
   { key: "publicHolidayRate" as const, label: "Public Holiday" },
 ];
 
+function dateStrOrNull(v: unknown): string | null {
+  if (v == null) return null;
+  if (v instanceof Date) return (v as Date).toISOString().slice(0, 10);
+  return String(v);
+}
+
 function SchadRateReference({ onSelect }: { onSelect: (rate: number) => void }) {
   const [open, setOpen] = useState(false);
   const [rates, setRates] = useState<PublicSchadRate[]>([]);
@@ -41,7 +47,7 @@ function SchadRateReference({ onSelect }: { onSelect: (rate: number) => void }) 
     if (!open || rates.length > 0) return;
     setLoading(true);
     backend.offers.listSchadRates()
-      .then((res) => { setRates(res.rates); setEffectiveDate(res.effectiveDate); })
+      .then((res) => { setRates(res.rates); setEffectiveDate(dateStrOrNull(res.effectiveDate)); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [open, rates.length]);
