@@ -258,7 +258,7 @@ function ResumeBannerCard() {
   const handleCreate = async () => {
     setCreating(true);
     try {
-      const res = await backend.resume.createSession({});
+      const res = await backend.resume.workerCreateOrGetSession();
       navigate(`/resume-builder/session/${res.session.id}`);
     } catch (err: unknown) {
       console.error(err);
@@ -362,6 +362,7 @@ function ResumeBannerCard() {
         <div className="flex gap-2 shrink-0">
           <button
             onClick={() => navigate(`/resume-builder/session/${session.id}`)}
+
             className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors"
           >
             {isComplete ? "Edit Resume" : "Continue"}
@@ -446,9 +447,15 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   ];
 
   const navigate = useNavigate();
-  const handleSidebarNav = (id: string) => {
+  const handleSidebarNav = async (id: string) => {
     if (id === "resume") {
-      navigate("/resume-builder");
+      try {
+        const res = await backend.resume.workerCreateOrGetSession();
+        navigate(`/resume-builder/session/${res.session.id}`);
+      } catch (err: unknown) {
+        console.error(err);
+        navigate("/resume-builder");
+      }
     } else {
       handleSidebarTab(id as SidebarTab);
     }

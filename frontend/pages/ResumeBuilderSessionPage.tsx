@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, LayoutDashboard } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 import { StepAboutYou } from "../components/resume/StepAboutYou";
 import { StepTargetRole } from "../components/resume/StepTargetRole";
 import { StepWorkHistory } from "../components/resume/StepWorkHistory";
@@ -28,6 +29,8 @@ export default function ResumeBuilderSessionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { token } = useAuth();
+  const isAuthenticated = !!token;
   const [session, setSession] = useState<SessionData>(defaultSession());
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -98,7 +101,7 @@ export default function ResumeBuilderSessionPage() {
 
   const handleBack = () => {
     if (currentStep === 0) {
-      navigate("/resume-builder");
+      navigate(isAuthenticated ? "/dashboard" : "/resume-builder");
     } else {
       setCurrentStep(currentStep - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -121,6 +124,14 @@ export default function ResumeBuilderSessionPage() {
         <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
+              {isAuthenticated && (
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mr-2"
+                >
+                  <LayoutDashboard size={14} /> Dashboard
+                </button>
+              )}
               <img src="/kizazi-hire-logo.png" alt="KizaziHire" className="h-7 w-auto" />
               <span className="text-xs text-slate-400 hidden sm:block">Resume Builder</span>
             </div>

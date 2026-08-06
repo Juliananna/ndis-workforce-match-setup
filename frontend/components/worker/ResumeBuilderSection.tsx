@@ -39,8 +39,8 @@ export function ResumeBuilderSection() {
   const handleCreate = async () => {
     setCreating(true);
     try {
-      const res = await backend.resume.createSession({});
-      navigate(`/resume-builder/${res.session.id}`);
+      const res = await backend.resume.workerCreateOrGetSession();
+      navigate(`/resume-builder/session/${res.session.id}`);
     } catch (err: unknown) {
       console.error(err);
       toast({ title: "Could not start resume builder", variant: "destructive" });
@@ -50,11 +50,11 @@ export function ResumeBuilderSection() {
   };
 
   const handleContinue = () => {
-    if (session) navigate(`/resume-builder/${session.id}`);
+    if (session) navigate(`/resume-builder/session/${session.id}`);
   };
 
   const handlePreview = () => {
-    if (session) navigate(`/resume-builder/${session.id}/preview`);
+    if (session) navigate(`/resume-builder/preview/${session.id}`);
   };
 
   const stepsDone = session ? Math.min(session.stepCompleted, STEP_LABELS.length) : 0;
