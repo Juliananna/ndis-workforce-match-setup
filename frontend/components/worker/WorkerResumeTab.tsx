@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { ChevronLeft, ChevronRight, Eye, Loader2, ExternalLink } from "lucide-react";
 import { StepAboutYou } from "../resume/StepAboutYou";
 import { StepTargetRole } from "../resume/StepTargetRole";
@@ -31,28 +31,31 @@ interface Props {
 export function WorkerResumeTab({ onBack }: Props) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const api = useAuthedBackend();
   const [session, setSession] = useState<SessionData>(defaultSession());
   const [currentStep, setCurrentStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    backend.resume.workerCreateOrGetSession()
+    if (!api) return;
+    api.resume.workerCreateOrGetSession()
       .then(({ session: s }) => {
         setSession(s as SessionData);
         setCurrentStep(Math.min(s.stepCompleted, STEPS.length - 1));
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error(err);
         toast({ title: "Could not load resume session", variant: "destructive" });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [api]);
 
   const saveStep = useCallback(async (data: SessionData, step: number) => {
-    if (!data.id) return;
+    if (!data.id || !api) return;
     setSaving(true);
     try {
-      await backend.resume.updateSession({
+      await api.resume.updateSession({
         id: data.id, stepCompleted: step,
         firstName: data.firstName ?? undefined,
         lastName: data.lastName ?? undefined,
