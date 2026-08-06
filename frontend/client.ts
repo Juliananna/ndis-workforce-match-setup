@@ -1721,6 +1721,7 @@ import {
 } from "~backend/resume/session_photo";
 import { scoreSession as api_resume_session_score_scoreSession } from "~backend/resume/session_score";
 import { updateSession as api_resume_session_update_updateSession } from "~backend/resume/session_update";
+import { workerCreateOrGetSession as api_resume_worker_create_or_get_workerCreateOrGetSession } from "~backend/resume/worker_create_or_get";
 import { getWorkerResumeSession as api_resume_worker_session_getWorkerResumeSession } from "~backend/resume/worker_session";
 
 export namespace resume {
@@ -1753,6 +1754,7 @@ export namespace resume {
             this.updateReferee = this.updateReferee.bind(this)
             this.updateSession = this.updateSession.bind(this)
             this.verifyResumeDocument = this.verifyResumeDocument.bind(this)
+            this.workerCreateOrGetSession = this.workerCreateOrGetSession.bind(this)
         }
 
         /**
@@ -2030,6 +2032,12 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads/${encodeURIComponent(params.id)}/documents/${encodeURIComponent(params.documentId)}/verify`, {method: "PATCH", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_verifyResumeDocument>
+        }
+
+        public async workerCreateOrGetSession(): Promise<ResponseType<typeof api_resume_worker_create_or_get_workerCreateOrGetSession>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/worker/create-or-get`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_worker_create_or_get_workerCreateOrGetSession>
         }
     }
 }
