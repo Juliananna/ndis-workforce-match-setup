@@ -4,17 +4,20 @@ import {
   Bell, HelpCircle, MapPin, CheckCircle2, AlertTriangle, XCircle,
   User, Zap, Star, Navigation, Clock, Menu, X,
   CreditCard, Users, FileText, ChevronRight, TrendingUp, Lock, Eye, EyeOff,
+  Sparkles, BarChart2, ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
+import { STEPS } from "../resume/types";
 import { JobDetailModal } from "../matching/JobDetailModal";
 import type { MatchedJob } from "~backend/matching/match_jobs";
 import type { WorkerDocument } from "~backend/workers/documents";
 import type { VerificationScoreResponse } from "~backend/workers/verification_score";
 import type { Offer } from "~backend/offers/types";
-
+import type { ResumeSession } from "~backend/resume/types";
 
 type SidebarTab = "home" | "jobs" | "profile";
 
@@ -236,6 +239,149 @@ function SetPasswordBanner() {
   );
 }
 
+const TOTAL_STEPS = STEPS.length;
+
+function ResumeBannerCard() {
+  const api = useAuthedBackend();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [session, setSession] = useState<ResumeSession | null | undefined>(undefined);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (!api) return;
+    api.resume.getWorkerResumeSession()
+      .then((res) => setSession(res.session))
+      .catch(() => setSession(null));
+  }, [api]);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    try {
+      const res = await backend.resume.createSession({});
+      navigate(`/resume-builder/session/${res.session.id}`);
+    } catch (err: unknown) {
+      console.error(err);
+      toast({ title: "Could not start resume builder", variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (session === undefined) return null;
+
+  if (session === null) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-700 p-6 text-white shadow-lg">
+        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute right-6 bottom-0 h-20 w-20 rounded-full bg-white/5 pointer-events-none" />
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <div className="h-14 w-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+            <Sparkles className="h-7 w-7 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h2 className="text-base font-bold">Build your NDIS resume</h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 border border-white/30 uppercase tracking-wide">New</span>
+            </div>
+            <p className="text-sm text-white/75 leading-relaxed max-w-md">
+              Our AI-powered builder creates a professional, provider-ready resume in minutes. Workers with a resume get seen first.
+            </p>
+            <div className="flex items-center gap-3 mt-3 flex-wrap">
+              <div className="flex items-center gap-1.5 text-xs text-white/60">
+                <CheckCircle2 className="h-3.5 w-3.5 text-white/60" />
+                AI-written summary
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-white/60">
+                <CheckCircle2 className="h-3.5 w-3.5 text-white/60" />
+                Resume strength score
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-white/60">
+                <CheckCircle2 className="h-3.5 w-3.5 text-white/60" />
+                Share with providers
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="flex items-center gap-2 px-5 py-3 bg-white text-purple-700 font-bold text-sm rounded-xl hover:bg-white/90 transition-colors shadow-md disabled:opacity-60 whitespace-nowrap shrink-0"
+          >
+            {creating ? (
+              <><div className="h-4 w-4 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />Starting…</>
+            ) : (
+              <>Start Now <ArrowRight className="h-4 w-4" /></>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const stepsDone = Math.min(session.stepCompleted, TOTAL_STEPS);
+  const progressPct = Math.round((stepsDone / TOTAL_STEPS) * 100);
+  const isComplete = session.stepCompleted >= TOTAL_STEPS;
+  const strengthScore = session.resumeStrengthScore;
+  const nextStep = !isComplete ? (STEPS[session.stepCompleted]?.label ?? null) : null;
+
+  return (
+    <div className="rounded-2xl border border-purple-200 bg-white overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-5 py-3.5 bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-purple-100">
+        <div className="h-7 w-7 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+          <Sparkles className="h-4 w-4 text-purple-600" />
+        </div>
+        <p className="font-semibold text-gray-900 text-sm flex-1">AI Resume Builder</p>
+        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${isComplete ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+          {isComplete ? "Complete" : "In Progress"}
+        </span>
+      </div>
+      <div className="px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex-1 min-w-0 space-y-2.5">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{stepsDone} / {TOTAL_STEPS} steps complete</span>
+              <span className="font-semibold">{progressPct}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-700"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </div>
+          {strengthScore !== null && (
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <BarChart2 className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+              Resume strength: <span className={`font-bold ${strengthScore >= 80 ? "text-emerald-600" : strengthScore >= 60 ? "text-amber-600" : "text-red-500"}`}>{strengthScore}%</span>
+            </div>
+          )}
+          {nextStep && (
+            <p className="text-xs text-purple-700 font-medium">Next: {nextStep}</p>
+          )}
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => navigate(`/resume-builder/session/${session.id}`)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            {isComplete ? "Edit Resume" : "Continue"}
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          {isComplete && (
+            <button
+              onClick={() => navigate(`/resume-builder/preview/${session.id}`)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-semibold rounded-xl transition-colors border border-purple-200"
+            >
+              <FileText className="h-4 w-4" />
+              Preview
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const { user } = useAuth();
   const api = useAuthedBackend();
@@ -296,7 +442,17 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
     { id: "home", label: "Home", icon: Home },
     { id: "jobs", label: "Job Offers", icon: Briefcase },
     { id: "profile", label: "Profile", icon: SettingsIcon },
+    { id: "resume", label: "Resume Builder", icon: Sparkles },
   ];
+
+  const navigate = useNavigate();
+  const handleSidebarNav = (id: string) => {
+    if (id === "resume") {
+      navigate("/resume-builder");
+    } else {
+      handleSidebarTab(id as SidebarTab);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -309,12 +465,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => handleSidebarTab(id as SidebarTab)}
+              onClick={() => handleSidebarNav(id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                 sidebarTab === id ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-              }`}
+              } ${id === "resume" ? "text-purple-700 hover:bg-purple-50" : ""}`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className={`h-4 w-4 shrink-0 ${id === "resume" ? "text-purple-500" : ""}`} />
               <span className="flex-1">{label}</span>
               {id === "jobs" && pendingOffers.length > 0 && (
                 <span className="h-5 w-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
@@ -364,12 +520,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
               {navItems.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => { handleSidebarTab(id as SidebarTab); setMobileMenuOpen(false); }}
+                  onClick={() => { handleSidebarNav(id); setMobileMenuOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors text-left ${
                     sidebarTab === id ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
-                  }`}
+                  } ${id === "resume" ? "text-purple-700 hover:bg-purple-50" : ""}`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />{label}
+                  <Icon className={`h-4 w-4 shrink-0 ${id === "resume" ? "text-purple-500" : ""}`} />{label}
                 </button>
               ))}
             </nav>
@@ -424,6 +580,8 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
 
           {!user?.hasPassword && <SetPasswordBanner />}
+
+          <ResumeBannerCard />
 
           {pendingOffers.length > 0 && (
             <button
