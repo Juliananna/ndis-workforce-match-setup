@@ -26,6 +26,9 @@ const EmployerUpgradePage = lazy(() => import("./EmployerUpgradePage"));
 const SalesPortalInner = lazy(() =>
   import("../components/sales/SalesPortalInner")
 );
+const WorkerResumeTab = lazy(() =>
+  import("../components/worker/WorkerResumeTab").then((m) => ({ default: m.WorkerResumeTab }))
+);
 const BrowseWorkersPage = lazy(() =>
   import("../components/employer/BrowseWorkersPage").then((m) => ({ default: m.BrowseWorkersPage }))
 );
@@ -33,7 +36,7 @@ const SavedWorkersTab = lazy(() =>
   import("../components/employer/SavedWorkersTab").then((m) => ({ default: m.SavedWorkersTab }))
 );
 
-type Tab = "home" | "profile" | "employer" | "offers" | "admin" | "browse" | "saved" | "upgrade" | "sales";
+type Tab = "home" | "profile" | "employer" | "offers" | "admin" | "browse" | "saved" | "upgrade" | "sales" | "resume";
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -115,6 +118,7 @@ export default function DashboardPage() {
                 isEmployer={isEmployer}
                 isAdmin={isAdmin}
                 isSalesAgent={isSalesAgent}
+                onBack={() => setTab("home")}
               />
             </div>
           </div>
@@ -682,13 +686,14 @@ function StatCard({
 }
 
 function PageContent({
-  tab, isWorker, isEmployer, isAdmin, isSalesAgent
+  tab, isWorker, isEmployer, isAdmin, isSalesAgent, onBack
 }: {
   tab: Tab;
   isWorker: boolean;
   isEmployer: boolean;
   isAdmin: boolean;
   isSalesAgent: boolean;
+  onBack?: () => void;
 }) {
   const fallback = (
     <div className="flex items-center justify-center py-20">
@@ -707,6 +712,7 @@ function PageContent({
       {tab === "upgrade" && isEmployer && <EmployerUpgradePage onBack={() => {}} />}
       {tab === "offers" && isWorker && <WorkerOffersPage />}
       {tab === "profile" && isWorker && <WorkerProfilePage />}
+      {tab === "resume" && isWorker && <WorkerResumeTab onBack={onBack ?? (() => {})} />}
       {tab === "admin" && isAdmin && null}
       {tab === "sales" && isSalesAgent && <SalesPortalInner />}
     </Suspense>

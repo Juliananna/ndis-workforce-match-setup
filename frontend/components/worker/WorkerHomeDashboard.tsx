@@ -6,7 +6,7 @@ import {
   CreditCard, Users, FileText, ChevronRight, TrendingUp, Lock, Eye, EyeOff,
   Sparkles, BarChart2, ArrowRight,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "../../contexts/AuthContext";
@@ -241,9 +241,8 @@ function SetPasswordBanner() {
 
 const TOTAL_STEPS = STEPS.length;
 
-function ResumeBannerCard() {
+function ResumeBannerCard({ onTabChange }: { onTabChange: (tab: string) => void }) {
   const api = useAuthedBackend();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<ResumeSession | null | undefined>(undefined);
   const [creating, setCreating] = useState(false);
@@ -258,8 +257,7 @@ function ResumeBannerCard() {
   const handleCreate = async () => {
     setCreating(true);
     try {
-      const res = await backend.resume.workerCreateOrGetSession();
-      navigate(`/resume-builder/session/${res.session.id}`);
+      onTabChange("resume");
     } catch (err: unknown) {
       console.error(err);
       toast({ title: "Could not start resume builder", variant: "destructive" });
@@ -361,7 +359,7 @@ function ResumeBannerCard() {
         </div>
         <div className="flex gap-2 shrink-0">
           <button
-            onClick={() => navigate(`/resume-builder/session/${session.id}`)}
+            onClick={() => onTabChange("resume")}
 
             className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors"
           >
@@ -370,7 +368,7 @@ function ResumeBannerCard() {
           </button>
           {isComplete && (
             <button
-              onClick={() => navigate(`/resume-builder/preview/${session.id}`)}
+              onClick={() => window.open(`/resume-builder/preview/${session.id}`, '_blank')}
               className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-semibold rounded-xl transition-colors border border-purple-200"
             >
               <FileText className="h-4 w-4" />
@@ -446,16 +444,9 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
     { id: "resume", label: "Resume Builder", icon: Sparkles },
   ];
 
-  const navigate = useNavigate();
-  const handleSidebarNav = async (id: string) => {
+  const handleSidebarNav = (id: string) => {
     if (id === "resume") {
-      try {
-        const res = await backend.resume.workerCreateOrGetSession();
-        navigate(`/resume-builder/session/${res.session.id}`);
-      } catch (err: unknown) {
-        console.error(err);
-        navigate("/resume-builder");
-      }
+      onTabChange("resume");
     } else {
       handleSidebarTab(id as SidebarTab);
     }
@@ -588,7 +579,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
 
           {!user?.hasPassword && <SetPasswordBanner />}
 
-          <ResumeBannerCard />
+          <ResumeBannerCard onTabChange={onTabChange} />
 
           {pendingOffers.length > 0 && (
             <button
