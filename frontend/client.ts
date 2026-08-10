@@ -205,6 +205,7 @@ import {
     adminSubmitReferenceCheck as api_admin_reference_check_adminSubmitReferenceCheck
 } from "~backend/admin/reference_check";
 import { adminSendReferenceMessage as api_admin_reference_message_adminSendReferenceMessage } from "~backend/admin/reference_message";
+import { adminBackfillResendLogs as api_admin_resend_backfill_adminBackfillResendLogs } from "~backend/admin/resend_backfill";
 import { adminResetUserPassword as api_admin_reset_user_password_adminResetUserPassword } from "~backend/admin/reset_user_password";
 import {
     adminListRtoEnquiries as api_admin_rto_enquiries_adminListRtoEnquiries,
@@ -257,6 +258,7 @@ export namespace admin {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.adminArchiveUser = this.adminArchiveUser.bind(this)
+            this.adminBackfillResendLogs = this.adminBackfillResendLogs.bind(this)
             this.adminCancelBooking = this.adminCancelBooking.bind(this)
             this.adminCancelEmailReferenceRequest = this.adminCancelEmailReferenceRequest.bind(this)
             this.adminCreateBooking = this.adminCreateBooking.bind(this)
@@ -341,6 +343,12 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/users/${encodeURIComponent(params.userId)}/archive`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async adminBackfillResendLogs(): Promise<ResponseType<typeof api_admin_resend_backfill_adminBackfillResendLogs>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/email-comms/backfill-resend`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_resend_backfill_adminBackfillResendLogs>
         }
 
         public async adminCancelBooking(params: { bookingId: string }): Promise<void> {

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import type { WorkerSummary } from "~backend/workers/browse";
 import type { JobRequest } from "~backend/jobs/get";
-import type { ReferencesSummary } from "~backend/workers/references";
+import type { ReferencesSummary, WorkerReferenceFull } from "~backend/workers/references";
 
 interface Props {
   worker: WorkerSummary | null;
@@ -38,6 +38,7 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
   const api = useAuthedBackend();
   const [view, setView] = useState<DrawerView>("profile");
   const [refSummary, setRefSummary] = useState<ReferencesSummary | null>(null);
+  const [refDetails, setRefDetails] = useState<WorkerReferenceFull[] | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
 
@@ -73,10 +74,11 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
       setOfferedRate("");
       setOfferNotes("");
       setRefSummary(null);
+      setRefDetails(null);
       setVideoUrl(null);
       if (api) {
         api.workers.getReferencesForEmployer({ workerId: worker.workerId })
-          .then((res) => setRefSummary(res.summary))
+          .then((res) => { setRefSummary(res.summary); setRefDetails(res.references ?? null); })
           .catch(() => {});
         if (worker.introVideoUrl) {
           setVideoLoading(true);
@@ -346,16 +348,33 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
               ) : refSummary.total === 0 ? (
                 <p className="text-xs text-muted-foreground/60">No references added</p>
               ) : (
-                <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-sm font-semibold text-foreground">{refSummary.total} reference{refSummary.total !== 1 ? 's' : ''}</span>
-                  {refSummary.verified > 0 && (
-                    <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle className="h-3.5 w-3.5" />{refSummary.verified} verified
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/50 ml-auto">
-                    <Lock className="h-3 w-3" />Details visible after offer accepted
-                  </span>
+                <div className="space-y-1.5 mt-0.5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-foreground">{refSummary.total} reference{refSummary.total !== 1 ? 's' : ''}</span>
+                    {refSummary.verified > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle className="h-3.5 w-3.5" />{refSummary.verified} verified
+                      </span>
+                    )}
+                    {!refDetails && (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/50 ml-auto">
+                        <Lock className="h-3 w-3" />Details visible after offer accepted
+                      </span>
+                    )}
+                  </div>
+                  {refDetails && refDetails.map((ref) => (
+                    <div key={ref.id} className="rounded-md border border-border bg-background px-3 py-2 space-y-0.5">
+                      <p className="text-xs font-semibold text-foreground">{ref.refereeName}</p>
+                      <p className="text-xs text-muted-foreground">{ref.refereeTitle} · {ref.refereeOrganisation}</p>
+                      {ref.refereeEmail && <p className="text-xs text-muted-foreground">{ref.refereeEmail}</p>}
+                      {ref.refereePhone && <p className="text-xs text-muted-foreground">{ref.refereePhone}</p>}
+                      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full mt-0.5 ${
+                        ref.status === 'Verified' ? 'bg-green-500/10 text-green-600' :
+                        ref.status === 'Declined' ? 'bg-red-500/10 text-red-600' :
+                        'bg-amber-500/10 text-amber-600'
+                      }`}>{ref.status}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
