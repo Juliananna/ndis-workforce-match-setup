@@ -7,7 +7,7 @@ import {
   ArrowLeft, MapPin, Calendar, Clock, DollarSign,
   CheckCircle2, XCircle, TrendingUp,
   ChevronDown, ChevronUp, Shield, Eye, EyeOff,
-  FileText, Share2, ExternalLink, Info
+  FileText, Share2, ExternalLink, Info, User
 } from "lucide-react";
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import { NegotiationHistory } from "./NegotiationHistory";
@@ -19,6 +19,7 @@ import type { EmployerNegotiateRequest } from "~backend/offers/negotiate";
 import type { WorkerRespondRequest } from "~backend/offers/respond";
 import type { ShareResumeRequest } from "~backend/offers/share_resume";
 import type { PublicSchadRate } from "~backend/offers/schads_rates";
+import type { WorkerSummary } from "~backend/workers/browse";
 import backend from "~backend/client";
 
 const SCHADS_RATE_TYPES = [
@@ -143,9 +144,10 @@ interface Props {
   onWorkerAction?: (req: Omit<WorkerRespondRequest, "offerId">) => Promise<Offer>;
   onShareResume?: (req: Omit<ShareResumeRequest, "offerId">) => Promise<Offer>;
   resumePreviewUrl?: string;
+  onViewWorkerProfile?: (workerId: string) => void;
 }
 
-export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerAction, onWorkerAction, onShareResume, resumePreviewUrl }: Props) {
+export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerAction, onWorkerAction, onShareResume, resumePreviewUrl, onViewWorkerProfile }: Props) {
   const [offer, setOffer] = useState<Offer>(initialOffer);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +236,13 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <OfferStatusBadge status={offer.status} size="md" />
                 {role === "EMPLOYER" && offer.workerName && (
-                  <span className="text-sm font-semibold text-gray-700">{offer.workerName}</span>
+                  <button
+                    onClick={() => onViewWorkerProfile?.(offer.workerId)}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline transition-colors"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    {offer.workerName}
+                  </button>
                 )}
                 {role === "EMPLOYER" && (
                   offer.seenAt

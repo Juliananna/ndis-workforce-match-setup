@@ -2597,6 +2597,7 @@ import {
     getDocumentDownloadUrl as api_workers_employer_documents_getDocumentDownloadUrl,
     listWorkerDocumentsForEmployer as api_workers_employer_documents_listWorkerDocumentsForEmployer
 } from "~backend/workers/employer_documents";
+import { getWorkerSummary as api_workers_get_summary_getWorkerSummary } from "~backend/workers/get_summary";
 import {
     getNdisCocStatus as api_workers_ndis_coc_sign_getNdisCocStatus,
     signNdisCoc as api_workers_ndis_coc_sign_signNdisCoc
@@ -2661,6 +2662,7 @@ export namespace workers {
             this.getWorkerProfile = this.getWorkerProfile.bind(this)
             this.getWorkerResume = this.getWorkerResume.bind(this)
             this.getWorkerSkills = this.getWorkerSkills.bind(this)
+            this.getWorkerSummary = this.getWorkerSummary.bind(this)
             this.getWorkerVideo = this.getWorkerVideo.bind(this)
             this.getWorkerVideoForEmployer = this.getWorkerVideoForEmployer.bind(this)
             this.listDocumentTypes = this.listDocumentTypes.bind(this)
@@ -2850,6 +2852,12 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/skills`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_skills_getWorkerSkills>
+        }
+
+        public async getWorkerSummary(params: { workerId: string }): Promise<ResponseType<typeof api_workers_get_summary_getWorkerSummary>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/${encodeURIComponent(params.workerId)}/summary`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_get_summary_getWorkerSummary>
         }
 
         /**

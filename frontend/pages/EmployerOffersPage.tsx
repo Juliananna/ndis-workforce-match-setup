@@ -3,8 +3,10 @@ import { Loader2 } from "lucide-react";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { OfferList } from "../components/offers/OfferList";
 import { OfferDetail } from "../components/offers/OfferDetail";
+import { WorkerProfileDrawer } from "../components/employer/WorkerProfileDrawer";
 import type { Offer, OfferStatus } from "~backend/offers/types";
 import type { EmployerNegotiateRequest } from "~backend/offers/negotiate";
+import type { WorkerSummary } from "~backend/workers/browse";
 
 type View = "list" | "detail";
 
@@ -16,6 +18,7 @@ export default function EmployerOffersPage() {
   const [statusFilter, setStatusFilter] = useState<OfferStatus | "all">("all");
   const [view, setView] = useState<View>("list");
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [profileWorker, setProfileWorker] = useState<WorkerSummary | null>(null);
 
   const load = useCallback(async () => {
     if (!api) return;
@@ -41,13 +44,23 @@ export default function EmployerOffersPage() {
     } catch (e: unknown) {
       console.error(e);
     }
-  };  
+  };
 
   const handleEmployerAction = async (req: Omit<EmployerNegotiateRequest, "offerId">): Promise<Offer> => {
     const updated = await api!.offers.employerNegotiate({ ...req, offerId: selectedOffer!.offerId });
     setOffers((prev) => prev.map((o) => o.offerId === updated.offerId ? updated : o));
     setSelectedOffer(updated);
     return updated;
+  };
+
+  const handleViewWorkerProfile = async (workerId: string) => {
+    if (!api) return;
+    try {
+      const summary = await api.workers.getWorkerSummary({ workerId });
+      setProfileWorker(summary);
+    } catch (e: unknown) {
+      console.error(e);
+    }
   };
 
   if (loading) {
@@ -94,8 +107,14 @@ export default function EmployerOffersPage() {
           role="EMPLOYER"
           onBack={() => { setView("list"); setSelectedOffer(null); }}
           onEmployerAction={handleEmployerAction}
+          onViewWorkerProfile={handleViewWorkerProfile}
         />
       )}
+
+      <WorkerProfileDrawer
+        worker={profileWorker}
+        onClose={() => setProfileWorker(null)}
+      />
     </div>
   );
 }
