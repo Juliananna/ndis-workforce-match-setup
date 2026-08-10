@@ -275,6 +275,7 @@ function AppInner() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <GlobalSupportButton />
     </BrowserRouter>
