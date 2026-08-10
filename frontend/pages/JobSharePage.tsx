@@ -223,6 +223,14 @@ export default function JobSharePage() {
                       )}
                     </div>
 
+                    {/* Description */}
+                    {job.description && (
+                      <div className="border-t border-gray-100 pt-4 mb-4">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">About the Role</p>
+                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{job.description}</p>
+                      </div>
+                    )}
+
                     {/* Tags teaser */}
                     {job.supportTypeTags.length > 0 && (
                       <div className="border-t border-gray-100 pt-4">

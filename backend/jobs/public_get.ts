@@ -15,6 +15,7 @@ export interface PublicJobDetails {
   weekdayRate: number;
   weekendRate: number;
   publicHolidayRate: number;
+  description: string | null;
   isEmergency: boolean;
   responseDeadline: Date | null;
   organisationName: string;
@@ -40,6 +41,7 @@ export const getPublicJob = api<GetPublicJobParams, PublicJobDetails>(
       support_type_tags: string[] | null;
       gender_preference: string | null;
       age_range_preference: string | null;
+      client_notes: string | null;
       weekday_rate: number;
       weekend_rate: number;
       public_holiday_rate: number;
@@ -53,7 +55,7 @@ export const getPublicJob = api<GetPublicJobParams, PublicJobDetails>(
       SELECT jr.job_id, jr.job_type, jr.job_title, jr.location,
              jr.shift_date::text AS shift_date, jr.shift_start_time,
              jr.shift_duration_hours, jr.support_type_tags, jr.gender_preference,
-             jr.age_range_preference, jr.weekday_rate, jr.weekend_rate,
+             jr.age_range_preference, jr.client_notes, jr.weekday_rate, jr.weekend_rate,
              jr.public_holiday_rate, jr.status, jr.is_emergency,
              jr.response_deadline, jr.created_at,
              e.organisation_name, e.logo_url
@@ -79,6 +81,7 @@ export const getPublicJob = api<GetPublicJobParams, PublicJobDetails>(
       weekdayRate: row.weekday_rate,
       weekendRate: row.weekend_rate,
       publicHolidayRate: row.public_holiday_rate,
+      description: row.client_notes,
       isEmergency: row.is_emergency,
       responseDeadline: row.response_deadline,
       organisationName: row.organisation_name,
