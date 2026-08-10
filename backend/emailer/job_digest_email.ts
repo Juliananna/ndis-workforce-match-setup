@@ -24,6 +24,7 @@ interface DigestWorker {
   email: string;
   name: string;
   minimum_pay_rate: number | null;
+  document_count: number;
 }
 
 function formatRate(rate: number): string {
@@ -59,7 +60,31 @@ function buildJobCard(job: DigestJob): string {
     </div>`;
 }
 
-export function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: string): string {
+function buildDocumentNudgeBanner(hasDocuments: boolean): string {
+  if (!hasDocuments) {
+    return `
+    <div style="border:2px solid #f59e0b;border-radius:10px;padding:16px 20px;margin-bottom:20px;background:#fffbeb;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#92400e;">&#9888;&#65039; Your profile isn't visible to employers yet</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#78350f;">Employers can only view and contact workers who have uploaded their compliance documents. Upload yours now to start receiving job offers directly.</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#78350f;">Documents you'll need:</p>
+      <ul style="margin:0 0 14px;padding-left:18px;font-size:13px;color:#78350f;">
+        <li>NDIS Worker Screening Check</li>
+        <li>Police Check</li>
+        <li>First Aid &amp; CPR Certificate</li>
+        <li>Relevant qualifications (e.g. Cert III in Individual Support)</li>
+      </ul>
+      <a href="https://kizazihire.com.au/dashboard" style="display:inline-block;background:#d97706;color:#fff;border-radius:7px;padding:10px 22px;font-size:14px;font-weight:600;text-decoration:none;">Upload My Documents</a>
+    </div>`;
+  }
+  return `
+    <div style="border:1px solid #d1fae5;border-radius:10px;padding:14px 18px;margin-bottom:20px;background:#f0fdf4;">
+      <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#065f46;">&#9989; Keep your documents up to date</p>
+      <p style="margin:0 0 10px;font-size:13px;color:#047857;">Employers prioritise workers with a complete, verified profile. Make sure your certifications and checks haven't expired.</p>
+      <a href="https://kizazihire.com.au/dashboard" style="display:inline-block;background:#059669;color:#fff;border-radius:7px;padding:8px 18px;font-size:13px;font-weight:600;text-decoration:none;">Review My Documents</a>
+    </div>`;
+}
+
+export function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: string, hasDocuments = true): string {
   const jobCards = jobs.map(buildJobCard).join("");
   const count = jobs.length;
   const heading = `${count} new NDIS job${count !== 1 ? "s" : ""} available this ${periodLabel}`;
@@ -69,6 +94,7 @@ export function buildDigestEmail(name: string, jobs: DigestJob[], periodLabel: s
     <div style="background:#fff;border-radius:12px;padding:24px;margin-bottom:16px;">
       <h2 style="color:#1a1a1a;margin:0 0 6px;">${heading}</h2>
       <p style="color:#6b7280;font-size:14px;margin:0 0 20px;">Hi ${name}, here are the latest open jobs matching your profile.</p>
+      ${buildDocumentNudgeBanner(hasDocuments)}
       ${jobCards}
       <div style="text-align:center;margin-top:20px;">
         <a href="https://kizazihire.com.au/dashboard" style="display:inline-block;background:#2563eb;color:#fff;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:600;text-decoration:none;">
@@ -126,7 +152,8 @@ async function sendDigest(since: Date, periodLabel: string): Promise<{ sent: num
       u.user_id,
       u.email,
       w.name,
-      wa.minimum_pay_rate
+      wa.minimum_pay_rate,
+      (SELECT COUNT(*)::int FROM worker_documents wd WHERE wd.worker_id = w.worker_id) AS document_count
     FROM workers w
     JOIN users u ON u.user_id = w.user_id
     LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
@@ -149,7 +176,7 @@ async function sendDigest(since: Date, periodLabel: string): Promise<{ sent: num
     return {
       to: w.email,
       subject: `${jobs.length} new NDIS job${jobs.length !== 1 ? "s" : ""} available — Kizazi Hire`,
-      html: buildDigestEmail(w.name, displayJobs.slice(0, 8), periodLabel),
+      html: buildDigestEmail(w.name, displayJobs.slice(0, 8), periodLabel, w.document_count > 0),
     };
   });
 
@@ -217,7 +244,7 @@ export const adminPreviewJobDigest = api<DigestPreviewRequest, DigestPreviewResp
     `;
 
     const html = jobs.length > 0
-      ? buildDigestEmail("[Worker Name]", jobs.slice(0, 8), periodLabel)
+      ? buildDigestEmail("[Worker Name]", jobs.slice(0, 8), periodLabel, false)
       : `<div style="font-family:Arial,sans-serif;padding:40px;text-align:center;color:#6b7280;">
           <p>No open jobs found in the last ${periodLabel} to include in the digest.</p>
         </div>`;
