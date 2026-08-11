@@ -1,0 +1,1 @@
+ALTER TABLE email_sent_log ADD COLUMN IF NOT EXISTS resend_id TEXT UNIQUE;

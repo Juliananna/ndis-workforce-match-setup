@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Building2, FileText, Briefcase, CheckCircle, MessageSquare,
   DollarSign, UserCheck, TrendingUp, Activity, AlertTriangle,
-  ShieldCheck, Zap, ArrowRight, Loader2, RefreshCw, BarChart2, RefreshCcw,
+  ShieldCheck, Zap, ArrowRight, Loader2, RefreshCw, BarChart2, RefreshCcw, DatabaseZap,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
@@ -80,6 +80,8 @@ export function AdminDashboardHome({
   const [refreshing, setRefreshing] = useState(false);
   const [ghlSyncing, setGhlSyncing] = useState(false);
   const [ghlResult, setGhlResult] = useState<{ synced: number; failed: number } | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ fetched: number; inserted: number; skipped: number } | null>(null);
 
   const load = async (silent = false) => {
     if (!api) return;
@@ -93,6 +95,21 @@ export function AdminDashboardHome({
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const backfillResend = async () => {
+    if (!api) return;
+    setBackfilling(true);
+    setBackfillResult(null);
+    try {
+      const result = await api.admin.adminBackfillResendLogs();
+      setBackfillResult(result);
+    } catch (e) {
+      console.error(e);
+      setBackfillResult({ fetched: -1, inserted: 0, skipped: 0 });
+    } finally {
+      setBackfilling(false);
     }
   };
 
@@ -400,6 +417,34 @@ export function AdminDashboardHome({
           >
             <RefreshCcw className={`h-4 w-4 ${ghlSyncing ? "animate-spin" : ""}`} />
             {ghlSyncing ? "Syncing…" : "Sync to GHL"}
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-blue-500/10">
+            <DatabaseZap className="h-5 w-5 text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">Backfill Email Logs from Resend</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Import historical sent emails from Resend into the email_sent_log table.
+            </p>
+            {backfillResult && backfillResult.fetched >= 0 && (
+              <p className="text-xs text-emerald-400 mt-1 font-medium">
+                Fetched {backfillResult.fetched}, inserted {backfillResult.inserted}, skipped {backfillResult.skipped}
+              </p>
+            )}
+            {backfillResult && backfillResult.fetched === -1 && (
+              <p className="text-xs text-red-400 mt-1 font-medium">Backfill failed — check ResendApiKey secret</p>
+            )}
+          </div>
+          <button
+            onClick={backfillResend}
+            disabled={backfilling}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl text-sm font-medium text-blue-400 transition-colors disabled:opacity-60 shrink-0"
+          >
+            <DatabaseZap className={`h-4 w-4 ${backfilling ? "animate-pulse" : ""}`} />
+            {backfilling ? "Importing…" : "Backfill Resend"}
           </button>
         </div>
       </div>
