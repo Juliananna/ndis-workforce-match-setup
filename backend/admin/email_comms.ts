@@ -239,23 +239,19 @@ export const adminSendEmailToUser = api<SendEmailToUserRequest, SendEmailRespons
     const subject = applyPlaceholders(req.subject.trim(), vars);
     const html = applyPlaceholders(req.htmlBody.trim(), vars);
 
-    let status = "sent";
-    let errorMsg: string | null = null;
     try {
-      await sendEmail({ to: user.email, subject, html });
+      await sendEmail({
+        to: user.email,
+        subject,
+        html,
+        category: req.category ?? "general",
+        recipientUserId: req.userId,
+        sentByUserId: auth.userID,
+      });
     } catch (e: unknown) {
-      status = "failed";
-      errorMsg = e instanceof Error ? e.message : "unknown error";
+      const errorMsg = e instanceof Error ? e.message : "unknown error";
+      throw APIError.internal(`Failed to send email: ${errorMsg}`);
     }
-
-    await db.exec`
-      INSERT INTO email_sent_log
-        (template_id, sent_by, recipient_user_id, recipient_email, subject, category, is_bulk, status, error_message)
-      VALUES
-        (${req.templateId ?? null}, ${auth.userID}, ${req.userId}, ${user.email}, ${subject}, ${req.category ?? "general"}, false, ${status}, ${errorMsg})
-    `;
-
-    if (status === "failed") throw APIError.internal(`Failed to send email: ${errorMsg}`);
 
     return { sent: 1 };
   }
@@ -366,24 +362,18 @@ export const adminSendBulkEmail = api<SendBulkEmailRequest, SendEmailResponse>(
         to: user.email,
         subject: applyPlaceholders(req.subject.trim(), vars),
         html: applyPlaceholders(req.htmlBody.trim(), vars),
-        user_id: user.user_id,
+        recipientUserId: user.user_id,
       };
     });
 
-    const emailToUserId = new Map(payloads.map((p) => [p.to, p.user_id]));
-    const emailToSubject = new Map(payloads.map((p) => [p.to, p.subject]));
-
     const { sent } = await sendEmailsBulk(
       payloads,
-      async (email, success, errorMsg) => {
-        const userId = emailToUserId.get(email) ?? null;
-        const subject = emailToSubject.get(email) ?? req.subject.trim();
-        await db.exec`
-          INSERT INTO email_sent_log
-            (template_id, sent_by, recipient_user_id, recipient_email, subject, category, is_bulk, bulk_count, target_role, status, error_message)
-          VALUES
-            (${req.templateId ?? null}, ${auth.userID}, ${userId}, ${email}, ${subject}, ${req.category ?? "general"}, true, ${users.length}, ${req.targetRole ?? "all"}, ${success ? "sent" : "failed"}, ${errorMsg ?? null})
-        `;
+      undefined,
+      {
+        category: req.category ?? "general",
+        targetRole: req.targetRole ?? "all",
+        totalCount: users.length,
+        sentByUserId: auth.userID,
       }
     );
 

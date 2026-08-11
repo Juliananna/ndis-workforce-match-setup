@@ -89,6 +89,8 @@ new Subscription(offerEmailTopic, "email-offer-events", {
     await sendEmail({
       to: user.email,
       subject: SUBJECTS[event.eventType],
+      category: "offer",
+      recipientUserId: event.recipientUserId,
       html: buildOfferHtml(
         event.eventType,
         event.location,

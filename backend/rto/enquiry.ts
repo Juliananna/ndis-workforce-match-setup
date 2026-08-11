@@ -59,6 +59,7 @@ export const submitRtoEnquiry = api<RtoEnquiryRequest, RtoEnquiryResponse>(
         to: "hello@kizazihire.com.au",
         subject: `RTO Partner Enquiry — ${req.organisationName.trim()}`,
         html,
+        category: "rto_enquiry_internal",
       });
     } catch { }
 
@@ -77,6 +78,7 @@ export const submitRtoEnquiry = api<RtoEnquiryRequest, RtoEnquiryResponse>(
         to: req.email.trim(),
         subject: "Thanks for reaching out — KIZAZI Hire RTO Partner Programme",
         html: confirmHtml,
+        category: "rto_enquiry",
       });
     } catch { }
 

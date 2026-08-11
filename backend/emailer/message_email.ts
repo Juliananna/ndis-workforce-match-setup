@@ -34,6 +34,8 @@ new Subscription(newMessageTopic, "email-new-message", {
       to: user.email,
       subject: `New message — ${event.location} shift on ${event.shiftDate}`,
       html,
+      category: "message",
+      recipientUserId: event.recipientUserId,
     });
   },
 });

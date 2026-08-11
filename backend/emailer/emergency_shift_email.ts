@@ -58,7 +58,7 @@ new Subscription(emergencyShiftTopic, "email-emergency-shift", {
     const subject = `Emergency shift available — ${event.location} on ${event.shiftDate}`;
 
     for await (const user of users) {
-      await sendEmail({ to: user.email, subject, html });
+      await sendEmail({ to: user.email, subject, html, category: "emergency_shift" });
     }
   },
 });

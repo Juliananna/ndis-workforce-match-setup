@@ -217,6 +217,8 @@ export const adminSendRtoEnquiryEmail = api<SendRtoEnquiryEmailRequest, SendRtoE
       to: row.email,
       subject: req.subject.trim(),
       html: body,
+      category: "rto_enquiry",
+      sentByUserId: auth.userID,
     });
 
     await db.exec`

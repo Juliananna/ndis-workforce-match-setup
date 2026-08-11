@@ -68,6 +68,9 @@ export const adminSendReferenceMessage = api<SendReferenceMessageRequest, SendRe
     await sendEmail({
       to: workerUser.email,
       subject: `Message about your reference: ${refLabel}`,
+      category: "compliance",
+      recipientUserId: workerUser.user_id,
+      sentByUserId: auth.userID,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #1a1a1a;">Reference Check Message</h2>

@@ -44,5 +44,5 @@ export async function sendComplianceOfficerInviteEmail(
     </div>
   `;
 
-  await sendEmail({ to, subject: "You've been invited as a Compliance Officer — Kizazi Hire", html });
+  await sendEmail({ to, subject: "You've been invited as a Compliance Officer — Kizazi Hire", html, category: "compliance_invite" });
 }

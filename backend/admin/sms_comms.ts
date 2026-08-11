@@ -179,12 +179,7 @@ export const adminSendSMSToUser = api<SendSMSToUserRequest, SendSMSResponse>(
       body = applyPlaceholders(tmpl.body, { FirstName: firstName, FullName: user.name ?? "" });
     }
 
-    await sendSMS(normalised, body);
-
-    await db.exec`
-      INSERT INTO sms_sent_log (sent_by, recipient_user_id, phone_number, message, status)
-      VALUES (${auth.userID}, ${req.userId}, ${normalised}, ${body}, 'sent')
-    `;
+    await sendSMS(normalised, body, { recipientUserId: req.userId, sentByUserId: auth.userID });
 
     return { sent: 1 };
   }
@@ -243,8 +238,6 @@ export const adminSendBulkSMS = api<SendBulkSMSRequest, SendSMSResponse>(
     let sent = 0;
     for (const user of users) {
       const phone = user.phone!.trim().replace(/\s+/g, "");
-      let status = "sent";
-      let errorMsg: string | null = null;
       let body: string;
 
       if (tmplBody !== null) {
@@ -255,16 +248,10 @@ export const adminSendBulkSMS = api<SendBulkSMSRequest, SendSMSResponse>(
       }
 
       try {
-        await sendSMS(phone, body);
+        await sendSMS(phone, body, { recipientUserId: user.user_id, sentByUserId: auth.userID, isBulk: true });
         sent++;
-      } catch (e: unknown) {
-        status = "failed";
-        errorMsg = e instanceof Error ? e.message : "unknown error";
+      } catch {
       }
-      await db.exec`
-        INSERT INTO sms_sent_log (sent_by, recipient_user_id, phone_number, message, status, error_message, is_bulk)
-        VALUES (${auth.userID}, ${user.user_id}, ${phone}, ${body}, ${status}, ${errorMsg}, true)
-      `;
     }
 
     return { sent };

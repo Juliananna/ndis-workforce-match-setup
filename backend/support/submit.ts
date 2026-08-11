@@ -80,7 +80,7 @@ export const submitSupportTicket = api<SubmitSupportRequest, SupportTicket>(
     </div>`;
 
     try {
-      await sendEmail({ to: userRow.email, subject: `Support request received: ${req.subject.trim()}`, html: confirmHtml });
+      await sendEmail({ to: userRow.email, subject: `Support request received: ${req.subject.trim()}`, html: confirmHtml, category: "support", recipientUserId: auth.userID });
     } catch {
     }
 
@@ -96,7 +96,7 @@ export const submitSupportTicket = api<SubmitSupportRequest, SupportTicket>(
     </div>`;
 
     try {
-      await sendEmail({ to: "support@kizazihire.com.au", subject: `[Support] ${req.subject.trim()} — ${displayName}`, html: adminNotifyHtml });
+      await sendEmail({ to: "support@kizazihire.com.au", subject: `[Support] ${req.subject.trim()} — ${displayName}`, html: adminNotifyHtml, category: "support_internal" });
     } catch {
     }
 

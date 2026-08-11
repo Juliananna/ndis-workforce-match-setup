@@ -50,6 +50,8 @@ new Subscription(documentExpiryTopic, "email-document-expiry", {
       to: user.email,
       subject: SUBJECTS[event.notificationType],
       html: buildDocumentEmailHtml(event.documentType, event.expiryDate, event.notificationType),
+      category: "document_expiry",
+      recipientUserId: event.userId,
     });
   },
 });

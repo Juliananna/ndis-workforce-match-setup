@@ -42,6 +42,7 @@ export const sendReferenceCallReminders = api(
       await sendEmail({
         to: row.officer_email,
         subject: `Reminder: Reference call tomorrow — ${row.referee_name} for ${row.worker_name}`,
+        category: "reference_reminder",
         html: buildReminderEmail({
           workerName: row.worker_name,
           refereeName: row.referee_name,
@@ -89,6 +90,7 @@ export const sendReferenceCallReminders = api(
       await sendEmail({
         to: row.officer_email,
         subject: `Starting in 1 hour: Reference call with ${row.referee_name} for ${row.worker_name}`,
+        category: "reference_reminder",
         html: buildReminderEmail({
           workerName: row.worker_name,
           refereeName: row.referee_name,

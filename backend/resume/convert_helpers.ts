@@ -78,7 +78,7 @@ export async function issueSetPasswordEmail(userId: string, email: string): Prom
   `;
 
   try {
-    await sendEmail({ to: email, subject: "Activate your KizaziHire profile — upload your first compliance document", html });
+    await sendEmail({ to: email, subject: "Activate your KizaziHire profile — upload your first compliance document", html, category: "onboarding", recipientUserId: userId });
   } catch {
   }
 }

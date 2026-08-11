@@ -253,7 +253,7 @@ export const sendOnboardingEmail1 = api(
       const sections = buildSections(row);
       const html = buildEmail1(row.first_name, row.completion_pct, sections);
       try {
-        await sendEmail({ to: row.email, subject: `Welcome, ${row.first_name} — let's get you verified`, html });
+        await sendEmail({ to: row.email, subject: `Welcome, ${row.first_name} — let's get you verified`, html, category: "onboarding", recipientUserId: row.user_id });
         await markSent(row.user_id, 1);
       } catch { }
     }
@@ -278,7 +278,7 @@ export const sendOnboardingEmail2 = api(
       const sections = buildSections(row);
       const html = buildEmail2(row.first_name, row.completion_pct, sections);
       try {
-        await sendEmail({ to: row.email, subject: `You're close, ${row.first_name} — don't miss this`, html });
+        await sendEmail({ to: row.email, subject: `You're close, ${row.first_name} — don't miss this`, html, category: "onboarding", recipientUserId: row.user_id });
         await markSent(row.user_id, 2);
       } catch { }
     }
@@ -302,7 +302,7 @@ export const sendOnboardingEmail3 = api(
 
       const html = buildEmail3(row.first_name, row.completion_pct);
       try {
-        await sendEmail({ to: row.email, subject: `Your free verification won't last, ${row.first_name}`, html });
+        await sendEmail({ to: row.email, subject: `Your free verification won't last, ${row.first_name}`, html, category: "onboarding", recipientUserId: row.user_id });
         await markSent(row.user_id, 3);
       } catch { }
     }
@@ -326,7 +326,7 @@ export const sendOnboardingEmail4 = api(
 
       const html = buildEmail4(row.first_name, row.completion_pct);
       try {
-        await sendEmail({ to: row.email, subject: `Final reminder — complete your profile, ${row.first_name}`, html });
+        await sendEmail({ to: row.email, subject: `Final reminder — complete your profile, ${row.first_name}`, html, category: "onboarding", recipientUserId: row.user_id });
         await markSent(row.user_id, 4);
       } catch { }
     }
@@ -361,7 +361,7 @@ new Subscription(workerSignedUpTopic, "onboarding-welcome-email", {
 
     const html = buildEmail1(event.firstName, 0, sections);
     try {
-      await sendEmail({ to: event.email, subject: `Welcome, ${event.firstName} — let's get you verified`, html });
+      await sendEmail({ to: event.email, subject: `Welcome, ${event.firstName} — let's get you verified`, html, category: "onboarding", recipientUserId: event.userId });
       await markSent(event.userId, 1);
     } catch { }
   },

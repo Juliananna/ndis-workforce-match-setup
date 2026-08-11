@@ -96,6 +96,8 @@ export const adminSendEmailReferenceRequest = api<EmailReferenceRequest, EmailRe
     await sendEmail({
       to: ref.referee_email,
       subject: `Reference Check Request for ${escapeHtml(workerName)} – Kizazi Hire`,
+      category: "reference_check",
+      sentByUserId: auth.userID,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #ffffff;">
           <img src="${escapeHtml(baseUrl)}/kizazi-hire-logo.png" alt="Kizazi Hire" style="height: 40px; margin-bottom: 24px;" />

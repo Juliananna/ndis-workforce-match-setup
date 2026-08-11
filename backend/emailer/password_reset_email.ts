@@ -34,7 +34,7 @@ export async function sendPasswordResetEmail(to: string, token: string, appBaseU
     </div>
   `;
 
-  await sendEmail({ to, subject: "Reset your Kizazi Hire password", html });
+  await sendEmail({ to, subject: "Reset your Kizazi Hire password", html, category: "password_reset" });
 }
 
 export async function sendAdminPasswordResetEmail(to: string, temporaryPassword: string): Promise<void> {
@@ -66,5 +66,5 @@ export async function sendAdminPasswordResetEmail(to: string, temporaryPassword:
     </div>
   `;
 
-  await sendEmail({ to, subject: "Your Kizazi Hire password has been reset", html });
+  await sendEmail({ to, subject: "Your Kizazi Hire password has been reset", html, category: "password_reset" });
 }

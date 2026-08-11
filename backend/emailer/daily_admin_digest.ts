@@ -6,8 +6,8 @@ import { sendEmail, sleep } from "./sender";
 export const dailyAdminDigest = api(
   { expose: false, method: "POST", path: "/emailer/internal/admin-digest" },
   async (): Promise<void> => {
-    const admins = await db.queryAll<{ email: string }>`
-      SELECT u.email
+    const admins = await db.queryAll<{ email: string; user_id: string }>`
+      SELECT u.email, u.user_id
       FROM admin_users au
       JOIN users u ON u.user_id = au.user_id
       WHERE COALESCE(u.is_suspended, false) = false
@@ -143,6 +143,8 @@ export const dailyAdminDigest = api(
           to: admin.email,
           subject: `Daily Platform Digest — ${today}`,
           html,
+          category: "admin_digest",
+          recipientUserId: admin.user_id,
         });
       } catch {
       }

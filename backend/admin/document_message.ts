@@ -92,21 +92,18 @@ export const adminSendDocumentMessage = api<SendDocumentMessageRequest, SendDocu
         </div>
       `;
 
-    let emailStatus = "sent";
-    let emailError: string | null = null;
     try {
-      await sendEmail({ to: workerUser.email, subject: emailSubject, html: emailHtml });
+      await sendEmail({
+        to: workerUser.email,
+        subject: emailSubject,
+        html: emailHtml,
+        category: "compliance",
+        recipientUserId: workerUser.user_id,
+        sentByUserId: auth.userID,
+      });
     } catch (e: unknown) {
-      emailStatus = "failed";
-      emailError = e instanceof Error ? e.message : "unknown error";
+      console.error("Failed to send document message email:", e);
     }
-
-    await db.exec`
-      INSERT INTO email_sent_log
-        (sent_by, recipient_user_id, recipient_email, subject, category, is_bulk, status, error_message)
-      VALUES
-        (${auth.userID}, ${workerUser.user_id}, ${workerUser.email}, ${emailSubject}, 'compliance', false, ${emailStatus}, ${emailError})
-    `;
 
     return { notificationId: row.id };
   }

@@ -101,7 +101,7 @@ new Subscription(userVerifiedTopic, "email-welcome-on-verify", {
       ? `Welcome to Kizazi Hire, ${event.name}!`
       : `Welcome aboard, ${event.name} — your employer account is ready`;
 
-    await sendEmail({ to: event.email, subject, html });
+    await sendEmail({ to: event.email, subject, html, category: "welcome", recipientUserId: event.userId });
   },
 });
 
@@ -147,6 +147,7 @@ new Subscription(employerSubscribedTopic, "email-employer-subscribed", {
       to: event.email,
       subject: `Subscription confirmed — ${event.plan} plan active until ${event.periodEnd}`,
       html,
+      category: "subscription",
     });
   },
 });
@@ -192,6 +193,8 @@ new Subscription(offerDeclinedTopic, "email-offer-declined", {
       to: email,
       subject: `Offer declined — ${event.shiftDate ? `shift on ${event.shiftDate} at` : "shift at"} ${event.location}`,
       html,
+      category: "offer",
+      recipientUserId: event.recipientUserId,
     });
   },
 });
@@ -241,6 +244,7 @@ new Subscription(paymentSucceededTopic, "email-payment-receipt", {
       to: event.email,
       subject: `Payment receipt — ${event.description} (${amount})`,
       html,
+      category: "payment",
     });
   },
 });

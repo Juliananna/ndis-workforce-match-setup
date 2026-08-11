@@ -34,7 +34,7 @@ export async function sendVerificationEmail(to: string, token: string, appBaseUr
     </div>
   `;
 
-  await sendEmail({ to, subject: "Verify your Kizazi Hire email address", html });
+  await sendEmail({ to, subject: "Verify your Kizazi Hire email address", html, category: "verification" });
 }
 
 export async function sendResendVerificationEmail(to: string, token: string, appBaseUrl: string): Promise<void> {
@@ -56,5 +56,5 @@ export async function sendResendVerificationEmail(to: string, token: string, app
     </div>
   `;
 
-  await sendEmail({ to, subject: "Your new Kizazi Hire verification link", html });
+  await sendEmail({ to, subject: "Your new Kizazi Hire verification link", html, category: "verification" });
 }

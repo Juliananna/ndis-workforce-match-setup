@@ -132,6 +132,9 @@ export const adminVerifyDocument = api<VerifyDocumentRequest, VerifyDocumentResp
             to: workerUser.email,
             subject: `Action Required: Please update your ${docLabel}`,
             html: emailHtml,
+            category: "compliance",
+            recipientUserId: workerUser.user_id,
+            sentByUserId: auth.userID,
           });
         } catch (e) {
           console.error("Failed to send document flag email:", e);
