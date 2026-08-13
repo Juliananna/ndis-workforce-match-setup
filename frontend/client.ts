@@ -1525,6 +1525,11 @@ export namespace notifications {
  */
 import { createOffer as api_offers_create_createOffer } from "~backend/offers/create";
 import { getOffer as api_offers_get_getOffer } from "~backend/offers/get";
+import {
+    cancelInterview as api_offers_interviews_cancelInterview,
+    createInterview as api_offers_interviews_createInterview,
+    listInterviews as api_offers_interviews_listInterviews
+} from "~backend/offers/interviews";
 import { listOffers as api_offers_list_listOffers } from "~backend/offers/list";
 import { employerNegotiate as api_offers_negotiate_employerNegotiate } from "~backend/offers/negotiate";
 import { workerRespond as api_offers_respond_workerRespond } from "~backend/offers/respond";
@@ -1542,15 +1547,38 @@ export namespace offers {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.cancelInterview = this.cancelInterview.bind(this)
+            this.createInterview = this.createInterview.bind(this)
             this.createOffer = this.createOffer.bind(this)
             this.employerNegotiate = this.employerNegotiate.bind(this)
             this.getOffer = this.getOffer.bind(this)
             this.getSharedResume = this.getSharedResume.bind(this)
+            this.listInterviews = this.listInterviews.bind(this)
             this.listOffers = this.listOffers.bind(this)
             this.listSchadRates = this.listSchadRates.bind(this)
             this.markOfferSeen = this.markOfferSeen.bind(this)
             this.shareResume = this.shareResume.bind(this)
             this.workerRespond = this.workerRespond.bind(this)
+        }
+
+        public async cancelInterview(params: { offerId: string, interviewId: string }): Promise<ResponseType<typeof api_offers_interviews_cancelInterview>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/interviews/${encodeURIComponent(params.interviewId)}/cancel`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_interviews_cancelInterview>
+        }
+
+        public async createInterview(params: RequestType<typeof api_offers_interviews_createInterview>): Promise<ResponseType<typeof api_offers_interviews_createInterview>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                durationMinutes: params.durationMinutes,
+                location:        params.location,
+                notes:           params.notes,
+                scheduledAt:     params.scheduledAt,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/interviews`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_interviews_createInterview>
         }
 
         public async createOffer(params: RequestType<typeof api_offers_create_createOffer>): Promise<ResponseType<typeof api_offers_create_createOffer>> {
@@ -1582,6 +1610,12 @@ export namespace offers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/shared-resume`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_share_resume_getSharedResume>
+        }
+
+        public async listInterviews(params: { offerId: string }): Promise<ResponseType<typeof api_offers_interviews_listInterviews>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/interviews`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_interviews_listInterviews>
         }
 
         public async listOffers(params: RequestType<typeof api_offers_list_listOffers>): Promise<ResponseType<typeof api_offers_list_listOffers>> {
@@ -2593,6 +2627,7 @@ import {
 import { browseWorkers as api_workers_browse_browseWorkers } from "~backend/workers/browse";
 import { getWorkerCompletion as api_workers_completion_getWorkerCompletion } from "~backend/workers/completion";
 import { getComplianceStatus as api_workers_compliance_status_getComplianceStatus } from "~backend/workers/compliance_status";
+import { getWorkerContactInfo as api_workers_contact_info_getWorkerContactInfo } from "~backend/workers/contact_info";
 import {
     confirmDocumentUpload as api_workers_documents_confirmDocumentUpload,
     deleteWorkerDocument as api_workers_documents_deleteWorkerDocument,
@@ -2667,6 +2702,7 @@ export namespace workers {
             this.getVideoUploadUrl = this.getVideoUploadUrl.bind(this)
             this.getWorkerAvailability = this.getWorkerAvailability.bind(this)
             this.getWorkerCompletion = this.getWorkerCompletion.bind(this)
+            this.getWorkerContactInfo = this.getWorkerContactInfo.bind(this)
             this.getWorkerProfile = this.getWorkerProfile.bind(this)
             this.getWorkerResume = this.getWorkerResume.bind(this)
             this.getWorkerSkills = this.getWorkerSkills.bind(this)
@@ -2839,6 +2875,12 @@ export namespace workers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/workers/completion`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_completion_getWorkerCompletion>
+        }
+
+        public async getWorkerContactInfo(params: { workerId: string }): Promise<ResponseType<typeof api_workers_contact_info_getWorkerContactInfo>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/workers/${encodeURIComponent(params.workerId)}/contact`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_workers_contact_info_getWorkerContactInfo>
         }
 
         public async getWorkerProfile(): Promise<ResponseType<typeof api_workers_profile_get_getWorkerProfile>> {

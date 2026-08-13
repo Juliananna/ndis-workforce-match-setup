@@ -69,6 +69,7 @@ export const shareResume = api<ShareResumeRequest, Offer>(
       seen_at: Date | null;
       resume_shared_at: Date | null;
       resume_session_id: string | null;
+      unread_message_count?: number | null;
     };
 
     const updated = await db.queryRow<OfferRow>`

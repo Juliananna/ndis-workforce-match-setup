@@ -94,6 +94,7 @@ export const employerNegotiate = api<EmployerNegotiateRequest, Offer>(
       seen_at: Date | null;
       resume_shared_at: Date | null;
       resume_session_id: string | null;
+      unread_message_count?: number | null;
     };
 
     let updated: OfferRow | null;

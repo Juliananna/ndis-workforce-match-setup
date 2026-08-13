@@ -25,6 +25,7 @@ export function mapOfferRow(row: {
   seen_at: Date | null;
   resume_shared_at?: Date | null;
   resume_session_id?: string | null;
+  unread_message_count?: number | null;
 }): Offer {
   return {
     offerId: row.offer_id,
@@ -50,6 +51,7 @@ export function mapOfferRow(row: {
     seenAt: row.seen_at,
     resumeSharedAt: row.resume_shared_at ?? null,
     resumeSessionId: row.resume_session_id ?? null,
+    unreadMessageCount: row.unread_message_count ?? 0,
   };
 }
 

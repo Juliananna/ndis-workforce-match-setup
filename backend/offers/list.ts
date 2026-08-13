@@ -41,6 +41,7 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
       seen_at: Date | null;
       resume_shared_at: Date | null;
       resume_session_id: string | null;
+      unread_message_count: number;
     };
 
     const offers: Offer[] = [];
@@ -59,7 +60,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
             o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
-            o.resume_shared_at, o.resume_session_id
+            o.resume_shared_at, o.resume_session_id,
+            (SELECT COUNT(*)::int FROM messages m WHERE m.offer_id = o.offer_id AND m.sender_role = 'WORKER' AND m.read_by_employer_at IS NULL) AS unread_message_count
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.employer_id = ${employer.employer_id} AND o.status = ${req.status}
@@ -72,7 +74,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
             o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
-            o.resume_shared_at, o.resume_session_id
+            o.resume_shared_at, o.resume_session_id,
+            (SELECT COUNT(*)::int FROM messages m WHERE m.offer_id = o.offer_id AND m.sender_role = 'WORKER' AND m.read_by_employer_at IS NULL) AS unread_message_count
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.employer_id = ${employer.employer_id}
@@ -96,7 +99,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
             o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
-            o.resume_shared_at, o.resume_session_id
+            o.resume_shared_at, o.resume_session_id,
+            (SELECT COUNT(*)::int FROM messages m WHERE m.offer_id = o.offer_id AND m.sender_role = 'EMPLOYER' AND m.read_by_worker_at IS NULL) AS unread_message_count
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.worker_id = ${worker.worker_id} AND o.status = ${req.status}
@@ -109,7 +113,8 @@ export const listOffers = api<ListOffersRequest, ListOffersResponse>(
             o.snapshot_location, o.snapshot_shift_date::text, o.snapshot_shift_start_time, o.snapshot_shift_duration_hours,
             o.snapshot_support_type_tags, o.snapshot_client_notes, o.snapshot_behavioural_considerations, o.snapshot_medical_requirements,
             o.offered_rate, o.negotiated_rate, o.latest_proposed_by, o.status, o.additional_notes, o.created_at, o.updated_at, o.seen_at,
-            o.resume_shared_at, o.resume_session_id
+            o.resume_shared_at, o.resume_session_id,
+            (SELECT COUNT(*)::int FROM messages m WHERE m.offer_id = o.offer_id AND m.sender_role = 'EMPLOYER' AND m.read_by_worker_at IS NULL) AS unread_message_count
           FROM offers o
           JOIN workers w ON w.worker_id = o.worker_id
           WHERE o.worker_id = ${worker.worker_id}

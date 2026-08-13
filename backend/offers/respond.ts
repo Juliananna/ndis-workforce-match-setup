@@ -126,13 +126,37 @@ export const workerRespond = api<WorkerRespondRequest, Offer>(
       seen_at: Date | null;
       resume_shared_at: Date | null;
       resume_session_id: string | null;
+      unread_message_count?: number | null;
     };
+
+    let autoResumeSessionId: string | null = null;
+    if (req.action === "accept") {
+      const resumeSession = await db.queryRow<{ id: string }>`
+        SELECT id FROM resume_sessions
+        WHERE converted_worker_id = ${worker.worker_id}
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `;
+      autoResumeSessionId = resumeSession?.id ?? null;
+    }
 
     let updated: OfferRow | null;
     if (rate !== null) {
       updated = await db.queryRow<OfferRow>`
         UPDATE offers
         SET status = ${newStatus}, negotiated_rate = ${rate}, latest_proposed_by = 'WORKER', updated_at = NOW()
+        WHERE offer_id = ${req.offerId}
+        RETURNING offer_id, job_id, employer_id, worker_id,
+          snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,
+          snapshot_support_type_tags, snapshot_client_notes, snapshot_behavioural_considerations, snapshot_medical_requirements,
+          offered_rate, negotiated_rate, latest_proposed_by, status, additional_notes, created_at, updated_at, seen_at,
+          resume_shared_at, resume_session_id
+      `;
+    } else if (req.action === "accept" && autoResumeSessionId) {
+      updated = await db.queryRow<OfferRow>`
+        UPDATE offers
+        SET status = ${newStatus}, latest_proposed_by = 'WORKER', updated_at = NOW(),
+          resume_session_id = ${autoResumeSessionId}, resume_shared_at = NOW()
         WHERE offer_id = ${req.offerId}
         RETURNING offer_id, job_id, employer_id, worker_id,
           snapshot_location, snapshot_shift_date::text, snapshot_shift_start_time, snapshot_shift_duration_hours,

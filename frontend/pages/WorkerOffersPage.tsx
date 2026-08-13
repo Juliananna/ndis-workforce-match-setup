@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Loader2, MapPin, Clock, Search, CheckCircle, Zap,
-  SlidersHorizontal, Navigation, CalendarDays, Bell, ChevronRight
+  SlidersHorizontal, Navigation, CalendarDays, Bell, ChevronRight, MessageCircle
 } from "lucide-react";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import { OfferDetail } from "../components/offers/OfferDetail";
@@ -68,6 +68,11 @@ function OfferCard({ offer, onClick }: { offer: Offer; onClick: () => void }) {
               <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 ACTION NEEDED
+              </span>
+            )}
+            {offer.unreadMessageCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-600 text-white">
+                <MessageCircle className="h-2.5 w-2.5" />{offer.unreadMessageCount} new
               </span>
             )}
           </div>

@@ -36,5 +36,6 @@ export interface Offer {
   seenAt: Date | null;
   resumeSharedAt: Date | null;
   resumeSessionId: string | null;
+  unreadMessageCount: number;
   history?: NegotiationEvent[];
 }

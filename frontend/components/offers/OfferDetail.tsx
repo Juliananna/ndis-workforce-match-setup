@@ -369,18 +369,20 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
           </div>
         )}
 
-        {role === "WORKER" && onShareResume && isActiveOffer && (
+        {role === "WORKER" && (isActiveOffer || offer.status === "Accepted") && (
           <div className="px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="h-3.5 w-3.5 text-gray-400" />
-              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Share Your Resume</p>
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Your Resume</p>
             </div>
             {offer.resumeSharedAt ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
                   <Share2 className="h-4 w-4 text-emerald-600 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-emerald-800">Resume shared with employer</p>
+                    <p className="text-sm font-semibold text-emerald-800">
+                      {offer.status === "Accepted" ? "Resume automatically shared with employer" : "Resume shared with employer"}
+                    </p>
                     <p className="text-xs text-emerald-600 mt-0.5">
                       Shared {new Date(offer.resumeSharedAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
@@ -398,17 +400,19 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
                       View my resume
                     </a>
                   )}
-                  <button
-                    onClick={() => doShareResume(false)}
-                    disabled={sharingResume}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                    {sharingResume ? "Removing…" : "Remove resume"}
-                  </button>
+                  {onShareResume && offer.status !== "Accepted" && (
+                    <button
+                      onClick={() => doShareResume(false)}
+                      disabled={sharingResume}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      {sharingResume ? "Removing…" : "Remove resume"}
+                    </button>
+                  )}
                 </div>
               </div>
-            ) : (
+            ) : onShareResume && isActiveOffer ? (
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
                   Share your resume with this employer to stand out during negotiations.
@@ -424,7 +428,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
                   {sharingResume ? "Sharing…" : "Share My Resume"}
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -655,8 +659,8 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
                 <p className="text-sm font-bold">Offer Accepted</p>
                 <p className="text-xs text-emerald-600">
                   {role === "EMPLOYER"
-                    ? "The worker has accepted this offer. Their compliance documents are now accessible above."
-                    : "You've accepted this offer. The employer can now access your compliance documents."}
+                    ? "The worker has accepted this offer. Their compliance documents and resume are now accessible above."
+                    : "You've accepted this offer. Your resume has been automatically shared with the employer."}
                 </p>
               </div>
             </div>
