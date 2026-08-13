@@ -271,6 +271,7 @@ export const downloadWorkerDocumentsZip = api.raw(
     path: "/employers/workers/:workerId/documents/download-zip",
   },
   async (req, resp) => {
+    try {
     const auth = getAuthData();
     if (!auth || auth.role !== "EMPLOYER") {
       resp.writeHead(403, { "Content-Type": "application/json" });
@@ -470,5 +471,12 @@ export const downloadWorkerDocumentsZip = api.raw(
       "Content-Length": zipBuffer.length,
     });
     resp.end(zipBuffer);
+    } catch (e) {
+      console.error("downloadWorkerDocumentsZip error:", e);
+      if (!resp.headersSent) {
+        resp.writeHead(500, { "Content-Type": "application/json" });
+        resp.end(JSON.stringify({ code: "internal", message: "an internal error occurred" }));
+      }
+    }
   }
 );
