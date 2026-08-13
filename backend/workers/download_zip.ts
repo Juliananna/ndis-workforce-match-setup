@@ -333,7 +333,7 @@ export const downloadWorkerDocumentsZip = api.raw(
       db.queryAll<{ skill: string }>`
         SELECT skill FROM worker_skills WHERE worker_id = ${worker.worker_id} ORDER BY skill
       `,
-      db.queryRow<{ available_days: string[]; preferred_shift_types: string[] }>`
+      db.queryRow<{ available_days: string; preferred_shift_types: string }>`
         SELECT available_days, preferred_shift_types FROM worker_availability WHERE worker_id = ${worker.worker_id}
       `,
       db.queryAll<{
@@ -387,8 +387,8 @@ export const downloadWorkerDocumentsZip = api.raw(
       ndisScreeningNumber: worker.ndis_screening_number,
       skills:             skillRows.map((s) => s.skill),
       availability:       availRow ? {
-        availableDays:        availRow.available_days,
-        preferredShiftTypes:  availRow.preferred_shift_types,
+        availableDays:        (() => { try { return JSON.parse(availRow.available_days); } catch { return []; } })(),
+        preferredShiftTypes:  (() => { try { return JSON.parse(availRow.preferred_shift_types); } catch { return []; } })(),
       } : null,
     }, generatedAt);
     files.push({ name: `${workerName}_profile_summary.txt`, data: profileBuf });
