@@ -1,4 +1,4 @@
-import { api, APIError } from "encore.dev/api";
+import { api } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { workerDocumentsBucket } from "./storage";
@@ -248,10 +248,10 @@ function buildReferenceChecksTxt(refs: {
   return Buffer.from(lines.join("\n"), "utf8");
 }
 
-async function assertEmployerWorkerAgreement(
+async function checkEmployerWorkerAgreement(
   employerId: string,
   workerId: string
-): Promise<void> {
+): Promise<boolean> {
   const agreement = await db.queryRow<{ offer_id: string }>`
     SELECT offer_id FROM offers
     WHERE employer_id = ${employerId}
@@ -259,11 +259,7 @@ async function assertEmployerWorkerAgreement(
       AND status = 'Accepted'
     LIMIT 1
   `;
-  if (!agreement) {
-    throw APIError.permissionDenied(
-      "document access requires an accepted offer between this employer and worker"
-    );
-  }
+  return !!agreement;
 }
 
 // Returns a ZIP archive of all compliance documents for a worker, accessible only by an employer with an accepted offer.
@@ -321,7 +317,12 @@ export const downloadWorkerDocumentsZip = api.raw(
       return;
     }
 
-    await assertEmployerWorkerAgreement(employer.employer_id, workerId);
+    const hasAgreement = await checkEmployerWorkerAgreement(employer.employer_id, workerId);
+    if (!hasAgreement) {
+      resp.writeHead(403, { "Content-Type": "application/json" });
+      resp.end(JSON.stringify({ code: "permission_denied", message: "document access requires an accepted offer between this employer and worker" }));
+      return;
+    }
 
     const [docRows, skillRows, availRow, refRows] = await Promise.all([
       db.queryAll<{ id: string; document_type: string; file_key: string; is_demo_url: boolean }>`
@@ -433,9 +434,15 @@ export const downloadWorkerDocumentsZip = api.raw(
 
     for (const row of docRows) {
       try {
-        const buffer = row.is_demo_url
-          ? null
-          : await workerDocumentsBucket.download(row.file_key).catch(() => null);
+        let buffer: Buffer | null = null;
+        if (row.is_demo_url) {
+          const fetched = await fetch(row.file_key).catch(() => null);
+          if (fetched && fetched.ok) {
+            buffer = Buffer.from(await fetched.arrayBuffer());
+          }
+        } else {
+          buffer = await workerDocumentsBucket.download(row.file_key).catch(() => null);
+        }
         if (!buffer) continue;
 
         const ext = row.file_key.split(".").pop() ?? "bin";
