@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   X, Star, MapPin, Car, FileCheck, Briefcase, Loader2,
-  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, Heart, GraduationCap,
+  ChevronRight, Send, Users, CheckCircle, Lock, CheckCircle2, AlertCircle, Heart, GraduationCap, CalendarPlus,
 } from "lucide-react";
+import { RequestInterviewModal } from "./RequestInterviewModal";
 import { LastOnlineBadge } from "../LastOnlineBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ interface Props {
   onToggleSave?: (workerId: string, e: React.MouseEvent) => void;
 }
 
-type DrawerView = "profile" | "send-offer";
+type DrawerView = "profile" | "send-offer" | "request-interview";
 
 function toDateStr(v: unknown): string {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -51,6 +52,7 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
   const [sending, setSending] = useState(false);
   const [offerError, setOfferError] = useState<string | null>(null);
   const [offerSent, setOfferSent] = useState(false);
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
 
   const loadJobs = useCallback(async () => {
     if (!api) return;
@@ -76,6 +78,7 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
       setRefSummary(null);
       setRefDetails(null);
       setVideoUrl(null);
+      setShowInterviewModal(false);
       if (api) {
         api.workers.getReferencesForEmployer({ workerId: worker.workerId })
           .then((res) => { setRefSummary(res.summary); setRefDetails(res.references ?? null); })
@@ -398,24 +401,37 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
               </div>
             )}
 
-            <div className="pt-2 flex gap-2">
-              {onToggleSave && (
-                <Button
-                  variant="outline"
-                  onClick={(e) => onToggleSave(worker.workerId, e)}
-                  disabled={isSaving}
-                  className={`gap-2 ${isSaved ? "text-rose-500 border-rose-200 hover:bg-rose-50" : ""}`}
-                >
-                  <Heart className={`h-4 w-4 ${isSaved ? "fill-rose-500" : ""}`} />
-                  {isSaved ? "Saved" : "Save"}
+            <div className="pt-2 space-y-2">
+              <div className="flex gap-2">
+                {onToggleSave && (
+                  <Button
+                    variant="outline"
+                    onClick={(e) => onToggleSave(worker.workerId, e)}
+                    disabled={isSaving}
+                    className={`gap-2 ${isSaved ? "text-rose-500 border-rose-200 hover:bg-rose-50" : ""}`}
+                  >
+                    <Heart className={`h-4 w-4 ${isSaved ? "fill-rose-500" : ""}`} />
+                    {isSaved ? "Saved" : "Save"}
+                  </Button>
+                )}
+                <Button className="flex-1" onClick={() => setView("send-offer")}>
+                  <Send className="h-4 w-4 mr-2" />Send Offer
                 </Button>
-              )}
-              <Button className="flex-1" onClick={() => setView("send-offer")}>
-                <Send className="h-4 w-4 mr-2" />Send Offer
+              </div>
+              <Button variant="outline" className="w-full gap-2" onClick={() => setShowInterviewModal(true)}>
+                <CalendarPlus className="h-4 w-4" />Request Interview
               </Button>
             </div>
           </div>
         )}
+
+        <RequestInterviewModal
+          open={showInterviewModal}
+          workerId={worker.workerId}
+          workerName={worker.fullName ?? worker.name}
+          onClose={() => setShowInterviewModal(false)}
+          onRequested={() => setShowInterviewModal(false)}
+        />
 
         {view === "send-offer" && (
           <div className="flex-1 p-5 space-y-5">

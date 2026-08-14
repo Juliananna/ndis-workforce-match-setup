@@ -1146,6 +1146,11 @@ export namespace emailer {
  * Import the endpoint handlers to derive the types for the client.
  */
 import {
+    cancelInterviewRequest as api_employers_interview_requests_cancelInterviewRequest,
+    listInterviewRequests as api_employers_interview_requests_listInterviewRequests,
+    requestInterview as api_employers_interview_requests_requestInterview
+} from "~backend/employers/interview_requests";
+import {
     confirmLogoUpload as api_employers_logo_confirmLogoUpload,
     getLogoUploadUrl as api_employers_logo_getLogoUploadUrl
 } from "~backend/employers/logo";
@@ -1165,15 +1170,24 @@ export namespace employers {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.cancelInterviewRequest = this.cancelInterviewRequest.bind(this)
             this.confirmLogoUpload = this.confirmLogoUpload.bind(this)
             this.deleteEmployerLogo = this.deleteEmployerLogo.bind(this)
             this.getEmployerProfile = this.getEmployerProfile.bind(this)
             this.getLogoUploadUrl = this.getLogoUploadUrl.bind(this)
             this.getSavedWorkerStatus = this.getSavedWorkerStatus.bind(this)
+            this.listInterviewRequests = this.listInterviewRequests.bind(this)
             this.listSavedWorkers = this.listSavedWorkers.bind(this)
+            this.requestInterview = this.requestInterview.bind(this)
             this.saveWorker = this.saveWorker.bind(this)
             this.unsaveWorker = this.unsaveWorker.bind(this)
             this.updateEmployerProfile = this.updateEmployerProfile.bind(this)
+        }
+
+        public async cancelInterviewRequest(params: { requestId: string }): Promise<ResponseType<typeof api_employers_interview_requests_cancelInterviewRequest>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/interview-requests/${encodeURIComponent(params.requestId)}/cancel`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_cancelInterviewRequest>
         }
 
         public async confirmLogoUpload(params: RequestType<typeof api_employers_logo_confirmLogoUpload>): Promise<ResponseType<typeof api_employers_logo_confirmLogoUpload>> {
@@ -1207,6 +1221,12 @@ export namespace employers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_getSavedWorkerStatus>
         }
 
+        public async listInterviewRequests(): Promise<ResponseType<typeof api_employers_interview_requests_listInterviewRequests>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/interview-requests`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_listInterviewRequests>
+        }
+
         /**
          * Lists all workers saved/shortlisted by the employer.
          */
@@ -1214,6 +1234,12 @@ export namespace employers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_listSavedWorkers>
+        }
+
+        public async requestInterview(params: RequestType<typeof api_employers_interview_requests_requestInterview>): Promise<ResponseType<typeof api_employers_interview_requests_requestInterview>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/interview-requests`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_requestInterview>
         }
 
         /**
