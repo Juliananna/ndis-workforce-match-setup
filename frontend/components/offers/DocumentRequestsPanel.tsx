@@ -58,7 +58,7 @@ export function EmployerDocumentRequestsPanel({ offerId, workerName }: PanelProp
   const [requests, setRequests] = useState<OfferDocumentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selectedType, setSelectedType] = useState<string>("");
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -81,22 +81,26 @@ export function EmployerDocumentRequestsPanel({ offerId, workerName }: PanelProp
   useEffect(() => { load(); }, [load]);
 
   const handleRequest = async () => {
-    if (!api || !selectedType) return;
+    if (!api || selectedTypes.size === 0) return;
     setSaving(true);
     setError(null);
     try {
-      const req = await api.offers.createDocumentRequest({
-        offerId,
-        documentType: selectedType,
-        note: note.trim() || undefined,
-      });
-      setRequests((prev) => [...prev, req]);
+      const newReqs = await Promise.all(
+        Array.from(selectedTypes).map((documentType) =>
+          api.offers.createDocumentRequest({
+            offerId,
+            documentType,
+            note: note.trim() || undefined,
+          })
+        )
+      );
+      setRequests((prev) => [...prev, ...newReqs]);
       setShowForm(false);
-      setSelectedType("");
+      setSelectedTypes(new Set());
       setNote("");
     } catch (e: unknown) {
-      console.error("Failed to request document:", e);
-      setError(e instanceof Error ? e.message : "Failed to send request");
+      console.error("Failed to request documents:", e);
+      setError(e instanceof Error ? e.message : "Failed to send requests");
     } finally {
       setSaving(false);
     }
@@ -120,9 +124,6 @@ export function EmployerDocumentRequestsPanel({ offerId, workerName }: PanelProp
   const pending = requests.filter((r) => r.status === "Pending");
   const fulfilled = requests.filter((r) => r.status === "Fulfilled");
   const cancelled = requests.filter((r) => r.status === "Cancelled");
-
-  const alreadyRequestedPending = new Set(pending.map((r) => r.documentType));
-  const availableTypes = REQUESTABLE_TYPES.filter((t) => !alreadyRequestedPending.has(t));
 
   if (loading) {
     return (
@@ -186,18 +187,20 @@ export function EmployerDocumentRequestsPanel({ offerId, workerName }: PanelProp
           variant="outline"
           className="gap-1.5 text-xs"
           onClick={() => setShowForm(true)}
-          disabled={availableTypes.length === 0}
         >
           <Plus className="h-3.5 w-3.5" />
-          Request a Document
+          Request Documents
         </Button>
       ) : (
         <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/30">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-foreground">Request a document from {workerName ?? "the worker"}</p>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Request documents from {workerName ?? "the worker"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Select one or more documents to request</p>
+            </div>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setSelectedType(""); setNote(""); setError(null); }}
+              onClick={() => { setShowForm(false); setSelectedTypes(new Set()); setNote(""); setError(null); }}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
@@ -205,53 +208,76 @@ export function EmployerDocumentRequestsPanel({ offerId, workerName }: PanelProp
           </div>
 
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-            {availableTypes.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setSelectedType(type)}
-                className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors text-left ${
-                  selectedType === type
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {getIcon(type)}
-                <span className="leading-tight">{type}</span>
-              </button>
-            ))}
+            {REQUESTABLE_TYPES.map((type) => {
+              const checked = selectedTypes.has(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTypes((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(type)) next.delete(type);
+                      else next.add(type);
+                      return next;
+                    });
+                  }}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs font-medium transition-colors text-left ${
+                    checked
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  <div className={`h-3.5 w-3.5 shrink-0 rounded border flex items-center justify-center transition-colors ${
+                    checked ? "bg-primary border-primary" : "border-muted-foreground/40"
+                  }`}>
+                    {checked && (
+                      <svg className="h-2.5 w-2.5 text-primary-foreground" fill="none" viewBox="0 0 12 12">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="leading-tight">{type}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {selectedType && (
+          {selectedTypes.size > 0 && (
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Note for worker (optional)</label>
+              <label className="text-xs text-muted-foreground">Note for worker (optional — applies to all selected)</label>
               <textarea
                 rows={2}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder={`e.g. Please upload your ${selectedType} as a PDF…`}
+                placeholder="e.g. Please upload as PDF, certified copy required…"
                 maxLength={300}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
               />
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
               onClick={handleRequest}
-              disabled={!selectedType || saving}
+              disabled={selectedTypes.size === 0 || saving}
             >
-              {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Sending…</> : "Send Request"}
+              {saving
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Sending…</>
+                : `Send Request${selectedTypes.size > 1 ? `s (${selectedTypes.size})` : ""}`}
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setShowForm(false); setSelectedType(""); setNote(""); setError(null); }}
+              onClick={() => { setShowForm(false); setSelectedTypes(new Set()); setNote(""); setError(null); }}
               disabled={saving}
             >
               Cancel
             </Button>
+            {selectedTypes.size > 0 && (
+              <span className="text-xs text-muted-foreground ml-auto">{selectedTypes.size} selected</span>
+            )}
           </div>
         </div>
       )}

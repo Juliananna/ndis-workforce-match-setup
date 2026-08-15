@@ -149,14 +149,6 @@ export const createDocumentRequest = api<CreateDocumentRequestParams, OfferDocum
       throw APIError.invalidArgument("document type is required");
     }
 
-    const existing = await db.queryRow<{ id: string }>`
-      SELECT id FROM offer_document_requests
-      WHERE offer_id = ${req.offerId}
-        AND document_type = ${req.documentType}
-        AND status = 'Pending'
-    `;
-    if (existing) throw APIError.alreadyExists("a pending request for this document type already exists");
-
     const row = await db.queryRow<{
       id: string; offer_id: string; employer_id: string; worker_id: string;
       document_type: string; note: string | null; status: string;
