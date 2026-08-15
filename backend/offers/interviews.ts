@@ -7,21 +7,30 @@ export interface InterviewBooking {
   offerId: string;
   employerId: string;
   workerId: string;
-  scheduledAt: Date;
+  suggestedSlots: string[];
+  confirmedSlot: string | null;
+  workerConfirmedAt: Date | null;
+  scheduledAt: Date | null;
   durationMinutes: number;
   location: string | null;
   notes: string | null;
-  status: "Scheduled" | "Completed" | "Cancelled";
+  status: "AwaitingWorker" | "Scheduled" | "Completed" | "Cancelled";
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface CreateInterviewRequest {
   offerId: string;
-  scheduledAt: Date;
+  suggestedSlots: string[];
   durationMinutes?: number;
   location?: string;
   notes?: string;
+}
+
+export interface ConfirmInterviewSlotRequest {
+  offerId: string;
+  interviewId: string;
+  confirmedSlot: string;
 }
 
 export interface ListInterviewsRequest {
@@ -42,7 +51,10 @@ function mapRow(row: {
   offer_id: string;
   employer_id: string;
   worker_id: string;
-  scheduled_at: Date;
+  suggested_slots: string[] | null;
+  confirmed_slot: Date | null;
+  worker_confirmed_at: Date | null;
+  scheduled_at: Date | null;
   duration_minutes: number;
   location: string | null;
   notes: string | null;
@@ -55,6 +67,9 @@ function mapRow(row: {
     offerId: row.offer_id,
     employerId: row.employer_id,
     workerId: row.worker_id,
+    suggestedSlots: row.suggested_slots ?? [],
+    confirmedSlot: row.confirmed_slot ? new Date(row.confirmed_slot).toISOString() : null,
+    workerConfirmedAt: row.worker_confirmed_at,
     scheduledAt: row.scheduled_at,
     durationMinutes: row.duration_minutes,
     location: row.location,
@@ -122,8 +137,18 @@ export const createInterview = api<CreateInterviewRequest, InterviewBooking>(
       throw APIError.failedPrecondition("can only book interviews on active offers");
     }
 
-    if (new Date(req.scheduledAt) < new Date()) {
-      throw APIError.invalidArgument("interview must be scheduled in the future");
+    if (!req.suggestedSlots || req.suggestedSlots.length === 0) {
+      throw APIError.invalidArgument("at least one time slot must be suggested");
+    }
+    if (req.suggestedSlots.length > 5) {
+      throw APIError.invalidArgument("maximum 5 time slots can be suggested");
+    }
+
+    const now = new Date();
+    for (const slot of req.suggestedSlots) {
+      if (new Date(slot) <= now) {
+        throw APIError.invalidArgument("all suggested slots must be in the future");
+      }
     }
 
     const duration = req.durationMinutes ?? 30;
@@ -131,12 +156,17 @@ export const createInterview = api<CreateInterviewRequest, InterviewBooking>(
       throw APIError.invalidArgument("duration must be between 15 and 240 minutes");
     }
 
+    const slotsJson = JSON.stringify(req.suggestedSlots);
+
     const row = await db.queryRow<{
       id: string;
       offer_id: string;
       employer_id: string;
       worker_id: string;
-      scheduled_at: Date;
+      suggested_slots: string[] | null;
+      confirmed_slot: Date | null;
+      worker_confirmed_at: Date | null;
+      scheduled_at: Date | null;
       duration_minutes: number;
       location: string | null;
       notes: string | null;
@@ -144,11 +174,72 @@ export const createInterview = api<CreateInterviewRequest, InterviewBooking>(
       created_at: Date;
       updated_at: Date;
     }>`
-      INSERT INTO interview_bookings (offer_id, employer_id, worker_id, scheduled_at, duration_minutes, location, notes)
-      VALUES (${req.offerId}, ${offer.employer_id}, ${offer.worker_id}, ${req.scheduledAt}, ${duration}, ${req.location ?? null}, ${req.notes ?? null})
-      RETURNING id, offer_id, employer_id, worker_id, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
+      INSERT INTO interview_bookings (offer_id, employer_id, worker_id, suggested_slots, duration_minutes, location, notes)
+      VALUES (${req.offerId}, ${offer.employer_id}, ${offer.worker_id}, ${slotsJson}::jsonb, ${duration}, ${req.location ?? null}, ${req.notes ?? null})
+      RETURNING id, offer_id, employer_id, worker_id, suggested_slots, confirmed_slot, worker_confirmed_at, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
     `;
     if (!row) throw APIError.internal("failed to create interview booking");
+
+    return mapRow(row);
+  }
+);
+
+export const confirmInterviewSlot = api<ConfirmInterviewSlotRequest, InterviewBooking>(
+  { expose: true, auth: true, method: "POST", path: "/offers/:offerId/interviews/:interviewId/confirm" },
+  async (req) => {
+    const auth = getAuthData()!;
+    if (auth.role !== "WORKER") {
+      throw APIError.permissionDenied("only workers can confirm interview slots");
+    }
+    await assertOfferAccess(req.offerId, auth.userID, "WORKER");
+
+    const existing = await db.queryRow<{ status: string; suggested_slots: string[] | null }>`
+      SELECT status, suggested_slots FROM interview_bookings
+      WHERE id = ${req.interviewId} AND offer_id = ${req.offerId}
+    `;
+    if (!existing) throw APIError.notFound("interview not found");
+    if (existing.status !== "AwaitingWorker") {
+      throw APIError.failedPrecondition("interview is not awaiting worker confirmation");
+    }
+
+    const slots: string[] = existing.suggested_slots ?? [];
+    const chosen = new Date(req.confirmedSlot);
+    const isValid = slots.some((s) => Math.abs(new Date(s).getTime() - chosen.getTime()) < 1000);
+    if (!isValid) {
+      throw APIError.invalidArgument("chosen slot is not one of the suggested slots");
+    }
+
+    if (chosen <= new Date()) {
+      throw APIError.invalidArgument("chosen slot is in the past");
+    }
+
+    const row = await db.queryRow<{
+      id: string;
+      offer_id: string;
+      employer_id: string;
+      worker_id: string;
+      suggested_slots: string[] | null;
+      confirmed_slot: Date | null;
+      worker_confirmed_at: Date | null;
+      scheduled_at: Date | null;
+      duration_minutes: number;
+      location: string | null;
+      notes: string | null;
+      status: string;
+      created_at: Date;
+      updated_at: Date;
+    }>`
+      UPDATE interview_bookings
+      SET
+        status = 'Scheduled',
+        confirmed_slot = ${req.confirmedSlot}::timestamptz,
+        scheduled_at = ${req.confirmedSlot}::timestamptz,
+        worker_confirmed_at = NOW(),
+        updated_at = NOW()
+      WHERE id = ${req.interviewId} AND offer_id = ${req.offerId} AND status = 'AwaitingWorker'
+      RETURNING id, offer_id, employer_id, worker_id, suggested_slots, confirmed_slot, worker_confirmed_at, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
+    `;
+    if (!row) throw APIError.notFound("interview not found or already confirmed");
 
     return mapRow(row);
   }
@@ -165,7 +256,10 @@ export const listInterviews = api<ListInterviewsRequest, ListInterviewsResponse>
       offer_id: string;
       employer_id: string;
       worker_id: string;
-      scheduled_at: Date;
+      suggested_slots: string[] | null;
+      confirmed_slot: Date | null;
+      worker_confirmed_at: Date | null;
+      scheduled_at: Date | null;
       duration_minutes: number;
       location: string | null;
       notes: string | null;
@@ -173,10 +267,10 @@ export const listInterviews = api<ListInterviewsRequest, ListInterviewsResponse>
       created_at: Date;
       updated_at: Date;
     }>`
-      SELECT id, offer_id, employer_id, worker_id, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
+      SELECT id, offer_id, employer_id, worker_id, suggested_slots, confirmed_slot, worker_confirmed_at, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
       FROM interview_bookings
       WHERE offer_id = ${offerId}
-      ORDER BY scheduled_at ASC
+      ORDER BY created_at ASC
     `;
 
     return { interviews: rows.map(mapRow) };
@@ -194,7 +288,10 @@ export const cancelInterview = api<CancelInterviewRequest, InterviewBooking>(
       offer_id: string;
       employer_id: string;
       worker_id: string;
-      scheduled_at: Date;
+      suggested_slots: string[] | null;
+      confirmed_slot: Date | null;
+      worker_confirmed_at: Date | null;
+      scheduled_at: Date | null;
       duration_minutes: number;
       location: string | null;
       notes: string | null;
@@ -204,8 +301,8 @@ export const cancelInterview = api<CancelInterviewRequest, InterviewBooking>(
     }>`
       UPDATE interview_bookings
       SET status = 'Cancelled', updated_at = NOW()
-      WHERE id = ${req.interviewId} AND offer_id = ${req.offerId} AND status = 'Scheduled'
-      RETURNING id, offer_id, employer_id, worker_id, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
+      WHERE id = ${req.interviewId} AND offer_id = ${req.offerId} AND status IN ('AwaitingWorker', 'Scheduled')
+      RETURNING id, offer_id, employer_id, worker_id, suggested_slots, confirmed_slot, worker_confirmed_at, scheduled_at, duration_minutes, location, notes, status, created_at, updated_at
     `;
     if (!row) throw APIError.notFound("interview booking not found or already cancelled");
 

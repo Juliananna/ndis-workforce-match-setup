@@ -4,6 +4,7 @@ import {
   SlidersHorizontal, Navigation, CalendarDays, Bell, ChevronRight, MessageCircle
 } from "lucide-react";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
+import { InterviewRequestsPanel } from "../components/worker/InterviewRequestsPanel";
 import { OfferDetail } from "../components/offers/OfferDetail";
 import { OfferStatusBadge } from "../components/offers/OfferStatusBadge";
 import { JobDetailModal } from "../components/matching/JobDetailModal";
@@ -428,6 +429,8 @@ export default function WorkerOffersPage() {
       </aside>
 
       <div className="flex-1 min-w-0 space-y-6">
+        <InterviewRequestsPanel />
+
         {offers.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">

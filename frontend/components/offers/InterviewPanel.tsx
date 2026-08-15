@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CalendarDays, Clock, MapPin, FileText, Plus, XCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { CalendarDays, Clock, MapPin, FileText, Plus, XCircle, Loader2, CheckCircle2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookInterviewModal } from "./BookInterviewModal";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
@@ -12,14 +12,21 @@ interface Props {
 }
 
 const STATUS_STYLE: Record<InterviewBooking["status"], string> = {
+  AwaitingWorker: "bg-amber-50 text-amber-700 border-amber-200",
   Scheduled: "bg-blue-50 text-blue-700 border-blue-200",
   Completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Cancelled: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
-function formatDateTime(d: Date): string {
-  const date = new Date(d);
-  return date.toLocaleString("en-AU", {
+const STATUS_LABEL: Record<InterviewBooking["status"], string> = {
+  AwaitingWorker: "Awaiting your selection",
+  Scheduled: "Scheduled",
+  Completed: "Completed",
+  Cancelled: "Cancelled",
+};
+
+function formatDateTime(d: string | Date): string {
+  return new Date(d).toLocaleString("en-AU", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -36,6 +43,7 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -54,9 +62,7 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
   useEffect(() => { load(); }, [load]);
 
   const handleBooked = (interview: InterviewBooking) => {
-    setInterviews((prev) => [...prev, interview].sort(
-      (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
-    ));
+    setInterviews((prev) => [...prev, interview]);
   };
 
   const handleCancel = async (id: string) => {
@@ -72,6 +78,21 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
       setError(e instanceof Error ? e.message : "Failed to cancel");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const handleConfirmSlot = async (interviewId: string, slot: string) => {
+    if (!api) return;
+    setConfirmingId(interviewId);
+    setError(null);
+    try {
+      const updated = await api.offers.confirmInterviewSlot({ offerId, interviewId, confirmedSlot: slot });
+      setInterviews((prev) => prev.map((i) => i.id === interviewId ? updated : i));
+    } catch (e: unknown) {
+      console.error("Failed to confirm slot:", e);
+      setError(e instanceof Error ? e.message : "Failed to confirm slot");
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -96,7 +117,7 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
           onClick={() => setModalOpen(true)}
         >
           <Plus className="h-3.5 w-3.5" />
-          Book Interview
+          Suggest Interview Times
         </Button>
       )}
 
@@ -107,8 +128,8 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
       {interviews.length === 0 ? (
         <p className="text-sm text-gray-400 italic">
           {role === "EMPLOYER"
-            ? "No interviews booked yet. Use the button above to schedule one."
-            : "No interviews have been scheduled yet."}
+            ? "No interviews scheduled yet. Suggest some times above."
+            : "No interview times have been suggested yet."}
         </p>
       ) : (
         <div className="space-y-2">
@@ -118,7 +139,9 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
               interview={interview}
               role={role}
               cancelling={cancellingId === interview.id}
+              confirming={confirmingId === interview.id}
               onCancel={() => handleCancel(interview.id)}
+              onConfirmSlot={(slot) => handleConfirmSlot(interview.id, slot)}
             />
           ))}
           {cancelled.length > 0 && (
@@ -134,7 +157,9 @@ export function InterviewPanel({ offerId, workerName, role }: Props) {
                     interview={interview}
                     role={role}
                     cancelling={false}
+                    confirming={false}
                     onCancel={() => {}}
+                    onConfirmSlot={() => {}}
                   />
                 ))}
               </div>
@@ -158,34 +183,44 @@ function InterviewCard({
   interview,
   role,
   cancelling,
+  confirming,
   onCancel,
+  onConfirmSlot,
 }: {
   interview: InterviewBooking;
   role: "EMPLOYER" | "WORKER";
   cancelling: boolean;
+  confirming: boolean;
   onCancel: () => void;
+  onConfirmSlot: (slot: string) => void;
 }) {
-  const isPast = new Date(interview.scheduledAt) < new Date();
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  const isAwaitingWorker = interview.status === "AwaitingWorker";
+  const workerLabel = role === "WORKER" ? STATUS_LABEL["AwaitingWorker"] : "Awaiting worker";
 
   return (
-    <div className={`rounded-xl border px-4 py-3 space-y-2 ${
+    <div className={`rounded-xl border px-4 py-3 space-y-3 ${
       interview.status === "Cancelled" ? "opacity-60" : ""
     }`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1 min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[interview.status]}`}>
               {interview.status === "Completed" && <CheckCircle2 className="h-3 w-3" />}
-              {interview.status}
+              {interview.status === "Scheduled" && <CalendarDays className="h-3 w-3" />}
+              {interview.status === "AwaitingWorker" && <UserCheck className="h-3 w-3" />}
+              {isAwaitingWorker ? (role === "WORKER" ? workerLabel : "Awaiting worker") : interview.status}
             </span>
-            {isPast && interview.status === "Scheduled" && (
-              <span className="text-[10px] text-orange-600 font-semibold">Past</span>
-            )}
           </div>
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
-            <CalendarDays className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-            {formatDateTime(interview.scheduledAt)}
-          </div>
+
+          {interview.status === "Scheduled" && interview.confirmedSlot && (
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+              <CalendarDays className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+              {formatDateTime(interview.confirmedSlot)}
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <Clock className="h-3.5 w-3.5 shrink-0" />
             {interview.durationMinutes >= 60
@@ -206,7 +241,7 @@ function InterviewCard({
           )}
         </div>
 
-        {role === "EMPLOYER" && interview.status === "Scheduled" && (
+        {(role === "EMPLOYER" || role === "WORKER") && interview.status !== "Cancelled" && interview.status !== "Completed" && (
           <button
             onClick={onCancel}
             disabled={cancelling}
@@ -219,6 +254,58 @@ function InterviewCard({
           </button>
         )}
       </div>
+
+      {isAwaitingWorker && interview.suggestedSlots.length > 0 && (
+        <div className="space-y-2 pt-1 border-t border-border/50">
+          {role === "WORKER" ? (
+            <>
+              <p className="text-xs font-semibold text-gray-700">Pick a time that works for you:</p>
+              <div className="space-y-1.5">
+                {interview.suggestedSlots.map((slot) => (
+                  <label
+                    key={slot}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-colors ${
+                      selectedSlot === slot
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`slot-${interview.id}`}
+                      value={slot}
+                      checked={selectedSlot === slot}
+                      onChange={() => setSelectedSlot(slot)}
+                      className="accent-blue-600"
+                    />
+                    <span className="text-xs font-medium text-gray-800">{formatDateTime(slot)}</span>
+                  </label>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                className="w-full mt-1"
+                disabled={!selectedSlot || confirming}
+                onClick={() => selectedSlot && onConfirmSlot(selectedSlot)}
+              >
+                {confirming ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Confirming…</> : "Confirm This Time"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-gray-500">Suggested times (worker to pick):</p>
+              <div className="space-y-1">
+                {interview.suggestedSlots.map((slot) => (
+                  <div key={slot} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
+                    <CalendarDays className="h-3 w-3 text-gray-400 shrink-0" />
+                    {formatDateTime(slot)}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

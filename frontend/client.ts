@@ -1147,7 +1147,10 @@ export namespace emailer {
  */
 import {
     cancelInterviewRequest as api_employers_interview_requests_cancelInterviewRequest,
+    confirmInterviewRequestSlot as api_employers_interview_requests_confirmInterviewRequestSlot,
+    declineInterviewRequest as api_employers_interview_requests_declineInterviewRequest,
     listInterviewRequests as api_employers_interview_requests_listInterviewRequests,
+    listWorkerInterviewRequests as api_employers_interview_requests_listWorkerInterviewRequests,
     requestInterview as api_employers_interview_requests_requestInterview
 } from "~backend/employers/interview_requests";
 import {
@@ -1171,13 +1174,16 @@ export namespace employers {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.cancelInterviewRequest = this.cancelInterviewRequest.bind(this)
+            this.confirmInterviewRequestSlot = this.confirmInterviewRequestSlot.bind(this)
             this.confirmLogoUpload = this.confirmLogoUpload.bind(this)
+            this.declineInterviewRequest = this.declineInterviewRequest.bind(this)
             this.deleteEmployerLogo = this.deleteEmployerLogo.bind(this)
             this.getEmployerProfile = this.getEmployerProfile.bind(this)
             this.getLogoUploadUrl = this.getLogoUploadUrl.bind(this)
             this.getSavedWorkerStatus = this.getSavedWorkerStatus.bind(this)
             this.listInterviewRequests = this.listInterviewRequests.bind(this)
             this.listSavedWorkers = this.listSavedWorkers.bind(this)
+            this.listWorkerInterviewRequests = this.listWorkerInterviewRequests.bind(this)
             this.requestInterview = this.requestInterview.bind(this)
             this.saveWorker = this.saveWorker.bind(this)
             this.unsaveWorker = this.unsaveWorker.bind(this)
@@ -1190,10 +1196,27 @@ export namespace employers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_cancelInterviewRequest>
         }
 
+        public async confirmInterviewRequestSlot(params: RequestType<typeof api_employers_interview_requests_confirmInterviewRequestSlot>): Promise<ResponseType<typeof api_employers_interview_requests_confirmInterviewRequestSlot>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                confirmedSlot: params.confirmedSlot,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/interview-requests/${encodeURIComponent(params.requestId)}/confirm`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_confirmInterviewRequestSlot>
+        }
+
         public async confirmLogoUpload(params: RequestType<typeof api_employers_logo_confirmLogoUpload>): Promise<ResponseType<typeof api_employers_logo_confirmLogoUpload>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/employers/logo/confirm`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_logo_confirmLogoUpload>
+        }
+
+        public async declineInterviewRequest(params: { requestId: string }): Promise<ResponseType<typeof api_employers_interview_requests_declineInterviewRequest>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/employers/interview-requests/${encodeURIComponent(params.requestId)}/decline`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_declineInterviewRequest>
         }
 
         public async deleteEmployerLogo(): Promise<void> {
@@ -1234,6 +1257,12 @@ export namespace employers {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/employers/saved-workers`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_saved_workers_listSavedWorkers>
+        }
+
+        public async listWorkerInterviewRequests(): Promise<ResponseType<typeof api_employers_interview_requests_listWorkerInterviewRequests>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/workers/interview-requests`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_employers_interview_requests_listWorkerInterviewRequests>
         }
 
         public async requestInterview(params: RequestType<typeof api_employers_interview_requests_requestInterview>): Promise<ResponseType<typeof api_employers_interview_requests_requestInterview>> {
@@ -1550,9 +1579,17 @@ export namespace notifications {
  * Import the endpoint handlers to derive the types for the client.
  */
 import { createOffer as api_offers_create_createOffer } from "~backend/offers/create";
+import {
+    cancelDocumentRequest as api_offers_document_requests_cancelDocumentRequest,
+    createDocumentRequest as api_offers_document_requests_createDocumentRequest,
+    fulfillDocumentRequest as api_offers_document_requests_fulfillDocumentRequest,
+    getRequestableDocumentTypes as api_offers_document_requests_getRequestableDocumentTypes,
+    listDocumentRequests as api_offers_document_requests_listDocumentRequests
+} from "~backend/offers/document_requests";
 import { getOffer as api_offers_get_getOffer } from "~backend/offers/get";
 import {
     cancelInterview as api_offers_interviews_cancelInterview,
+    confirmInterviewSlot as api_offers_interviews_confirmInterviewSlot,
     createInterview as api_offers_interviews_createInterview,
     listInterviews as api_offers_interviews_listInterviews
 } from "~backend/offers/interviews";
@@ -1573,12 +1610,18 @@ export namespace offers {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.cancelDocumentRequest = this.cancelDocumentRequest.bind(this)
             this.cancelInterview = this.cancelInterview.bind(this)
+            this.confirmInterviewSlot = this.confirmInterviewSlot.bind(this)
+            this.createDocumentRequest = this.createDocumentRequest.bind(this)
             this.createInterview = this.createInterview.bind(this)
             this.createOffer = this.createOffer.bind(this)
             this.employerNegotiate = this.employerNegotiate.bind(this)
+            this.fulfillDocumentRequest = this.fulfillDocumentRequest.bind(this)
             this.getOffer = this.getOffer.bind(this)
+            this.getRequestableDocumentTypes = this.getRequestableDocumentTypes.bind(this)
             this.getSharedResume = this.getSharedResume.bind(this)
+            this.listDocumentRequests = this.listDocumentRequests.bind(this)
             this.listInterviews = this.listInterviews.bind(this)
             this.listOffers = this.listOffers.bind(this)
             this.listSchadRates = this.listSchadRates.bind(this)
@@ -1587,10 +1630,39 @@ export namespace offers {
             this.workerRespond = this.workerRespond.bind(this)
         }
 
+        public async cancelDocumentRequest(params: { offerId: string, requestId: string }): Promise<ResponseType<typeof api_offers_document_requests_cancelDocumentRequest>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/document-requests/${encodeURIComponent(params.requestId)}/cancel`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_document_requests_cancelDocumentRequest>
+        }
+
         public async cancelInterview(params: { offerId: string, interviewId: string }): Promise<ResponseType<typeof api_offers_interviews_cancelInterview>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/interviews/${encodeURIComponent(params.interviewId)}/cancel`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_interviews_cancelInterview>
+        }
+
+        public async confirmInterviewSlot(params: RequestType<typeof api_offers_interviews_confirmInterviewSlot>): Promise<ResponseType<typeof api_offers_interviews_confirmInterviewSlot>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                confirmedSlot: params.confirmedSlot,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/interviews/${encodeURIComponent(params.interviewId)}/confirm`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_interviews_confirmInterviewSlot>
+        }
+
+        public async createDocumentRequest(params: RequestType<typeof api_offers_document_requests_createDocumentRequest>): Promise<ResponseType<typeof api_offers_document_requests_createDocumentRequest>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                documentType: params.documentType,
+                note:         params.note,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/document-requests`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_document_requests_createDocumentRequest>
         }
 
         public async createInterview(params: RequestType<typeof api_offers_interviews_createInterview>): Promise<ResponseType<typeof api_offers_interviews_createInterview>> {
@@ -1599,7 +1671,7 @@ export namespace offers {
                 durationMinutes: params.durationMinutes,
                 location:        params.location,
                 notes:           params.notes,
-                scheduledAt:     params.scheduledAt,
+                suggestedSlots:  params.suggestedSlots,
             }
 
             // Now make the actual call to the API
@@ -1626,16 +1698,39 @@ export namespace offers {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_negotiate_employerNegotiate>
         }
 
+        public async fulfillDocumentRequest(params: RequestType<typeof api_offers_document_requests_fulfillDocumentRequest>): Promise<ResponseType<typeof api_offers_document_requests_fulfillDocumentRequest>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                fulfilledUrl: params.fulfilledUrl,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/document-requests/${encodeURIComponent(params.requestId)}/fulfill`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_document_requests_fulfillDocumentRequest>
+        }
+
         public async getOffer(params: { offerId: string }): Promise<ResponseType<typeof api_offers_get_getOffer>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_get_getOffer>
         }
 
+        public async getRequestableDocumentTypes(): Promise<ResponseType<typeof api_offers_document_requests_getRequestableDocumentTypes>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/document-request-types`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_document_requests_getRequestableDocumentTypes>
+        }
+
         public async getSharedResume(params: { offerId: string }): Promise<ResponseType<typeof api_offers_share_resume_getSharedResume>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/shared-resume`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_share_resume_getSharedResume>
+        }
+
+        public async listDocumentRequests(params: { offerId: string }): Promise<ResponseType<typeof api_offers_document_requests_listDocumentRequests>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/offers/${encodeURIComponent(params.offerId)}/document-requests`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_offers_document_requests_listDocumentRequests>
         }
 
         public async listInterviews(params: { offerId: string }): Promise<ResponseType<typeof api_offers_interviews_listInterviews>> {
