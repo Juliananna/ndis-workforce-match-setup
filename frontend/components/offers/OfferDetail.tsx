@@ -7,13 +7,14 @@ import {
   ArrowLeft, MapPin, Calendar, Clock, DollarSign,
   CheckCircle2, XCircle, TrendingUp,
   ChevronDown, ChevronUp, Shield, Eye, EyeOff,
-  FileText, Share2, ExternalLink, Info, User, Phone, CalendarCheck
+  FileText, Share2, ExternalLink, Info, User, Phone, CalendarCheck, FilePlus
 } from "lucide-react";
 import { OfferStatusBadge } from "./OfferStatusBadge";
 import { NegotiationHistory } from "./NegotiationHistory";
 import { WorkerDocumentsPanel, WorkerDocumentsLockedPlaceholder } from "./WorkerDocumentsPanel";
 import { WorkerContactPanel } from "./WorkerContactPanel";
 import { InterviewPanel } from "./InterviewPanel";
+import { EmployerDocumentRequestsPanel, WorkerDocumentRequestsPanel } from "./DocumentRequestsPanel";
 import { MessageThread } from "./MessageThread";
 import { ReviewPanel } from "./ReviewPanel";
 import type { Offer } from "~backend/offers/types";
@@ -441,6 +442,26 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
               <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Worker Contact Details</p>
             </div>
             <WorkerContactPanel workerId={offer.workerId} />
+          </div>
+        )}
+
+        {role === "EMPLOYER" && isActiveOffer && (
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FilePlus className="h-3.5 w-3.5 text-gray-400" />
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Document Requests</p>
+            </div>
+            <EmployerDocumentRequestsPanel offerId={offer.offerId} workerName={offer.workerName ?? "the worker"} />
+          </div>
+        )}
+
+        {role === "WORKER" && isActiveOffer && (
+          <div className="px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <FilePlus className="h-3.5 w-3.5 text-gray-400" />
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Document Requests</p>
+            </div>
+            <WorkerDocumentRequestsPanel offerId={offer.offerId} />
           </div>
         )}
 
