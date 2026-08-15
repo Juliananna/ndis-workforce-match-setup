@@ -67,7 +67,9 @@ function mapRow(row: {
     offerId: row.offer_id,
     employerId: row.employer_id,
     workerId: row.worker_id,
-    suggestedSlots: row.suggested_slots ?? [],
+    suggestedSlots: typeof row.suggested_slots === "string"
+      ? JSON.parse(row.suggested_slots)
+      : (row.suggested_slots ?? []),
     confirmedSlot: row.confirmed_slot ? new Date(row.confirmed_slot).toISOString() : null,
     workerConfirmedAt: row.worker_confirmed_at,
     scheduledAt: row.scheduled_at,
@@ -202,7 +204,9 @@ export const confirmInterviewSlot = api<ConfirmInterviewSlotRequest, InterviewBo
       throw APIError.failedPrecondition("interview is not awaiting worker confirmation");
     }
 
-    const slots: string[] = existing.suggested_slots ?? [];
+    const slots: string[] = typeof existing.suggested_slots === "string"
+      ? JSON.parse(existing.suggested_slots)
+      : (existing.suggested_slots ?? []);
     const chosen = new Date(req.confirmedSlot);
     const isValid = slots.some((s) => Math.abs(new Date(s).getTime() - chosen.getTime()) < 1000);
     if (!isValid) {
