@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useAuthedBackend } from "../hooks/useAuthedBackend";
 import {
   Search, Users, FileText, ShieldCheck, Clock, ArrowRight,
-  CheckCircle, XCircle, RefreshCw, Download, Star
+  CheckCircle, XCircle, RefreshCw, Download, Star, Trash2
 } from "lucide-react";
 
 interface LeadSummary {
@@ -39,6 +39,7 @@ export default function AdminResumeLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [purging, setPurging] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -71,6 +72,22 @@ export default function AdminResumeLeadsPage() {
       console.error(err);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const purgeAnonymous = async () => {
+    if (!api) return;
+    if (!confirm("Delete all anonymous resume sessions (no name, no email, no documents, no referees)?")) return;
+    setPurging(true);
+    try {
+      const result = await api.resume.purgeAnonymousLeads();
+      toast({ title: `Deleted ${result.deleted} anonymous session${result.deleted !== 1 ? "s" : ""}` });
+      loadLeads();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Failed to purge anonymous sessions", variant: "destructive" });
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -107,9 +124,19 @@ export default function AdminResumeLeadsPage() {
             <h1 className="font-bold text-slate-800">Resume Leads</h1>
             <span className="px-2 py-0.5 bg-teal-100 text-teal-700 text-xs font-medium rounded-full">{total} total</span>
           </div>
-          <button onClick={loadLeads} className="text-slate-400 hover:text-slate-600">
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={purgeAnonymous}
+              disabled={purging}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 disabled:opacity-50 transition-colors"
+            >
+              <Trash2 size={13} />
+              {purging ? "Deleting…" : "Delete anonymous"}
+            </button>
+            <button onClick={loadLeads} className="text-slate-400 hover:text-slate-600">
+              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
         </div>
       </header>
 
