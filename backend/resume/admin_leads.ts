@@ -36,8 +36,19 @@ export const listLeads = api<ListLeadsParams, ListLeadsResponse>(
     const status = params.status ?? null;
 
     const rows = status
-      ? await db.queryAll`SELECT * FROM resume_sessions WHERE status = ${status} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`
-      : await db.queryAll`SELECT * FROM resume_sessions ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+      ? await db.queryAll`
+          SELECT rs.*, COALESCE(rs.email, u.email) AS resolved_email
+          FROM resume_sessions rs
+          LEFT JOIN workers w ON w.worker_id = rs.converted_worker_id
+          LEFT JOIN users u ON u.user_id = w.user_id
+          WHERE rs.status = ${status}
+          ORDER BY rs.created_at DESC LIMIT ${limit} OFFSET ${offset}`
+      : await db.queryAll`
+          SELECT rs.*, COALESCE(rs.email, u.email) AS resolved_email
+          FROM resume_sessions rs
+          LEFT JOIN workers w ON w.worker_id = rs.converted_worker_id
+          LEFT JOIN users u ON u.user_id = w.user_id
+          ORDER BY rs.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
     const countRow = status
       ? await db.queryRow<{ count: number }>`SELECT COUNT(*)::int as count FROM resume_sessions WHERE status = ${status}`
@@ -45,7 +56,10 @@ export const listLeads = api<ListLeadsParams, ListLeadsResponse>(
 
     const leads: LeadSummary[] = [];
 
-    for (const row of rows) {
+    for (const row of rows as any[]) {
+      if (row.resolved_email && !row.email) {
+        row.email = row.resolved_email;
+      }
       const docCount = await db.queryRow<{ count: number }>`
         SELECT COUNT(*)::int as count FROM resume_session_documents WHERE session_id = ${row.id}
       `;
@@ -85,8 +99,17 @@ export const getLeadDetail = api<GetLeadDetailParams, GetLeadDetailResponse>(
     const auth = getAuthData()!;
     await assertAdminOrCompliance(auth.userID);
 
-    const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
+    const row = await db.queryRow`
+      SELECT rs.*, COALESCE(rs.email, u.email) AS resolved_email
+      FROM resume_sessions rs
+      LEFT JOIN workers w ON w.worker_id = rs.converted_worker_id
+      LEFT JOIN users u ON u.user_id = w.user_id
+      WHERE rs.id = ${id}
+    `;
     if (!row) throw APIError.notFound("lead not found");
+    if (row.resolved_email && !row.email) {
+      (row as any).email = row.resolved_email;
+    }
 
     const docRows = await db.queryAll<{
       id: string; session_id: string; document_type: string; document_title: string;

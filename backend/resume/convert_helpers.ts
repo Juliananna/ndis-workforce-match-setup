@@ -262,6 +262,8 @@ export async function convertSessionToProfile(
         UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
         WHERE id = ${sessionId}
       `;
+      await buildWorkerExtras(session, existingWorker.worker_id, availabilityDays, availabilityShifts);
+      await migrateResumeDocs(sessionId, existingWorker.worker_id);
       await migrateResumePhoto(sessionId, existingWorker.worker_id);
       await syncOnboardingStatus(existingWorker.worker_id);
       await syncResumeLeadToGHL(session.email!, fullName || name);
