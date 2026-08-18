@@ -36,6 +36,7 @@ export const uploadWorkerDocument = api.raw(
     const fileName = url.searchParams.get("fileName") ?? "upload";
     const expiryDate = url.searchParams.get("expiryDate") ?? undefined;
     const title = url.searchParams.get("title") ?? undefined;
+    const referenceNumber = url.searchParams.get("referenceNumber") ?? undefined;
 
     const validTypes = new Set<string>(DOCUMENT_TYPES);
     if (!validTypes.has(documentType)) {
@@ -110,11 +111,14 @@ export const uploadWorkerDocument = api.raw(
       else if (diffDays <= 60) status = "Expiring Soon";
     }
 
+    const refNumber = referenceNumber?.trim() ?? null;
+
     let row: {
       id: string;
       worker_id: string;
       document_type: string;
       title: string | null;
+      reference_number: string | null;
       file_key: string;
       upload_date: Date;
       expiry_date: Date | null;
@@ -128,15 +132,16 @@ export const uploadWorkerDocument = api.raw(
         worker_id: string;
         document_type: string;
         title: string | null;
+        reference_number: string | null;
         file_key: string;
         upload_date: Date;
         expiry_date: Date | null;
         verification_status: string;
         created_at: Date;
       }>`
-        INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
-        VALUES (${workerId}, ${documentType}, ${title?.trim() ?? null}, ${fileKey}, ${parsedExpiry}, ${status})
-        RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, created_at
+        INSERT INTO worker_documents (worker_id, document_type, title, reference_number, file_key, expiry_date, verification_status)
+        VALUES (${workerId}, ${documentType}, ${title?.trim() ?? null}, ${refNumber}, ${fileKey}, ${parsedExpiry}, ${status})
+        RETURNING id, worker_id, document_type, title, reference_number, file_key, upload_date, expiry_date, verification_status, created_at
       `;
     } catch (dbErr) {
       console.error("Failed to insert worker_document record:", dbErr);
@@ -168,6 +173,7 @@ export const uploadWorkerDocument = api.raw(
       workerId: row.worker_id,
       documentType: row.document_type,
       title: row.title,
+      referenceNumber: row.reference_number,
       fileUrl,
       uploadDate: row.upload_date,
       expiryDate: row.expiry_date,

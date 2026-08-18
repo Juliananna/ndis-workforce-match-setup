@@ -11,11 +11,13 @@ export function useProxyUpload() {
     documentType: string,
     expiryDate?: string,
     title?: string,
+    referenceNumber?: string,
   ): Promise<WorkerDocument> => {
     if (!client) throw new Error("Not authenticated");
     const query: Record<string, string> = { documentType, fileName: file.name };
     if (expiryDate) query.expiryDate = expiryDate;
     if (title) query.title = title;
+    if (referenceNumber) query.referenceNumber = referenceNumber;
     const resp = await client.uploads.uploadWorkerDocument({
       headers: { "Content-Type": file.type || "application/octet-stream" },
       body: file,

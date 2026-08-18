@@ -7,6 +7,14 @@ import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import { useProxyUpload } from "../../hooks/useProxyUpload";
 import type { WorkerDocument } from "~backend/workers/documents";
 
+const REFERENCE_NUMBER_LABELS: Partial<Record<string, string>> = {
+  "NDIS Worker Screening Check": "NDIS Worker Screening Number",
+  "Working With Children Check": "WWC Check Number",
+  "Police Clearance": "Certificate / Reference Number",
+  "Driver's Licence": "Licence Number",
+  "Passport / ID": "Passport Number",
+};
+
 const MANDATORY_DOCUMENT_TYPES = [
   "Driver's Licence",
   "Passport / ID",
@@ -38,6 +46,7 @@ export function DocumentUploadGate({ onComplete }: Props) {
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState(MANDATORY_DOCUMENT_TYPES[0]);
   const [expiryDate, setExpiryDate] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -60,13 +69,20 @@ export function DocumentUploadGate({ onComplete }: Props) {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const refLabel = REFERENCE_NUMBER_LABELS[selectedType];
+    if (refLabel && !referenceNumber.trim()) {
+      setUploadError(`Please enter the ${refLabel}.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     setUploadError(null);
     try {
-      const doc = await proxy.uploadDocument(file, selectedType, expiryDate || undefined);
+      const doc = await proxy.uploadDocument(file, selectedType, expiryDate || undefined, undefined, referenceNumber.trim() || undefined);
       const updated = [...documents, doc];
       setDocuments(updated);
       setExpiryDate("");
+      setReferenceNumber("");
       if (fileRef.current) fileRef.current.value = "";
       const nextAvailable = availableTypes.filter((t) => t !== selectedType);
       if (nextAvailable.length > 0) setSelectedType(nextAvailable[0]);
@@ -161,7 +177,7 @@ export function DocumentUploadGate({ onComplete }: Props) {
                     <label className="block text-xs font-medium text-gray-700">Document Type <span className="text-red-500">*</span></label>
                     <select
                       value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
+                      onChange={(e) => { setSelectedType(e.target.value); setReferenceNumber(""); }}
                       className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {availableTypes.map((t) => (
@@ -179,6 +195,21 @@ export function DocumentUploadGate({ onComplete }: Props) {
                     />
                   </div>
                 </div>
+
+                {REFERENCE_NUMBER_LABELS[selectedType] && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-gray-700">
+                      {REFERENCE_NUMBER_LABELS[selectedType]} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                      placeholder={`Enter your ${REFERENCE_NUMBER_LABELS[selectedType]!.toLowerCase()}`}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <input

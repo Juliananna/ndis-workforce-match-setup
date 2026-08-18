@@ -448,8 +448,8 @@ export default function WorkerProfilePage() {
     refreshCompletion();
   };
 
-  const handleUploadDocument = async (file: File, documentType: string, expiryDate?: string, title?: string) => {
-    const doc = await proxy.uploadDocument(file, documentType, expiryDate, title);
+  const handleUploadDocument = async (file: File, documentType: string, expiryDate?: string, title?: string, referenceNumber?: string) => {
+    const doc = await proxy.uploadDocument(file, documentType, expiryDate, title, referenceNumber);
     setDocuments((prev) => [doc, ...prev]);
     refreshCompletion();
     return doc;

@@ -38,6 +38,7 @@ export interface WorkerDocument {
   workerId: string;
   documentType: string;
   title: string | null;
+  referenceNumber: string | null;
   fileUrl: string;
   uploadDate: Date;
   expiryDate: Date | null;
@@ -65,6 +66,7 @@ export interface ConfirmDocumentUploadRequest {
   fileKey: string;
   documentType: string;
   title?: string;
+  referenceNumber?: string;
   expiryDate?: string;
 }
 
@@ -75,6 +77,7 @@ export interface DeleteDocumentRequest {
 export interface UpdateDocumentExpiryRequest {
   documentId: string;
   expiryDate: string | null;
+  referenceNumber?: string;
 }
 
 function resolveStatus(expiryDate: Date | null, currentStatus: VerificationStatus = "Pending"): VerificationStatus {
@@ -165,12 +168,14 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
     const status: VerificationStatus = expiryDate ? resolveStatus(expiryDate) : "Pending";
 
     const title = req.title?.trim() ?? null;
+    const referenceNumber = req.referenceNumber?.trim() ?? null;
 
     const row = await db.queryRow<{
       id: string;
       worker_id: string;
       document_type: string;
       title: string | null;
+      reference_number: string | null;
       file_key: string;
       upload_date: Date;
       expiry_date: Date | null;
@@ -178,9 +183,9 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       flag_reason: string | null;
       created_at: Date;
     }>`
-      INSERT INTO worker_documents (worker_id, document_type, title, file_key, expiry_date, verification_status)
-      VALUES (${workerId}, ${req.documentType}, ${title}, ${req.fileKey}, ${expiryDate}, ${status})
-      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
+      INSERT INTO worker_documents (worker_id, document_type, title, reference_number, file_key, expiry_date, verification_status)
+      VALUES (${workerId}, ${req.documentType}, ${title}, ${referenceNumber}, ${req.fileKey}, ${expiryDate}, ${status})
+      RETURNING id, worker_id, document_type, title, reference_number, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
     `;
 
     if (!row) {
@@ -196,6 +201,7 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       workerId: row.worker_id,
       documentType: row.document_type,
       title: row.title,
+      referenceNumber: row.reference_number,
       fileUrl,
       uploadDate: row.upload_date,
       expiryDate: row.expiry_date,
@@ -222,6 +228,7 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
       worker_id: string;
       document_type: string;
       title: string | null;
+      reference_number: string | null;
       file_key: string;
       upload_date: Date;
       expiry_date: Date | null;
@@ -230,7 +237,7 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
       created_at: Date;
       is_demo_url: boolean;
     }>`
-      SELECT id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at, is_demo_url
+      SELECT id, worker_id, document_type, title, reference_number, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at, is_demo_url
       FROM worker_documents
       WHERE worker_id = ${workerId}
       ORDER BY created_at DESC
@@ -262,6 +269,7 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
         workerId: row.worker_id,
         documentType: row.document_type,
         title: row.title,
+        referenceNumber: row.reference_number ?? null,
         fileUrl,
         uploadDate: row.upload_date,
         expiryDate: row.expiry_date,
@@ -321,8 +329,8 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
 
     const workerId = await getWorkerIdForUser(auth.userID);
 
-    const doc = await db.queryRow<{ worker_id: string; file_key: string; verification_status: string; title: string | null }>`
-      SELECT worker_id, file_key, verification_status, title FROM worker_documents WHERE id = ${req.documentId}
+    const doc = await db.queryRow<{ worker_id: string; file_key: string; verification_status: string; title: string | null; reference_number: string | null }>`
+      SELECT worker_id, file_key, verification_status, title, reference_number FROM worker_documents WHERE id = ${req.documentId}
     `;
     if (!doc) throw APIError.notFound("document not found");
     if (doc.worker_id !== workerId) throw APIError.permissionDenied("access denied");
@@ -337,12 +345,14 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
     const expiryDate = req.expiryDate ? new Date(req.expiryDate) : null;
     const currentStatus = doc.verification_status as VerificationStatus;
     const newStatus = resolveStatus(expiryDate, currentStatus);
+    const updatedRefNumber = req.referenceNumber !== undefined ? (req.referenceNumber?.trim() || null) : doc.reference_number;
 
     const row = await db.queryRow<{
       id: string;
       worker_id: string;
       document_type: string;
       title: string | null;
+      reference_number: string | null;
       file_key: string;
       upload_date: Date;
       expiry_date: Date | null;
@@ -351,9 +361,9 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
       created_at: Date;
     }>`
       UPDATE worker_documents
-      SET expiry_date = ${expiryDate}, verification_status = ${newStatus}, updated_at = NOW()
+      SET expiry_date = ${expiryDate}, verification_status = ${newStatus}, reference_number = ${updatedRefNumber}, updated_at = NOW()
       WHERE id = ${req.documentId}
-      RETURNING id, worker_id, document_type, title, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
+      RETURNING id, worker_id, document_type, title, reference_number, file_key, upload_date, expiry_date, verification_status, flag_reason, created_at
     `;
 
     if (!row) throw APIError.internal("failed to update document");
@@ -365,6 +375,7 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
       workerId: row.worker_id,
       documentType: row.document_type,
       title: row.title,
+      referenceNumber: row.reference_number,
       fileUrl,
       uploadDate: row.upload_date,
       expiryDate: row.expiry_date,

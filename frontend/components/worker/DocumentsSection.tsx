@@ -44,9 +44,17 @@ const FLAG_REASON_LABELS: Record<string, string> = {
   missing_info: "Document is missing required information",
 };
 
+const REFERENCE_NUMBER_LABELS: Partial<Record<string, string>> = {
+  "NDIS Worker Screening Check": "NDIS Worker Screening Number",
+  "Working With Children Check": "WWC Check Number",
+  "Police Clearance": "Certificate / Reference Number",
+  "Driver's Licence": "Licence Number",
+  "Passport / ID": "Passport Number",
+};
+
 interface Props {
   documents: WorkerDocument[];
-  onUpload: (file: File, documentType: string, expiryDate?: string, title?: string) => Promise<WorkerDocument>;
+  onUpload: (file: File, documentType: string, expiryDate?: string, title?: string, referenceNumber?: string) => Promise<WorkerDocument>;
   onDelete: (documentId: string) => Promise<void>;
   onUpdateExpiry: (documentId: string, expiryDate: string | null) => Promise<void>;
   onRefreshDocuments?: () => void;
@@ -158,6 +166,11 @@ function DocRow({ doc, onDelete, onUpdateExpiry, onQuickView }: DocRowProps) {
                 Expires {new Date(doc.expiryDate).toLocaleDateString()}
               </span>
             )}
+            {doc.referenceNumber && (
+              <span className="text-xs text-muted-foreground/70">
+                #{doc.referenceNumber}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -220,6 +233,7 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
   const [uploading, setUploading] = useState(false);
   const [expiryDate, setExpiryDate] = useState("");
   const [trainingTitle, setTrainingTitle] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [previewDoc, setPreviewDoc] = useState<PreviewDoc | null>(null);
@@ -256,6 +270,7 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
   const [selectedType, setSelectedType] = useState<string>(() => availableTypes[0] ?? OTHER_TRAINING);
 
   const isOtherTraining = selectedType === OTHER_TRAINING;
+  const referenceLabel = REFERENCE_NUMBER_LABELS[selectedType] ?? null;
 
   const mandatoryDocs = MANDATORY_DOCUMENT_TYPES.map((t) => ({
     type: t,
@@ -291,12 +306,19 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
       return;
     }
 
+    const refLabel = REFERENCE_NUMBER_LABELS[typeToUpload];
+    if (refLabel && !referenceNumber.trim()) {
+      setUploadError(`Please enter the ${refLabel}.`);
+      return;
+    }
+
     setUploading(true);
     setUploadError(null);
     try {
-      await onUpload(file, typeToUpload, expiryDate || undefined, trainingTitle.trim() || undefined);
+      await onUpload(file, typeToUpload, expiryDate || undefined, trainingTitle.trim() || undefined, referenceNumber.trim() || undefined);
       setExpiryDate("");
       setTrainingTitle("");
+      setReferenceNumber("");
       if (fileRef.current) fileRef.current.value = "";
 
       const remaining = availableTypes.filter((t) => t !== typeToUpload || t === OTHER_TRAINING);
@@ -493,6 +515,21 @@ export function DocumentsSection({ documents, onUpload, onDelete, onUpdateExpiry
                 placeholder="e.g. Manual Handling Certificate"
                 value={trainingTitle}
                 onChange={(e) => setTrainingTitle(e.target.value)}
+                className="bg-input border-border text-foreground text-sm"
+              />
+            </div>
+          )}
+
+          {referenceLabel && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-foreground">
+                {referenceLabel} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="text"
+                placeholder={`Enter your ${referenceLabel.toLowerCase()}`}
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
                 className="bg-input border-border text-foreground text-sm"
               />
             </div>
