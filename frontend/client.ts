@@ -1893,6 +1893,7 @@ import {
     getResumePremiumStatus as api_resume_premium_getResumePremiumStatus,
     saveResumeTheme as api_resume_premium_saveResumeTheme
 } from "~backend/resume/premium";
+import { purgeAnonymousLeads as api_resume_purge_anonymous_purgeAnonymousLeads } from "~backend/resume/purge_anonymous";
 import {
     addReferee as api_resume_referees_addReferee,
     updateReferee as api_resume_referees_updateReferee
@@ -1933,6 +1934,7 @@ export namespace resume {
             this.getSessionPhotoUploadUrl = this.getSessionPhotoUploadUrl.bind(this)
             this.getWorkerResumeSession = this.getWorkerResumeSession.bind(this)
             this.listLeads = this.listLeads.bind(this)
+            this.purgeAnonymousLeads = this.purgeAnonymousLeads.bind(this)
             this.saveResumeTheme = this.saveResumeTheme.bind(this)
             this.scoreSession = this.scoreSession.bind(this)
             this.updateReferee = this.updateReferee.bind(this)
@@ -2129,6 +2131,12 @@ export namespace resume {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_listLeads>
+        }
+
+        public async purgeAnonymousLeads(): Promise<ResponseType<typeof api_resume_purge_anonymous_purgeAnonymousLeads>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/resume-leads/anonymous`, {method: "DELETE", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_purge_anonymous_purgeAnonymousLeads>
         }
 
         public async saveResumeTheme(params: RequestType<typeof api_resume_premium_saveResumeTheme>): Promise<ResponseType<typeof api_resume_premium_saveResumeTheme>> {
