@@ -91,8 +91,8 @@ export default function AdminResumeLeadsPage() {
     const q = filter.toLowerCase();
     return (
       l.session.email?.toLowerCase().includes(q) ||
-      l.session.first_name?.toLowerCase().includes(q) ||
-      l.session.last_name?.toLowerCase().includes(q) ||
+      l.session.firstName?.toLowerCase().includes(q) ||
+      l.session.lastName?.toLowerCase().includes(q) ||
       l.session.suburb?.toLowerCase().includes(q)
     );
   });
