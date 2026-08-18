@@ -103,7 +103,7 @@ export function DocumentPreviewModal({ doc, open, onClose, onGetDownloadUrl, adm
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-2xl bg-card border border-border rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="relative z-10 w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl flex flex-col max-h-[95vh]">
         <div className="flex items-start justify-between p-4 border-b border-border shrink-0">
           <div className="flex items-start gap-3 min-w-0">
             <FileText className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -270,7 +270,7 @@ function PreviewArea({
         <img
           src={previewUrl}
           alt="Document preview"
-          className="max-w-full max-h-[50vh] rounded-lg border border-border object-contain"
+          className="max-w-full max-h-[70vh] rounded-lg border border-border object-contain"
         />
       </div>
     );
@@ -281,7 +281,7 @@ function PreviewArea({
       <iframe
         src={previewUrl}
         className="w-full rounded-lg border border-border"
-        style={{ height: "50vh" }}
+        style={{ height: "70vh" }}
         title="Document preview"
       />
     );
