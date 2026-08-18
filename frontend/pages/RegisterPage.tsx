@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, Loader2, User, Building2, Mail } from "lucide-react";
 import backend from "~backend/client";
 import { emailError, phoneError } from "../lib/validation";
@@ -8,7 +8,8 @@ type Role = "WORKER" | "EMPLOYER";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [role, setRole] = useState<Role>("WORKER");
+  const [searchParams] = useSearchParams();
+  const [role, setRole] = useState<Role>(searchParams.get("tab") === "employer" ? "EMPLOYER" : "WORKER");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

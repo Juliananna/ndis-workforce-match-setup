@@ -270,7 +270,7 @@ export default function LandingPage() {
 
             <div className="mb-9 flex flex-col gap-3 sm:flex-row">
               <Link
-                to="/register"
+                to="/register?tab=employer"
                 className="group flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl"
                 style={{ background: "var(--brand-hero-grad)", boxShadow: "0 8px 28px rgba(43,183,227,0.3)" }}
               >
