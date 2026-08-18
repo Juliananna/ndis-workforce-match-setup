@@ -206,12 +206,22 @@ export default function AdminResumeLeadsPage() {
           ) : detail ? (
             <div className="space-y-4">
               <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
-                <div>
-                  <h2 className="font-bold text-slate-800 text-lg">
-                    {[detail.session.firstName, detail.session.lastName].filter(Boolean).join(" ") || "Anonymous"}
-                  </h2>
-                  <p className="text-sm text-slate-500">{detail.session.email}</p>
-                  <p className="text-xs text-slate-400">{detail.session.targetRole} · {detail.session.suburb}, {detail.session.state} · {detail.session.experienceYears}yr exp</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-bold text-slate-800 text-lg">
+                      {[detail.session.firstName, detail.session.lastName].filter(Boolean).join(" ") || "Anonymous"}
+                    </h2>
+                    <p className="text-sm text-slate-500">{detail.session.email}</p>
+                    <p className="text-xs text-slate-400">{detail.session.targetRole} · {detail.session.suburb}, {detail.session.state} · {detail.session.experienceYears}yr exp</p>
+                  </div>
+                  <a
+                    href={`/resume-builder/preview/${detail.session.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition-colors"
+                  >
+                    <ArrowRight size={13} /> View Resume
+                  </a>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center">
