@@ -2176,6 +2176,7 @@ export namespace resume {
                 capabilityStories:   params.capabilityStories,
                 checks:              params.checks,
                 driversLicence:      params.driversLicence,
+                email:               params.email,
                 experienceLevel:     params.experienceLevel,
                 experienceYears:     params.experienceYears,
                 firstName:           params.firstName,

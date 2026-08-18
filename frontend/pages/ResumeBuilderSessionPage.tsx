@@ -29,7 +29,7 @@ export default function ResumeBuilderSessionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const isAuthenticated = !!token;
   const [session, setSession] = useState<SessionData>(defaultSession());
   const [currentStep, setCurrentStep] = useState(0);
@@ -39,13 +39,17 @@ export default function ResumeBuilderSessionPage() {
   useEffect(() => {
     if (!id) return;
     backend.resume.getSession({ id }).then(({ session: s }) => {
-      setSession(s as SessionData);
+      const sessionData = s as SessionData;
+      if (!sessionData.email && user?.email) {
+        sessionData.email = user.email;
+      }
+      setSession(sessionData);
       setCurrentStep(Math.min(s.stepCompleted, STEPS.length - 1));
     }).catch(() => {
       toast({ title: "Session not found", description: "Starting a new session.", variant: "destructive" });
       navigate("/resume-builder");
     }).finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user]);
 
   const saveStep = useCallback(async (data: SessionData, step: number) => {
     if (!data.id) return;
@@ -53,6 +57,7 @@ export default function ResumeBuilderSessionPage() {
     try {
       await backend.resume.updateSession({
         id: data.id, stepCompleted: step,
+        email: data.email ?? undefined,
         firstName: data.firstName ?? undefined,
         lastName: data.lastName ?? undefined,
         phone: data.phone ?? undefined,
@@ -89,9 +94,15 @@ export default function ResumeBuilderSessionPage() {
   };
 
   const handleNext = async () => {
-    if (currentStep === 0 && (!session.firstName?.trim() || !session.lastName?.trim())) {
-      toast({ title: "Name required", description: "Please enter your first and last name to continue.", variant: "destructive" });
-      return;
+    if (currentStep === 0) {
+      if (!session.firstName?.trim() || !session.lastName?.trim()) {
+        toast({ title: "Name required", description: "Please enter your first and last name to continue.", variant: "destructive" });
+        return;
+      }
+      if (!session.email?.trim() || !session.email.includes("@")) {
+        toast({ title: "Email required", description: "Please enter a valid email address to continue.", variant: "destructive" });
+        return;
+      }
     }
     const nextStep = currentStep + 1;
     await saveStep(session, nextStep);
@@ -189,7 +200,7 @@ export default function ResumeBuilderSessionPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          {currentStep === 0 && <StepAboutYou data={session} onChange={handleChange} />}
+          {currentStep === 0 && <StepAboutYou data={session} onChange={handleChange} emailLocked={isAuthenticated} />}
           {currentStep === 1 && <StepTargetRole data={session} onChange={handleChange} />}
           {currentStep === 2 && <StepWorkHistory data={session} onChange={handleChange} />}
           {currentStep === 3 && <StepSupportSkills data={session} onChange={handleChange} />}

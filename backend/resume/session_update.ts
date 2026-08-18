@@ -6,6 +6,7 @@ import type { ResumeSession, WorkHistoryEntry, QualificationEntry, TrainingEntry
 interface UpdateSessionRequest {
   id: string;
   stepCompleted?: number;
+  email?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -56,6 +57,7 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
       UPDATE resume_sessions SET
         updated_at = NOW(),
         step_completed = COALESCE(${req.stepCompleted ?? null}, step_completed),
+        email = COALESCE(${req.email ?? null}, email),
         first_name = COALESCE(${req.firstName ?? null}, first_name),
         last_name = COALESCE(${req.lastName ?? null}, last_name),
         phone = COALESCE(${req.phone ?? null}, phone),

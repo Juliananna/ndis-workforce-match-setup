@@ -38,7 +38,7 @@ export default function ResumeBuilderPreviewPage() {
   const [generating, setGenerating] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(true);
+  const [showEmailForm, setShowEmailForm] = useState(false);
   const [showHiredModal, setShowHiredModal] = useState(false);
   const [profileJustCreated, setProfileJustCreated] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -53,6 +53,9 @@ export default function ResumeBuilderPreviewPage() {
       const { session: s, referees: r } = await backend.resume.getSession({ id });
       setSession(s as SessionData);
       setReferees(r as RefereeRecord[]);
+      if (!s.email) {
+        setShowEmailForm(true);
+      }
     } catch {
       toast({ title: "Session not found", variant: "destructive" });
       navigate("/resume-builder");
