@@ -17,6 +17,7 @@ export interface AdminWorkerSummary {
   pendingDocumentCount: number;
   pendingReferenceCount: number;
   createdAt: Date;
+  resumeSessionId: string | null;
   profileCompletionPct: number;
   profileCompletionSections: CompletionSection[];
   profileCompletionItems: {
@@ -55,6 +56,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       pending_count: number;
       pending_ref_count: number;
       created_at: Date;
+      resume_session_id: string | null;
       has_bio: boolean;
       has_experience: boolean;
       has_skills: boolean;
@@ -72,6 +74,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
         w.phone,
         w.location,
         u.is_verified,
+        w.resume_session_id,
         COUNT(wd.id)::int AS doc_count,
         COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Pending')::int AS pending_count,
         (SELECT COUNT(*)::int FROM worker_references wr WHERE wr.worker_id = w.worker_id AND wr.status IN ('Pending', 'Contacted')) AS pending_ref_count,
@@ -89,7 +92,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       LEFT JOIN worker_documents wd ON wd.worker_id = w.worker_id
       WHERE u.is_demo = FALSE
       GROUP BY w.worker_id, w.user_id, w.name, u.email, w.phone, w.location, u.is_verified, u.created_at,
-               w.bio, w.experience_years, w.intro_video_url, w.avatar_url
+               w.bio, w.experience_years, w.intro_video_url, w.avatar_url, w.resume_session_id
       ORDER BY pending_count DESC, u.created_at DESC
     `;
 
@@ -133,6 +136,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           pendingDocumentCount: r.pending_count,
           pendingReferenceCount: r.pending_ref_count,
           createdAt: r.created_at,
+          resumeSessionId: r.resume_session_id ?? null,
           profileCompletionPct: completionPercent,
           profileCompletionItems: items,
           profileCompletionSections: sections,

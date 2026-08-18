@@ -454,15 +454,27 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
         </button>
 
         <Card className="p-5 space-y-3">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-semibold text-foreground">{selectedWorker.name}</p>
               <p className="text-sm text-muted-foreground">{selectedWorker.email}</p>
               <p className="text-xs text-muted-foreground">{selectedWorker.phone}{selectedWorker.location ? ` · ${selectedWorker.location}` : ""}</p>
             </div>
-            <Badge className={selectedWorker.isVerified ? "bg-green-500/15 text-green-400 border-transparent" : "bg-muted text-muted-foreground border-transparent"}>
-              {selectedWorker.isVerified ? "Email verified" : "Unverified"}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {selectedWorker.resumeSessionId && (
+                <a
+                  href={`/resume-builder/preview/${selectedWorker.resumeSessionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-semibold hover:bg-teal-700 transition-colors"
+                >
+                  <Eye className="h-3 w-3" /> View Resume
+                </a>
+              )}
+              <Badge className={selectedWorker.isVerified ? "bg-green-500/15 text-green-400 border-transparent" : "bg-muted text-muted-foreground border-transparent"}>
+                {selectedWorker.isVerified ? "Email verified" : "Unverified"}
+              </Badge>
+            </div>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-1.5">Profile completion</p>
