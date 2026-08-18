@@ -16,24 +16,40 @@ export function StepAboutYou({ data, onChange }: Props) {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">First name</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            First name <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
+            required
             value={data.firstName ?? ""}
             onChange={(e) => onChange("firstName", e.target.value)}
             placeholder="e.g. Sarah"
-            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            className={`w-full px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm ${
+              !data.firstName ? "border-red-300 bg-red-50" : "border-slate-200"
+            }`}
           />
+          {!data.firstName && (
+            <p className="text-xs text-red-500 mt-1">Required</p>
+          )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Last name</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Last name <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
+            required
             value={data.lastName ?? ""}
             onChange={(e) => onChange("lastName", e.target.value)}
             placeholder="e.g. Mitchell"
-            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            className={`w-full px-3 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm ${
+              !data.lastName ? "border-red-300 bg-red-50" : "border-slate-200"
+            }`}
           />
+          {!data.lastName && (
+            <p className="text-xs text-red-500 mt-1">Required</p>
+          )}
         </div>
       </div>
 

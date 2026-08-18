@@ -38,7 +38,7 @@ export default function ResumeBuilderPreviewPage() {
   const [generating, setGenerating] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(true);
   const [showHiredModal, setShowHiredModal] = useState(false);
   const [profileJustCreated, setProfileJustCreated] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);

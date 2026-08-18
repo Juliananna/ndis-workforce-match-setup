@@ -89,6 +89,10 @@ export default function ResumeBuilderSessionPage() {
   };
 
   const handleNext = async () => {
+    if (currentStep === 0 && (!session.firstName?.trim() || !session.lastName?.trim())) {
+      toast({ title: "Name required", description: "Please enter your first and last name to continue.", variant: "destructive" });
+      return;
+    }
     const nextStep = currentStep + 1;
     await saveStep(session, nextStep);
     if (nextStep >= STEPS.length - 1) {

@@ -80,8 +80,9 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
     }
 
     try {
-      const nameParts = req.email.split("@")[0].split(/[.\-_]/);
-      const firstName = nameParts[0] ?? req.email;
+      const firstName = session.firstName ?? req.email.split("@")[0].split(/[.\-_]/)[0] ?? req.email;
+      const lastName = session.lastName ?? undefined;
+      const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || undefined;
       const tags = ["resume-lead", "worker"];
       if (profileCreated || (req.consentProfileCreation && workerId)) {
         tags.push("resume-converted");
@@ -92,6 +93,8 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
       await upsertContact({
         email: req.email,
         firstName,
+        lastName,
+        name: fullName,
         tags,
         source: "resume-builder",
         website: resumeUrl,
