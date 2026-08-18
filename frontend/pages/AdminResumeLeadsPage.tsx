@@ -103,6 +103,39 @@ export default function AdminResumeLeadsPage() {
     }
   };
 
+  const exportCsv = () => {
+    const headers = [
+      "ID", "First Name", "Last Name", "Email", "Phone", "Status",
+      "Target Role", "Suburb", "State", "Postcode", "Experience Level",
+      "Experience Years", "Resume Score", "Step Completed",
+      "Documents", "Referees", "Consents", "Created At",
+    ];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+    const rows = filteredLeads.map((l) => {
+      const s = l.session;
+      return [
+        s.id, s.firstName, s.lastName, s.email, s.phone, s.status,
+        s.targetRole, s.suburb, s.state, s.postcode, s.experienceLevel,
+        s.experienceYears, s.resumeStrengthScore, s.stepCompleted,
+        l.documentCount, l.refereeCount, l.consentCount,
+        s.createdAt ? new Date(s.createdAt).toISOString() : "",
+      ].map(escape).join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resume-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filteredLeads = leads.filter((l) => {
     if (!filter) return true;
     const q = filter.toLowerCase();
@@ -125,6 +158,14 @@ export default function AdminResumeLeadsPage() {
             <span className="px-2 py-0.5 bg-teal-100 text-teal-700 text-xs font-medium rounded-full">{total} total</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={exportCsv}
+              disabled={filteredLeads.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 disabled:opacity-40 transition-colors"
+            >
+              <Download size={13} />
+              Export CSV
+            </button>
             <button
               onClick={purgeAnonymous}
               disabled={purging}
