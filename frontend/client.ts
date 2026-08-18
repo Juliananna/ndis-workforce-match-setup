@@ -246,7 +246,9 @@ import {
 import {
     adminGetWorkerDocuments as api_admin_workers_adminGetWorkerDocuments,
     adminGetWorkerReferences as api_admin_workers_adminGetWorkerReferences,
+    adminHideWorker as api_admin_workers_adminHideWorker,
     adminListWorkers as api_admin_workers_adminListWorkers,
+    adminUnhideWorker as api_admin_workers_adminUnhideWorker,
     adminVerifyReference as api_admin_workers_adminVerifyReference
 } from "~backend/admin/workers";
 
@@ -276,6 +278,7 @@ export namespace admin {
             this.adminGetWorkerDocuments = this.adminGetWorkerDocuments.bind(this)
             this.adminGetWorkerReferences = this.adminGetWorkerReferences.bind(this)
             this.adminGrantSubscription = this.adminGrantSubscription.bind(this)
+            this.adminHideWorker = this.adminHideWorker.bind(this)
             this.adminListAuditLog = this.adminListAuditLog.bind(this)
             this.adminListComplianceMessageLog = this.adminListComplianceMessageLog.bind(this)
             this.adminListEmailLog = this.adminListEmailLog.bind(this)
@@ -307,6 +310,7 @@ export namespace admin {
             this.adminSendSMSToUser = this.adminSendSMSToUser.bind(this)
             this.adminSubmitReferenceCheck = this.adminSubmitReferenceCheck.bind(this)
             this.adminSuspendUser = this.adminSuspendUser.bind(this)
+            this.adminUnhideWorker = this.adminUnhideWorker.bind(this)
             this.adminUpdateEmailTemplate = this.adminUpdateEmailTemplate.bind(this)
             this.adminUpdateJobStatus = this.adminUpdateJobStatus.bind(this)
             this.adminUpdateReferenceNotes = this.adminUpdateReferenceNotes.bind(this)
@@ -457,6 +461,17 @@ export namespace admin {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/employers/${encodeURIComponent(params.employerId)}/grant-subscription`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_employers_adminGrantSubscription>
+        }
+
+        public async adminHideWorker(params: RequestType<typeof api_admin_workers_adminHideWorker>): Promise<ResponseType<typeof api_admin_workers_adminHideWorker>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                note: params.note,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/hide`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_workers_adminHideWorker>
         }
 
         public async adminListAuditLog(params: RequestType<typeof api_admin_settings_adminListAuditLog>): Promise<ResponseType<typeof api_admin_settings_adminListAuditLog>> {
@@ -717,6 +732,12 @@ export namespace admin {
             }
 
             await this.baseClient.callTypedAPI(`/admin/users/${encodeURIComponent(params.userId)}/suspend`, {method: "POST", body: JSON.stringify(body)})
+        }
+
+        public async adminUnhideWorker(params: { workerId: string }): Promise<ResponseType<typeof api_admin_workers_adminUnhideWorker>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/unhide`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_workers_adminUnhideWorker>
         }
 
         public async adminUpdateEmailTemplate(params: RequestType<typeof api_admin_email_comms_adminUpdateEmailTemplate>): Promise<ResponseType<typeof api_admin_email_comms_adminUpdateEmailTemplate>> {
@@ -3104,7 +3125,8 @@ export namespace workers {
         public async updateDocumentExpiry(params: RequestType<typeof api_workers_documents_updateDocumentExpiry>): Promise<ResponseType<typeof api_workers_documents_updateDocumentExpiry>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                expiryDate: params.expiryDate,
+                expiryDate:      params.expiryDate,
+                referenceNumber: params.referenceNumber,
             }
 
             // Now make the actual call to the API
