@@ -9,6 +9,7 @@ export interface AccountSummary {
   role: string;
   name: string;
   isVerified: boolean;
+  isHidden: boolean;
   subscriptionStatus: string | null;
   subscriptionPlan: string | null;
   subscriptionPeriodEnd: Date | null;
@@ -39,6 +40,7 @@ export const listAccounts = api<void, ListAccountsResponse>(
       role: string;
       name: string;
       is_verified: boolean;
+      is_hidden: boolean;
       subscription_status: string | null;
       subscription_plan: string | null;
       subscription_period_end: Date | null;
@@ -50,6 +52,7 @@ export const listAccounts = api<void, ListAccountsResponse>(
         u.role,
         COALESCE(w.name, e.organisation_name, u.email) AS name,
         u.is_verified,
+        COALESCE(w.is_hidden, FALSE) AS is_hidden,
         e.subscription_status,
         e.subscription_plan,
         e.subscription_period_end,
@@ -93,6 +96,7 @@ export const listAccounts = api<void, ListAccountsResponse>(
         role: r.role,
         name: r.name,
         isVerified: r.is_verified,
+        isHidden: r.is_hidden,
         subscriptionStatus: r.subscription_status,
         subscriptionPlan: r.subscription_plan,
         subscriptionPeriodEnd: r.subscription_period_end,

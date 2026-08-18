@@ -8,7 +8,7 @@ import {
   Loader2, Users, FileText, CheckCircle, X, ChevronRight, ArrowLeft, AlertTriangle,
   PhoneCall, Clock, UserCheck, Eye, ClipboardList, TrendingUp, ShieldAlert, ShieldCheck,
   Trash2, Plus, BarChart3, Briefcase, Building2, DollarSign, MessageSquare, Zap,
-  Mail, Search, ChevronDown, Activity, HelpCircle, RefreshCw, Copy,
+  Mail, Search, ChevronDown, Activity, HelpCircle, RefreshCw, Copy, EyeOff,
 } from "lucide-react";
 
 function generatePassword(): string {
@@ -271,6 +271,10 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
   const [messageText, setMessageText] = useState("");
   const [messageSending, setMessageSending] = useState(false);
   const [messageSent, setMessageSent] = useState<string | null>(null);
+  const [hideModalOpen, setHideModalOpen] = useState(false);
+  const [hideNote, setHideNote] = useState("");
+  const [hidingSaving, setHidingSaving] = useState(false);
+  const [filterHidden, setFilterHidden] = useState<"visible" | "hidden" | "all">("visible");
 
   const loadWorkers = useCallback(async () => {
     if (!api) return;
@@ -423,8 +427,42 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
     return result;
   };
 
+  const handleHideWorker = async () => {
+    if (!api || !selectedWorker || !hideNote.trim()) return;
+    setHidingSaving(true);
+    try {
+      await api.admin.adminHideWorker({ workerId: selectedWorker.workerId, note: hideNote.trim() });
+      setWorkers((prev) => prev.map((w) => w.workerId === selectedWorker.workerId ? { ...w, isHidden: true, hiddenNote: hideNote.trim() } : w));
+      setSelectedWorker((prev) => prev ? { ...prev, isHidden: true, hiddenNote: hideNote.trim() } : prev);
+      setHideModalOpen(false);
+      setHideNote("");
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to hide profile");
+    } finally {
+      setHidingSaving(false);
+    }
+  };
+
+  const handleUnhideWorker = async () => {
+    if (!api || !selectedWorker) return;
+    setHidingSaving(true);
+    try {
+      await api.admin.adminUnhideWorker({ workerId: selectedWorker.workerId });
+      setWorkers((prev) => prev.map((w) => w.workerId === selectedWorker.workerId ? { ...w, isHidden: false, hiddenNote: null } : w));
+      setSelectedWorker((prev) => prev ? { ...prev, isHidden: false, hiddenNote: null } : prev);
+    } catch (e: unknown) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Failed to unhide profile");
+    } finally {
+      setHidingSaving(false);
+    }
+  };
+
   const filtered = workers
     .filter((w) => {
+      if (filterHidden === "visible" && w.isHidden) return false;
+      if (filterHidden === "hidden" && !w.isHidden) return false;
       if (search && !w.name.toLowerCase().includes(search.toLowerCase()) && !w.email.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterVerified === "verified" && !w.isVerified) return false;
       if (filterVerified === "unverified" && w.isVerified) return false;
@@ -471,11 +509,43 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
                   <Eye className="h-3 w-3" /> View Resume
                 </a>
               )}
+              {selectedWorker.isHidden ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={hidingSaving}
+                  onClick={handleUnhideWorker}
+                  className="h-7 text-xs gap-1.5 text-green-500 border-green-500/30 hover:bg-green-500/10"
+                >
+                  {hidingSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                  Unhide Profile
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setHideModalOpen(true); setHideNote(""); setError(null); }}
+                  className="h-7 text-xs gap-1.5 text-orange-500 border-orange-500/30 hover:bg-orange-500/10"
+                >
+                  <EyeOff className="h-3 w-3" />
+                  Hide Profile
+                </Button>
+              )}
               <Badge className={selectedWorker.isVerified ? "bg-green-500/15 text-green-400 border-transparent" : "bg-muted text-muted-foreground border-transparent"}>
                 {selectedWorker.isVerified ? "Email verified" : "Unverified"}
               </Badge>
             </div>
           </div>
+          {selectedWorker.isHidden && (
+            <div className="flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2.5 text-xs text-orange-400">
+              <EyeOff className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Profile hidden from employers and matching</p>
+                {selectedWorker.hiddenNote && <p className="mt-0.5 text-orange-400/80">{selectedWorker.hiddenNote}</p>}
+                {selectedWorker.hiddenBy && <p className="mt-0.5 text-orange-400/60">Hidden by {selectedWorker.hiddenBy}</p>}
+              </div>
+            </div>
+          )}
           <div>
             <p className="text-xs text-muted-foreground mb-1.5">Profile completion</p>
             <ProfileCompletionBar
@@ -676,6 +746,46 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
           <ReferenceCheckWizard reference={wizardRef} workerName={selectedWorker.name}
             existingCheck={existingChecks[wizardRef.id] ?? null} onSubmit={handleSubmitRefCheck} onClose={() => setWizardRef(null)} />
         )}
+
+        {hideModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setHideModalOpen(false)} />
+            <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-xl shadow-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <EyeOff className="h-4 w-4 text-orange-400" />
+                <p className="font-semibold text-foreground">Hide Profile</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This profile will be hidden from employer browse and job matching. It will still be visible in the admin Workers tab.
+              </p>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Reason / Note <span className="text-destructive">*</span></label>
+                <textarea
+                  rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none resize-none focus:ring-1 focus:ring-ring"
+                  placeholder="e.g. Safeguarding concern pending investigation"
+                  value={hideNote}
+                  onChange={(e) => setHideNote(e.target.value)}
+                />
+              </div>
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={hidingSaving || !hideNote.trim()}
+                  onClick={handleHideWorker}
+                  className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white gap-1.5"
+                >
+                  {hidingSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  Confirm Hide
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setHideModalOpen(false)} disabled={hidingSaving}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -691,6 +801,15 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
             <Input className="pl-8 h-8 text-sm" placeholder="Search workers…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <span className="text-xs text-muted-foreground shrink-0">{filtered.length} / {workers.length} workers</span>
+          <select
+            value={filterHidden}
+            onChange={(e) => setFilterHidden(e.target.value as typeof filterHidden)}
+            className="h-7 text-xs rounded-lg border border-input bg-background px-2 focus:outline-none focus:ring-1 focus:ring-ring shrink-0"
+          >
+            <option value="visible">Active profiles</option>
+            <option value="hidden">Hidden only</option>
+            <option value="all">All profiles</option>
+          </select>
           <button
             onClick={loadWorkers}
             disabled={loading}
@@ -765,6 +884,11 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-sm text-foreground">{w.name}</p>
                       {!w.isVerified && <Badge className="text-xs bg-muted text-muted-foreground border-transparent">Unverified</Badge>}
+                      {w.isHidden && (
+                        <Badge className="text-xs bg-orange-500/15 text-orange-400 border-transparent flex items-center gap-0.5">
+                          <EyeOff className="h-2.5 w-2.5" />Hidden
+                        </Badge>
+                      )}
                       {w.pendingDocumentCount > 0 && (
                         <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-medium">{w.pendingDocumentCount} pending</span>
                       )}

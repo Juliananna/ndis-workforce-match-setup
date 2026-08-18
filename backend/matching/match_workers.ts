@@ -209,6 +209,7 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         WHERE
           u.is_demo = FALSE
           AND u.is_suspended = FALSE
+          AND w.is_hidden = FALSE
           AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
           AND (

@@ -18,6 +18,10 @@ export interface AdminWorkerSummary {
   pendingReferenceCount: number;
   createdAt: Date;
   resumeSessionId: string | null;
+  isHidden: boolean;
+  hiddenNote: string | null;
+  hiddenAt: Date | null;
+  hiddenBy: string | null;
   profileCompletionPct: number;
   profileCompletionSections: CompletionSection[];
   profileCompletionItems: {
@@ -57,6 +61,10 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       pending_ref_count: number;
       created_at: Date;
       resume_session_id: string | null;
+      is_hidden: boolean;
+      hidden_note: string | null;
+      hidden_at: Date | null;
+      hidden_by: string | null;
       has_bio: boolean;
       has_experience: boolean;
       has_skills: boolean;
@@ -75,6 +83,10 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
         w.location,
         u.is_verified,
         w.resume_session_id,
+        w.is_hidden,
+        w.hidden_note,
+        w.hidden_at,
+        w.hidden_by,
         COUNT(wd.id)::int AS doc_count,
         COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Pending')::int AS pending_count,
         (SELECT COUNT(*)::int FROM worker_references wr WHERE wr.worker_id = w.worker_id AND wr.status IN ('Pending', 'Contacted')) AS pending_ref_count,
@@ -92,7 +104,8 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       LEFT JOIN worker_documents wd ON wd.worker_id = w.worker_id
       WHERE u.is_demo = FALSE
       GROUP BY w.worker_id, w.user_id, w.name, u.email, w.phone, w.location, u.is_verified, u.created_at,
-               w.bio, w.experience_years, w.intro_video_url, w.avatar_url, w.resume_session_id
+               w.bio, w.experience_years, w.intro_video_url, w.avatar_url, w.resume_session_id,
+               w.is_hidden, w.hidden_note, w.hidden_at, w.hidden_by
       ORDER BY pending_count DESC, u.created_at DESC
     `;
 
@@ -137,6 +150,10 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           pendingReferenceCount: r.pending_ref_count,
           createdAt: r.created_at,
           resumeSessionId: r.resume_session_id ?? null,
+          isHidden: r.is_hidden,
+          hiddenNote: r.hidden_note ?? null,
+          hiddenAt: r.hidden_at ?? null,
+          hiddenBy: r.hidden_by ?? null,
           profileCompletionPct: completionPercent,
           profileCompletionItems: items,
           profileCompletionSections: sections,
@@ -266,6 +283,66 @@ export const adminGetWorkerReferences = api<GetWorkerReferencesRequest, GetWorke
         createdAt: r.created_at,
       })),
     };
+  }
+);
+
+export interface HideWorkerRequest {
+  workerId: string;
+  note: string;
+}
+
+export interface HideWorkerResponse {
+  workerId: string;
+  isHidden: boolean;
+}
+
+export const adminHideWorker = api<HideWorkerRequest, HideWorkerResponse>(
+  { expose: true, auth: true, method: "POST", path: "/admin/workers/:workerId/hide" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdminOrCompliance(auth.userID);
+
+    if (!req.note?.trim()) {
+      throw APIError.invalidArgument("A note is required when hiding a profile");
+    }
+
+    const adminRow = await db.queryRow<{ email: string }>`
+      SELECT u.email FROM admin_users a JOIN users u ON u.user_id = a.user_id WHERE a.user_id = ${auth.userID}
+    `;
+
+    const row = await db.queryRow<{ worker_id: string }>`
+      UPDATE workers
+      SET is_hidden = TRUE, hidden_note = ${req.note.trim()}, hidden_at = NOW(), hidden_by = ${adminRow?.email ?? auth.userID}
+      WHERE worker_id = ${req.workerId}
+      RETURNING worker_id
+    `;
+
+    if (!row) throw APIError.notFound("worker not found");
+
+    return { workerId: row.worker_id, isHidden: true };
+  }
+);
+
+export interface UnhideWorkerRequest {
+  workerId: string;
+}
+
+export const adminUnhideWorker = api<UnhideWorkerRequest, HideWorkerResponse>(
+  { expose: true, auth: true, method: "POST", path: "/admin/workers/:workerId/unhide" },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdminOrCompliance(auth.userID);
+
+    const row = await db.queryRow<{ worker_id: string }>`
+      UPDATE workers
+      SET is_hidden = FALSE, hidden_note = NULL, hidden_at = NULL, hidden_by = NULL
+      WHERE worker_id = ${req.workerId}
+      RETURNING worker_id
+    `;
+
+    if (!row) throw APIError.notFound("worker not found");
+
+    return { workerId: row.worker_id, isHidden: false };
   }
 );
 

@@ -12,7 +12,7 @@ import {
   StickyNote, Plus, Trash2, CheckCircle, AlertCircle, Edit2, Save,
   X, ShieldCheck, CreditCard, XCircle, CalendarPlus, RefreshCw,
   CheckCircle2, BadgeCheck, Zap, FileCheck, Star, Eye, EyeOff,
-  MapPin, Phone, Mail, Briefcase, Award, Clock, TrendingUp,
+  MapPin, Phone, Mail, Briefcase, Award, TrendingUp,
   UserCheck, Shield, Package,
 } from "lucide-react";
 
@@ -629,6 +629,11 @@ export function UserAccountsPanel() {
                         )}
                         {a.subscriptionStatus === "cancelled" && <Badge className="bg-red-100 text-red-600 border-transparent text-xs">Cancelled</Badge>}
                         {a.subscriptionStatus === "expired" && <Badge className="bg-orange-100 text-orange-600 border-transparent text-xs">Expired</Badge>}
+                        {a.isHidden && (
+                          <Badge className="bg-orange-100 text-orange-600 border-transparent text-xs flex items-center gap-0.5">
+                            <EyeOff className="h-2.5 w-2.5" />Hidden
+                          </Badge>
+                        )}
                         {a.notes.length > 0 && (
                           <Badge className="bg-orange-100 text-orange-600 border-transparent text-xs">
                             <StickyNote className="h-2.5 w-2.5 mr-0.5 inline" />{a.notes.length}
