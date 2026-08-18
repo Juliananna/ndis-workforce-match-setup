@@ -691,6 +691,13 @@ function WorkersTab({ api, isAdmin }: { api: ReturnType<typeof useAuthedBackend>
             <Input className="pl-8 h-8 text-sm" placeholder="Search workers…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <span className="text-xs text-muted-foreground shrink-0">{filtered.length} / {workers.length} workers</span>
+          <button
+            onClick={loadWorkers}
+            disabled={loading}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
           {activeFilterCount > 0 && (
             <button
               onClick={() => { setFilterVerified("all"); setFilterDocs("all"); setFilterCompletion("all"); setFilterSort("default"); }}
