@@ -38,6 +38,17 @@ function useMetaPixel() {
   }, []);
 }
 
+function useGhlTracking() {
+  useEffect(() => {
+    if (document.querySelector('script[data-tracking-id="tk_ef9fb1dfa2ff4a6abb036d231581ac6c"]')) return;
+    const script = document.createElement("script");
+    script.src = "https://link.msgsndr.com/js/external-tracking.js";
+    script.dataset.trackingId = "tk_ef9fb1dfa2ff4a6abb036d231581ac6c";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+}
+
 function useChunkErrorReload() {
   useEffect(() => {
     const handler = (event: ErrorEvent) => {
@@ -294,6 +305,7 @@ function AppInner() {
 export default function App() {
   useChunkErrorReload();
   useMetaPixel();
+  useGhlTracking();
   return (
     <AuthProvider>
       <AppInner />
