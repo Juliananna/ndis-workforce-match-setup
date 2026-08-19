@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, ChevronRight, Zap } from "lucide-react";
+import { Plus, Briefcase, ChevronRight, Zap, Lock } from "lucide-react";
 import type { JobRequest } from "~backend/jobs/get";
 
 function toDateStr(v: unknown): string {
@@ -20,9 +20,14 @@ interface Props {
   jobs: JobRequest[];
   onNew: () => void;
   onView: (job: JobRequest) => void;
+  isFreeTier?: boolean;
+  jobLimit?: number;
+  onUpgrade?: () => void;
 }
 
-export function JobRequestList({ jobs, onNew, onView }: Props) {
+export function JobRequestList({ jobs, onNew, onView, isFreeTier = false, jobLimit = 2, onUpgrade }: Props) {
+  const atLimit = isFreeTier && jobs.length >= jobLimit;
+
   return (
     <Card className="p-5 space-y-4">
       <div className="flex items-center justify-between">
@@ -32,11 +37,41 @@ export function JobRequestList({ jobs, onNew, onView }: Props) {
           {jobs.length > 0 && (
             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{jobs.length}</span>
           )}
+          {isFreeTier && (
+            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              {jobs.length}/{jobLimit} free
+            </span>
+          )}
         </div>
-        <Button size="sm" onClick={onNew}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />New Job
-        </Button>
+        {atLimit ? (
+          <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={onUpgrade}>
+            <Lock className="h-3.5 w-3.5 mr-1.5" />Upgrade to Post More
+          </Button>
+        ) : (
+          <Button size="sm" onClick={onNew}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />New Job
+          </Button>
+        )}
       </div>
+
+      {isFreeTier && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">
+              Free plan: {jobLimit - jobs.length > 0 ? `${jobLimit - jobs.length} job post${jobLimit - jobs.length !== 1 ? "s" : ""} remaining` : "Job post limit reached"}
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              You can see how many workers match your jobs, but you'll need to upgrade to connect with them.
+            </p>
+          </div>
+          {onUpgrade && (
+            <Button size="sm" className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white" onClick={onUpgrade}>
+              Upgrade
+            </Button>
+          )}
+        </div>
+      )}
 
       {jobs.length === 0 ? (
         <div className="text-center py-8 space-y-2">

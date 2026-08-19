@@ -1,7 +1,9 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
-import { requireEmployerSubscription } from "../employers/subscription_guard";
+import { getEmployerTier } from "../employers/subscription_guard";
+
+export const FREE_TIER_BROWSE_LIMIT = 6;
 
 function parsePgArray(val: unknown): string[] {
   if (Array.isArray(val)) return val as string[];
@@ -61,6 +63,8 @@ export interface WorkerSummary {
 export interface BrowseWorkersResponse {
   workers: WorkerSummary[];
   total: number;
+  isFreeTier: boolean;
+  freeTierLimit: number;
 }
 
 export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
@@ -71,9 +75,10 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       throw APIError.permissionDenied("only employers can browse worker profiles");
     }
 
-    await requireEmployerSubscription(auth.userID);
+    const tierInfo = await getEmployerTier(auth.userID);
+    const isFreeTier = !tierInfo.isActive;
 
-    const limit = Math.min(req.limit ?? 20, 50);
+    const limit = isFreeTier ? FREE_TIER_BROWSE_LIMIT : Math.min(req.limit ?? 20, 50);
     const offset = req.offset ?? 0;
     const hasGeo = req.latitude != null && req.longitude != null;
     const verifiedOnly = req.verifiedOnly ?? false;
@@ -377,6 +382,6 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       longitude: r.longitude,
     }));
 
-    return { workers, total: workers.length };
+    return { workers, total: workers.length, isFreeTier, freeTierLimit: FREE_TIER_BROWSE_LIMIT };
   }
 );

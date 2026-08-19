@@ -13,14 +13,20 @@ import type { JobRequest } from "~backend/jobs/get";
 import type { CreateJobRequestRequest } from "~backend/jobs/create";
 import type { UpdateJobRequestRequest } from "~backend/jobs/update";
 import type { Offer } from "~backend/offers/types";
+import type { EmployerFreemiumStatus } from "~backend/payments/freemium_status";
 
 type View = "list" | "new" | "detail";
 
-export default function EmployerDashboardPage() {
+interface Props {
+  onUpgrade?: () => void;
+}
+
+export default function EmployerDashboardPage({ onUpgrade }: Props) {
   const api = useAuthedBackend();
   const proxy = useProxyUpload();
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
   const [jobs, setJobs] = useState<JobRequest[]>([]);
+  const [freemium, setFreemium] = useState<EmployerFreemiumStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("list");
   const [selectedJob, setSelectedJob] = useState<JobRequest | null>(null);
@@ -28,12 +34,14 @@ export default function EmployerDashboardPage() {
   const load = useCallback(async () => {
     if (!api) return;
     try {
-      const [profileRes, jobsRes] = await Promise.allSettled([
+      const [profileRes, jobsRes, freemiumRes] = await Promise.allSettled([
         api.employers.getEmployerProfile(),
         api.jobs.listJobRequests(),
+        api.payments.getEmployerFreemiumStatus(),
       ]);
       if (profileRes.status === "fulfilled") setProfile(profileRes.value);
       if (jobsRes.status === "fulfilled") setJobs(jobsRes.value.jobs);
+      if (freemiumRes.status === "fulfilled") setFreemium(freemiumRes.value);
     } finally {
       setLoading(false);
     }
@@ -57,6 +65,7 @@ export default function EmployerDashboardPage() {
   const handleCreateJob = async (req: CreateJobRequestRequest) => {
     const job = await api!.jobs.createJobRequest(req);
     setJobs((prev) => [job, ...prev]);
+    setFreemium((prev) => prev ? { ...prev, jobCount: prev.jobCount + 1 } : prev);
     setView("list");
   };
 
@@ -79,6 +88,9 @@ export default function EmployerDashboardPage() {
     setView("detail");
   };
 
+  const isFreeTier = freemium?.isFreeTier ?? false;
+  const jobLimit = freemium?.jobLimit ?? 2;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -97,6 +109,9 @@ export default function EmployerDashboardPage() {
           jobs={jobs}
           onNew={() => setView("new")}
           onView={handleViewJob}
+          isFreeTier={isFreeTier}
+          jobLimit={jobLimit}
+          onUpgrade={onUpgrade}
         />
       )}
 
@@ -113,9 +128,11 @@ export default function EmployerDashboardPage() {
           onBack={() => setView("list")}
           onUpdate={handleUpdateJob}
           onCancel={handleCancelJob}
-          onSendOffer={async (workerId: string, rate: number, notes: string): Promise<Offer> => {
+          isFreeTier={isFreeTier}
+          onUpgrade={onUpgrade}
+          onSendOffer={!isFreeTier ? async (workerId: string, rate: number, notes: string): Promise<Offer> => {
             return api!.offers.createOffer({ jobId: selectedJob.jobId, workerId, offeredRate: rate, additionalNotes: notes || undefined });
-          }}
+          } : undefined}
         />
       )}
     </div>

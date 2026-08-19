@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react"
 import {
   Search, MapPin, Star, Car, FileCheck, Loader2,
   ChevronDown, ChevronUp, X, BadgeCheck, Shield, CheckCircle2, AlertCircle, Heart, GraduationCap,
-  Map, List,
+  Map, List, Lock,
 } from "lucide-react";
 
 const WorkerMapView = lazy(() =>
@@ -27,7 +27,12 @@ const DAY_LABELS: Record<string, string> = {
 
 const DEFAULT_RADIUS_KM = 50;
 
-export function BrowseWorkersPage() {
+interface BrowseWorkersPageProps {
+  isFreeTier: boolean;
+  onUpgrade: () => void;
+}
+
+export function BrowseWorkersPage({ isFreeTier, onUpgrade }: BrowseWorkersPageProps) {
   const api = useAuthedBackend();
 
   const [query, setQuery] = useState("");
@@ -44,6 +49,7 @@ export function BrowseWorkersPage() {
   const [workers, setWorkers] = useState<WorkerSummary[]>([]);
   const [fallbackWorkers, setFallbackWorkers] = useState<WorkerSummary[]>([]);
   const [isFallback, setIsFallback] = useState(false);
+  const [freeTierLimit, setFreeTierLimit] = useState(6);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,13 +78,13 @@ export function BrowseWorkersPage() {
   const searchRef = useRef<AbortController | null>(null);
 
   const refreshSavedStatus = useCallback(async (workerList: WorkerSummary[]) => {
-    if (!api || workerList.length === 0) return;
+    if (!api || workerList.length === 0 || isFreeTier) return;
     try {
       const res = await api.employers.getSavedWorkerStatus({ workerIds: workerList.map((w) => w.workerId) });
       setSavedIds(new Set(res.savedIds));
     } catch {
     }
-  }, [api]);
+  }, [api, isFreeTier]);
 
   const search = useCallback(async (overrideQuery?: string) => {
     if (!api) return;
@@ -102,6 +108,7 @@ export function BrowseWorkersPage() {
         limit: 50,
       });
       setWorkers(res.workers);
+      if (res.freeTierLimit) setFreeTierLimit(res.freeTierLimit);
       if (res.workers.length === 0) {
         const fallback = await api.workers.browseWorkers({ limit: 20 });
         setFallbackWorkers(fallback.workers);
@@ -146,7 +153,7 @@ export function BrowseWorkersPage() {
 
   const handleToggleSave = useCallback(async (workerId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!api || savingIds.has(workerId)) return;
+    if (!api || savingIds.has(workerId) || isFreeTier) return;
     setSavingIds((prev) => new Set(prev).add(workerId));
     const isSaved = savedIds.has(workerId);
     try {
@@ -162,12 +169,15 @@ export function BrowseWorkersPage() {
     } finally {
       setSavingIds((prev) => { const s = new Set(prev); s.delete(workerId); return s; });
     }
-  }, [api, savedIds, savingIds]);
+  }, [api, savedIds, savingIds, isFreeTier]);
 
   const activeFilterCount = selectedSkills.length + (driversLicense ? 1 : 0) + (vehicleAccess ? 1 : 0) + (verifiedOnly ? 1 : 0);
 
   const verifiedCount = workers.filter((w) => w.isFullyVerified).length;
   const displayWorkers = isFallback ? fallbackWorkers : workers;
+
+  const visibleWorkers = isFreeTier ? displayWorkers.slice(0, freeTierLimit) : displayWorkers;
+  const lockedCount = isFreeTier ? Math.max(0, displayWorkers.length - freeTierLimit) : 0;
 
   return (
     <div className="space-y-5">
@@ -204,16 +214,33 @@ export function BrowseWorkersPage() {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-green-800">Verified workers are more reliable and ready to work</p>
-          <p className="text-xs text-green-700 mt-0.5">
-            Verified workers have confirmed their identity, uploaded compliance documents, set their availability, and provided references.
-            They appear first in search results.
-          </p>
+      {isFreeTier && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-800">Free Preview — {freeTierLimit} workers visible</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Upgrade to browse all verified workers, access compliance documents, and send job offers.
+            </p>
+          </div>
+          <Button size="sm" className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white" onClick={onUpgrade}>
+            Upgrade
+          </Button>
         </div>
-      </div>
+      )}
+
+      {!isFreeTier && (
+        <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-green-800">Verified workers are more reliable and ready to work</p>
+            <p className="text-xs text-green-700 mt-0.5">
+              Verified workers have confirmed their identity, uploaded compliance documents, set their availability, and provided references.
+              They appear first in search results.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="flex gap-2">
@@ -377,7 +404,7 @@ export function BrowseWorkersPage() {
               </p>
             </div>
           </div>
-          {viewMode === "map" ? (
+          {viewMode === "map" && !isFreeTier ? (
             <Suspense fallback={
               <div className="flex items-center justify-center h-[540px] rounded-xl border border-border bg-muted/30">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -395,18 +422,17 @@ export function BrowseWorkersPage() {
               />
             </Suspense>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {fallbackWorkers.map((w) => (
-                <WorkerCard
-                  key={w.workerId}
-                  worker={w}
-                  saved={savedIds.has(w.workerId)}
-                  saving={savingIds.has(w.workerId)}
-                  onClick={() => setSelectedWorker(w)}
-                  onToggleSave={(e) => handleToggleSave(w.workerId, e)}
-                />
-              ))}
-            </div>
+            <WorkerGrid
+              workers={visibleWorkers}
+              savedIds={savedIds}
+              savingIds={savingIds}
+              lockedCount={lockedCount}
+              isFreeTier={isFreeTier}
+              onSelect={setSelectedWorker}
+              onToggleSave={handleToggleSave}
+              onHover={setHoveredId}
+              onUpgrade={onUpgrade}
+            />
           )}
         </div>
       )}
@@ -425,11 +451,14 @@ export function BrowseWorkersPage() {
               {verifiedCount > 0 && !verifiedOnly && (
                 <span className="ml-1.5 text-green-700 font-semibold">· {verifiedCount} verified</span>
               )}
+              {isFreeTier && lockedCount > 0 && (
+                <span className="ml-1.5 text-amber-600 font-semibold">· {lockedCount} locked</span>
+              )}
             </p>
-            <p className="text-xs text-muted-foreground">Verified workers shown first</p>
+            {!isFreeTier && <p className="text-xs text-muted-foreground">Verified workers shown first</p>}
           </div>
 
-          {viewMode === "map" ? (
+          {viewMode === "map" && !isFreeTier ? (
             <Suspense fallback={
               <div className="flex items-center justify-center h-[540px] rounded-xl border border-border bg-muted/30">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -447,31 +476,81 @@ export function BrowseWorkersPage() {
               />
             </Suspense>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {workers.map((w) => (
-                <WorkerCard
-                  key={w.workerId}
-                  worker={w}
-                  saved={savedIds.has(w.workerId)}
-                  saving={savingIds.has(w.workerId)}
-                  onClick={() => setSelectedWorker(w)}
-                  onToggleSave={(e) => handleToggleSave(w.workerId, e)}
-                  onMouseEnter={() => setHoveredId(w.workerId)}
-                  onMouseLeave={() => setHoveredId(null)}
-                />
-              ))}
-            </div>
+            <WorkerGrid
+              workers={visibleWorkers}
+              savedIds={savedIds}
+              savingIds={savingIds}
+              lockedCount={lockedCount}
+              isFreeTier={isFreeTier}
+              onSelect={setSelectedWorker}
+              onToggleSave={handleToggleSave}
+              onHover={setHoveredId}
+              onUpgrade={onUpgrade}
+            />
           )}
         </div>
       )}
 
-      <WorkerProfileDrawer
-        worker={selectedWorker}
-        savedIds={savedIds}
-        savingIds={savingIds}
-        onToggleSave={handleToggleSave}
-        onClose={() => setSelectedWorker(null)}
-      />
+      {!isFreeTier && (
+        <WorkerProfileDrawer
+          worker={selectedWorker}
+          savedIds={savedIds}
+          savingIds={savingIds}
+          onToggleSave={handleToggleSave}
+          onClose={() => setSelectedWorker(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface WorkerGridProps {
+  workers: WorkerSummary[];
+  savedIds: Set<string>;
+  savingIds: Set<string>;
+  lockedCount: number;
+  isFreeTier: boolean;
+  onSelect: (w: WorkerSummary) => void;
+  onToggleSave: (id: string, e: React.MouseEvent) => void;
+  onHover: (id: string | null) => void;
+  onUpgrade: () => void;
+}
+
+function WorkerGrid({ workers, savedIds, savingIds, lockedCount, isFreeTier, onSelect, onToggleSave, onHover, onUpgrade }: WorkerGridProps) {
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {workers.map((w) => (
+          <WorkerCard
+            key={w.workerId}
+            worker={w}
+            saved={savedIds.has(w.workerId)}
+            saving={savingIds.has(w.workerId)}
+            isFreeTier={isFreeTier}
+            onClick={() => !isFreeTier && onSelect(w)}
+            onToggleSave={(e) => onToggleSave(w.workerId, e)}
+            onMouseEnter={() => onHover(w.workerId)}
+            onMouseLeave={() => onHover(null)}
+          />
+        ))}
+      </div>
+
+      {isFreeTier && lockedCount > 0 && (
+        <div className="relative rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-8 text-center space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="h-6 w-6 text-amber-500" />
+            <span className="text-lg font-bold text-amber-800">
+              {lockedCount} more worker{lockedCount !== 1 ? "s" : ""} available
+            </span>
+          </div>
+          <p className="text-sm text-amber-700 max-w-sm mx-auto">
+            Upgrade to see all verified workers, access compliance documents, and connect with applicants.
+          </p>
+          <Button onClick={onUpgrade} className="bg-amber-600 hover:bg-amber-700 text-white">
+            Unlock All Workers — Upgrade Now
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -509,19 +588,24 @@ interface WorkerCardProps {
   worker: WorkerSummary;
   saved: boolean;
   saving: boolean;
+  isFreeTier: boolean;
   onClick: () => void;
   onToggleSave: (e: React.MouseEvent) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 }
 
-function WorkerCard({ worker, saved, saving, onClick, onToggleSave, onMouseEnter, onMouseLeave }: WorkerCardProps) {
+function WorkerCard({ worker, saved, saving, isFreeTier, onClick, onToggleSave, onMouseEnter, onMouseLeave }: WorkerCardProps) {
   const days = Array.isArray(worker.availableDays) ? worker.availableDays : [];
   return (
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={`rounded-lg border bg-card p-4 space-y-3 cursor-pointer transition-all ${
+      className={`rounded-lg border bg-card p-4 space-y-3 transition-all ${
+        isFreeTier
+          ? "cursor-default"
+          : "cursor-pointer"
+      } ${
         worker.isFullyVerified
           ? "border-green-200 ring-1 ring-green-100 hover:border-green-400 hover:ring-green-200"
           : worker.priorityBoost
@@ -556,18 +640,20 @@ function WorkerCard({ worker, saved, saving, onClick, onToggleSave, onMouseEnter
         </div>
         <div className="flex items-center gap-2">
           <LastOnlineBadge lastLoginAt={worker.lastLoginAt} />
-          <button
-            onClick={onToggleSave}
-            disabled={saving}
-            className={`p-1 rounded-full transition-colors ${
-              saved
-                ? "text-rose-500 hover:text-rose-600"
-                : "text-muted-foreground hover:text-rose-400"
-            }`}
-            title={saved ? "Remove from shortlist" : "Save to shortlist"}
-          >
-            <Heart className={`h-4 w-4 ${saved ? "fill-rose-500" : ""} ${saving ? "animate-pulse" : ""}`} />
-          </button>
+          {!isFreeTier && (
+            <button
+              onClick={onToggleSave}
+              disabled={saving}
+              className={`p-1 rounded-full transition-colors ${
+                saved
+                  ? "text-rose-500 hover:text-rose-600"
+                  : "text-muted-foreground hover:text-rose-400"
+              }`}
+              title={saved ? "Remove from shortlist" : "Save to shortlist"}
+            >
+              <Heart className={`h-4 w-4 ${saved ? "fill-rose-500" : ""} ${saving ? "animate-pulse" : ""}`} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -660,6 +746,14 @@ function WorkerCard({ worker, saved, saving, onClick, onToggleSave, onMouseEnter
             ? `In Progress — ${worker.verificationScore}% complete`
             : `Getting Started — ${worker.verificationScore}% complete`}
         </p>
+      )}
+
+      {isFreeTier && (
+        <div className="pt-1 border-t border-border/50">
+          <p className="text-[11px] text-amber-600 flex items-center gap-1">
+            <Lock className="h-3 w-3" />Upgrade to view profile &amp; contact this worker
+          </p>
+        </div>
       )}
     </div>
   );

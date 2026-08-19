@@ -45,9 +45,11 @@ interface Props {
   onUpdate: (req: UpdateJobRequestRequest) => Promise<JobRequest>;
   onCancel: (jobId: string) => Promise<void>;
   onSendOffer?: (workerId: string, rate: number, notes: string) => Promise<Offer>;
+  isFreeTier?: boolean;
+  onUpgrade?: () => void;
 }
 
-export function JobRequestDetail({ job, onBack, onUpdate, onCancel, onSendOffer }: Props) {
+export function JobRequestDetail({ job, onBack, onUpdate, onCancel, onSendOffer, isFreeTier = false, onUpgrade }: Props) {
   const api = useAuthedBackend();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -352,7 +354,9 @@ export function JobRequestDetail({ job, onBack, onUpdate, onCancel, onSendOffer 
           <MatchedWorkersList
             jobId={current.jobId}
             jobRate={current.weekdayRate}
-            onSendOffer={onSendOffer ? (wId, wName) => { setPendingWorkerId(wId); setPendingWorkerName(wName); setOfferModalOpen(true); } : undefined}
+            onSendOffer={!isFreeTier && onSendOffer ? (wId, wName) => { setPendingWorkerId(wId); setPendingWorkerName(wName); setOfferModalOpen(true); } : undefined}
+            isFreeTier={isFreeTier}
+            onUpgrade={onUpgrade}
           />
         </Card>
       )}

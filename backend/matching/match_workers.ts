@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
+import { getEmployerTier } from "../employers/subscription_guard";
 
 export interface MatchedWorker {
   workerId: string;
@@ -35,6 +36,8 @@ export interface MatchWorkersRequest {
 export interface MatchWorkersResponse {
   workers: MatchedWorker[];
   hasGeoFilter: boolean;
+  isFreeTier: boolean;
+  totalCount: number;
 }
 
 function computeCompatibility(params: {
@@ -117,6 +120,9 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
       SELECT employer_id FROM employers WHERE user_id = ${auth.userID}
     `;
     if (!employer) throw APIError.notFound("employer profile not found");
+
+    const tierInfo = await getEmployerTier(auth.userID);
+    const isFreeTier = !tierInfo.isActive;
 
     const job = await db.queryRow<{
       job_id: string;
@@ -367,6 +373,22 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
       return b.compatibilityScore - a.compatibilityScore;
     });
 
-    return { workers: result, hasGeoFilter };
+    const totalCount = result.length;
+
+    if (isFreeTier) {
+      const redacted = result.map((w) => ({
+        ...w,
+        workerId: "",
+        name: "Support Worker",
+        fullName: null,
+        location: null,
+        bio: null,
+        skills: [],
+        matchReasons: [`${w.compatibilityScore}% compatibility match`],
+      }));
+      return { workers: redacted, hasGeoFilter, isFreeTier: true, totalCount };
+    }
+
+    return { workers: result, hasGeoFilter, isFreeTier: false, totalCount };
   }
 );

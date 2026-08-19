@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Loader2, Send, Navigation, Star, BadgeCheck, Shield, User } from "lucide-react";
+import { MapPin, Loader2, Send, Navigation, Star, BadgeCheck, Shield, User, Lock } from "lucide-react";
 import { useAuthedBackend } from "../../hooks/useAuthedBackend";
 import type { MatchedWorker } from "~backend/matching/match_workers";
 import type { WorkerSummary } from "~backend/workers/browse";
@@ -12,6 +12,8 @@ interface Props {
   jobId: string;
   jobRate: number;
   onSendOffer?: (workerId: string, workerName: string) => void;
+  isFreeTier?: boolean;
+  onUpgrade?: () => void;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -63,9 +65,10 @@ function matchedWorkerToSummary(w: MatchedWorker): WorkerSummary {
   };
 }
 
-export function MatchedWorkersList({ jobId, onSendOffer }: Props) {
+export function MatchedWorkersList({ jobId, onSendOffer, isFreeTier = false, onUpgrade }: Props) {
   const api = useAuthedBackend();
   const [workers, setWorkers] = useState<MatchedWorker[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasGeoFilter, setHasGeoFilter] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +81,7 @@ export function MatchedWorkersList({ jobId, onSendOffer }: Props) {
     try {
       const res = await api.matching.matchWorkersForJob({ jobId });
       setWorkers(res.workers);
+      setTotalCount(res.totalCount);
       setHasGeoFilter(res.hasGeoFilter);
     } catch (e: unknown) {
       console.error("Failed to load matched workers:", e);
@@ -112,97 +116,155 @@ export function MatchedWorkersList({ jobId, onSendOffer }: Props) {
           )}
         </div>
 
-        {workers.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic text-center py-4">No matching workers found.</p>
-        ) : (
-          workers.map((w) => (
-            <Card key={w.workerId} className="p-4 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-sm text-foreground">{w.name}</p>
-                    {w.priorityBoost && (
-                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-primary">
-                        <Star className="h-3 w-3 fill-primary" />Priority
-                      </span>
-                    )}
-                    {w.docsVerifiedPurchased && (
-                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-green-600">
-                        <BadgeCheck className="h-3 w-3" />Verified Docs
-                      </span>
-                    )}
-                    {w.refsPurchased && (
-                      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-600">
-                        <Shield className="h-3 w-3" />Ref Checked
-                      </span>
-                    )}
-                    <ScoreBadge score={w.compatibilityScore} />
-                    {w.distanceKm != null && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3" />{w.distanceKm}km
-                      </span>
-                    )}
-                  </div>
-                  {w.location && <p className="text-xs text-muted-foreground">{w.location}</p>}
+        {isFreeTier && totalCount > 0 && (
+          <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  {totalCount} worker{totalCount !== 1 ? "s" : ""} matched this job
+                </p>
+                <p className="text-xs text-amber-700">Upgrade to see who they are and send offers</p>
+              </div>
+            </div>
+            {onUpgrade && (
+              <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={onUpgrade}>
+                Unlock Applicants
+              </Button>
+            )}
+          </div>
+        )}
 
-                  {w.matchReasons.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {w.matchReasons.map((r) => (
-                        <span key={r} className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">{r}</span>
-                      ))}
+        {isFreeTier && totalCount > 0 && (
+          <div className="space-y-2">
+            {workers.map((w, i) => (
+              <Card key={i} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {w.driversLicense && <Badge variant="outline" className="text-xs">Driver's Licence</Badge>}
-                    {w.vehicleAccess && <Badge variant="outline" className="text-xs">Vehicle</Badge>}
-                    {w.experienceYears != null && (
-                      <Badge variant="outline" className="text-xs">{w.experienceYears}yr exp</Badge>
-                    )}
-                    {w.minimumPayRate != null && (
-                      <Badge variant="outline" className="text-xs">Min ${w.minimumPayRate}/hr</Badge>
-                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-sm text-foreground">Support Worker</p>
+                        <ScoreBadge score={w.compatibilityScore} />
+                        {w.isFullyVerified && (
+                          <span className="text-[11px] font-semibold text-green-600">✅ Verified</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Profile details hidden — upgrade to view
+                      </p>
+                    </div>
                   </div>
-                  {w.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {w.skills.slice(0, 5).map((s) => (
-                        <span key={s} className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">{s}</span>
-                      ))}
-                      {w.skills.length > 5 && <span className="text-xs text-muted-foreground">+{w.skills.length - 5}</span>}
-                    </div>
+                  {onUpgrade && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs shrink-0 border-amber-300 text-amber-700" onClick={onUpgrade}>
+                      <Lock className="h-3 w-3 mr-1" />Connect
+                    </Button>
                   )}
                 </div>
-                <div className="flex flex-col gap-1.5 shrink-0">
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {isFreeTier && totalCount === 0 && (
+          <p className="text-sm text-muted-foreground italic text-center py-4">No matching workers found yet.</p>
+        )}
+
+        {!isFreeTier && workers.length === 0 && (
+          <p className="text-sm text-muted-foreground italic text-center py-4">No matching workers found.</p>
+        )}
+
+        {!isFreeTier && workers.map((w) => (
+          <Card key={w.workerId} className="p-4 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-sm text-foreground">{w.name}</p>
+                  {w.priorityBoost && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-semibold text-primary">
+                      <Star className="h-3 w-3 fill-primary" />Priority
+                    </span>
+                  )}
+                  {w.docsVerifiedPurchased && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-semibold text-green-600">
+                      <BadgeCheck className="h-3 w-3" />Verified Docs
+                    </span>
+                  )}
+                  {w.refsPurchased && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-semibold text-blue-600">
+                      <Shield className="h-3 w-3" />Ref Checked
+                    </span>
+                  )}
+                  <ScoreBadge score={w.compatibilityScore} />
+                  {w.distanceKm != null && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                      <MapPin className="h-3 w-3" />{w.distanceKm}km
+                    </span>
+                  )}
+                </div>
+                {w.location && <p className="text-xs text-muted-foreground">{w.location}</p>}
+
+                {w.matchReasons.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {w.matchReasons.map((r) => (
+                      <span key={r} className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">{r}</span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {w.driversLicense && <Badge variant="outline" className="text-xs">Driver's Licence</Badge>}
+                  {w.vehicleAccess && <Badge variant="outline" className="text-xs">Vehicle</Badge>}
+                  {w.experienceYears != null && (
+                    <Badge variant="outline" className="text-xs">{w.experienceYears}yr exp</Badge>
+                  )}
+                  {w.minimumPayRate != null && (
+                    <Badge variant="outline" className="text-xs">Min ${w.minimumPayRate}/hr</Badge>
+                  )}
+                </div>
+                {w.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {w.skills.slice(0, 5).map((s) => (
+                      <span key={s} className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">{s}</span>
+                    ))}
+                    {w.skills.length > 5 && <span className="text-xs text-muted-foreground">+{w.skills.length - 5}</span>}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => setDrawerWorker(matchedWorkerToSummary(w))}
+                >
+                  <User className="h-3 w-3 mr-1" />View Profile
+                </Button>
+                {onSendOffer && (
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs"
-                    onClick={() => setDrawerWorker(matchedWorkerToSummary(w))}
+                    onClick={() => onSendOffer(w.workerId, w.name)}
                   >
-                    <User className="h-3 w-3 mr-1" />View Profile
+                    <Send className="h-3 w-3 mr-1" />Offer
                   </Button>
-                  {onSendOffer && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => onSendOffer(w.workerId, w.name)}
-                    >
-                      <Send className="h-3 w-3 mr-1" />Offer
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
-              {w.bio && <p className="text-xs text-muted-foreground line-clamp-2">{w.bio}</p>}
-            </Card>
-          ))
-        )}
+            </div>
+            {w.bio && <p className="text-xs text-muted-foreground line-clamp-2">{w.bio}</p>}
+          </Card>
+        ))}
       </div>
 
-      <WorkerProfileDrawer
-        worker={drawerWorker}
-        onClose={() => setDrawerWorker(null)}
-      />
+      {!isFreeTier && (
+        <WorkerProfileDrawer
+          worker={drawerWorker}
+          onClose={() => setDrawerWorker(null)}
+        />
+      )}
     </>
   );
 }

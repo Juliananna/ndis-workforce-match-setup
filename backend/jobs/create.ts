@@ -3,7 +3,9 @@ import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { SUPPORT_TYPE_TAGS } from "./tags";
 import { JobRequest, mapRow } from "./get";
-import { requireEmployerSubscription } from "../employers/subscription_guard";
+import { getEmployerTier } from "../employers/subscription_guard";
+
+export const FREE_TIER_JOB_LIMIT = 2;
 
 export interface CreateJobRequestRequest {
   jobType?: "shift" | "general";
@@ -65,7 +67,17 @@ export const createJobRequest = api<CreateJobRequestRequest, JobRequest>(
     `;
     if (!employer) throw APIError.notFound("employer profile not found");
 
-    await requireEmployerSubscription(auth.userID);
+    const tierInfo = await getEmployerTier(auth.userID);
+    if (!tierInfo.isActive) {
+      const jobCount = await db.queryRow<{ count: number }>`
+        SELECT COUNT(*)::int AS count FROM job_requests WHERE employer_id = ${employer.employer_id}
+      `;
+      if ((jobCount?.count ?? 0) >= FREE_TIER_JOB_LIMIT) {
+        throw APIError.permissionDenied(
+          `Free accounts can post up to ${FREE_TIER_JOB_LIMIT} jobs. Upgrade to post unlimited jobs.`
+        );
+      }
+    }
 
     const status = req.status ?? "Draft";
     const tags = req.supportTypeTags;

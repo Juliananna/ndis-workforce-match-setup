@@ -219,6 +219,8 @@ function EmployerLayout({
 }) {
   const [jobs, setJobs] = useState<JobRequest[]>([]);
   const [profile, setProfile] = useState<EmployerProfile | null>(null);
+  const [isFreeTier, setIsFreeTier] = useState(false);
+  const [jobLimit, setJobLimit] = useState(2);
   const [jobsLoaded, setJobsLoaded] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -228,9 +230,14 @@ function EmployerLayout({
     Promise.allSettled([
       api.jobs.listJobRequests(),
       api.employers.getEmployerProfile(),
-    ]).then(([jobsRes, profileRes]) => {
+      api.payments.getEmployerFreemiumStatus(),
+    ]).then(([jobsRes, profileRes, freemiumRes]) => {
       if (jobsRes.status === "fulfilled") setJobs(jobsRes.value.jobs);
       if (profileRes.status === "fulfilled") setProfile(profileRes.value);
+      if (freemiumRes.status === "fulfilled") {
+        setIsFreeTier(freemiumRes.value.isFreeTier);
+        setJobLimit(freemiumRes.value.jobLimit);
+      }
     });
   }, [api, jobsLoaded]);
 
@@ -248,6 +255,8 @@ function EmployerLayout({
     setTab(t);
     setMobileSidebarOpen(false);
   };
+
+  const handleUpgrade = () => setTab("upgrade");
 
   const renderContent = () => {
     if (tab === "home") {
@@ -271,6 +280,9 @@ function EmployerLayout({
           isEmployer={true}
           isAdmin={isAdmin}
           isSalesAgent={isSalesAgent}
+          isFreeTier={isFreeTier}
+          jobLimit={jobLimit}
+          onUpgrade={handleUpgrade}
         />
       </div>
     );
@@ -686,7 +698,7 @@ function StatCard({
 }
 
 function PageContent({
-  tab, isWorker, isEmployer, isAdmin, isSalesAgent, onBack
+  tab, isWorker, isEmployer, isAdmin, isSalesAgent, onBack, isFreeTier, jobLimit, onUpgrade
 }: {
   tab: Tab;
   isWorker: boolean;
@@ -694,6 +706,9 @@ function PageContent({
   isAdmin: boolean;
   isSalesAgent: boolean;
   onBack?: () => void;
+  isFreeTier?: boolean;
+  jobLimit?: number;
+  onUpgrade?: () => void;
 }) {
   const fallback = (
     <div className="flex items-center justify-center py-20">
@@ -705,8 +720,8 @@ function PageContent({
 
   return (
     <Suspense fallback={fallback}>
-      {tab === "employer" && isEmployer && <EmployerDashboardPage />}
-      {tab === "browse" && isEmployer && <BrowseWorkersPage />}
+      {tab === "employer" && isEmployer && <EmployerDashboardPage onUpgrade={onUpgrade} />}
+      {tab === "browse" && isEmployer && <BrowseWorkersPage isFreeTier={isFreeTier ?? false} onUpgrade={onUpgrade ?? (() => {})} />}
       {tab === "saved" && isEmployer && <SavedWorkersTab />}
       {tab === "offers" && isEmployer && <EmployerOffersPage />}
       {tab === "upgrade" && isEmployer && <EmployerUpgradePage onBack={() => {}} />}
