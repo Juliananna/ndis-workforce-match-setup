@@ -258,7 +258,7 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
                 <p className="text-sm font-semibold text-gray-900">{w.role}</p>
                 <p className="text-xs text-gray-500">{w.employer}</p>
                 <p className="text-xs text-gray-400">
-                  {w.startDate} – {w.current ? "Present" : (w.endDate ?? "")}
+                  {String(w.startDate || "")} – {w.current ? "Present" : String(w.endDate || "")}
                 </p>
                 {w.responsibilities && (
                   <p className="text-xs text-gray-600 mt-1 leading-relaxed">{w.responsibilities}</p>
@@ -540,8 +540,8 @@ export function ProfileSection({ profile, editing, onEdit, onSave, onCancel }: P
                     <Shield className="h-3.5 w-3.5 text-green-400 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-gray-800">{t.name}</p>
-                      <p className="text-xs text-gray-500">{t.provider}{t.completionDate ? ` · ${t.completionDate}` : ""}</p>
-                      {t.expiryDate && <p className="text-xs text-amber-600">Expires: {t.expiryDate}</p>}
+                      <p className="text-xs text-gray-500">{t.provider}{t.completionDate ? ` · ${String(t.completionDate)}` : ""}</p>
+                      {t.expiryDate && <p className="text-xs text-amber-600">Expires: {String(t.expiryDate)}</p>}
                     </div>
                   </div>
                 ))}
