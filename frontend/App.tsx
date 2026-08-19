@@ -54,6 +54,7 @@ function useChunkErrorReload() {
   }, []);
 }
 
+const EmployerFreePage = lazy(() => import("./pages/EmployerFreePage"));
 const ComplianceDashboardPage = lazy(() => import("./pages/ComplianceDashboardPage"));
 const SalesPortalPage = lazy(() => import("./pages/SalesPortalPage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
@@ -121,7 +122,7 @@ function RoleRouter() {
   return <DashboardPage />;
 }
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder", "/rto-partners"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/worker-signup", "/gethired", "/hirenow", "/hire-free", "/verify-email", "/privacy-policy", "/contact", "/forgot-password", "/reset-password", "/demo", "/resume-builder", "/rto-partners"];
 const JOB_SHARE_PATH_PREFIX = "/jobs/share/";
 const REFERENCE_PATH_PREFIX = "/reference/";
 const RTO_PATH_PREFIX = "/rto/";
@@ -181,6 +182,14 @@ function AppInner() {
         <Route path="/worker-signup" element={<WorkerSignupPage />} />
         <Route path="/gethired" element={<GetHiredPage />} />
         <Route path="/hirenow" element={<HireNowPage />} />
+        <Route
+          path="/hire-free"
+          element={
+            <Suspense fallback={<div className="min-h-screen bg-[#f4f5f9] flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" /></div>}>
+              <EmployerFreePage />
+            </Suspense>
+          }
+        />
         <Route path="/demo" element={<DemoRoute />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
