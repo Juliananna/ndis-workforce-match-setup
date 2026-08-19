@@ -243,7 +243,7 @@ export default function ContactPage() {
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form id="ghl-contact-form" onSubmit={handleSubmit} className="space-y-5">
                   {/* Enquiry type */}
                   <div>
                     <label className="mb-2.5 block text-xs font-black uppercase tracking-widest" style={{ color: "var(--brand-muted)" }}>
@@ -277,6 +277,7 @@ export default function ContactPage() {
                     <input
                       required
                       type="text"
+                      name="full_name"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="Jane Smith"
@@ -297,6 +298,7 @@ export default function ContactPage() {
                     <input
                       required
                       type="email"
+                      name="email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       placeholder="jane@example.com.au"
@@ -316,6 +318,7 @@ export default function ContactPage() {
                     </label>
                     <textarea
                       required
+                      name="message"
                       rows={5}
                       value={form.message}
                       onChange={(e) => setForm({ ...form, message: e.target.value })}

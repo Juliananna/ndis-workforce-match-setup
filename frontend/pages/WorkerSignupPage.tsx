@@ -168,6 +168,8 @@ export default function WorkerSignupPage() {
         if (rtoId) sessionStorage.setItem("rto_id", rtoId);
       }
 
+      const form = document.getElementById("ghl-worker-signup-form");
+      if (form) form.dispatchEvent(new Event("submit", { bubbles: true }));
       setSuccess({ email });
     } catch (err: unknown) {
       console.error(err);
@@ -347,11 +349,12 @@ export default function WorkerSignupPage() {
           )}
 
           {step === 1 && (
-            <form onSubmit={handleStep1} className="space-y-4">
+            <form id="ghl-worker-signup-form" onSubmit={handleStep1} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                 <input
                   type="text"
+                  name="full_name"
                   placeholder="Jane Smith"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -364,6 +367,7 @@ export default function WorkerSignupPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
                 <input
                   type="email"
+                  name="email"
                   placeholder="jane@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -376,6 +380,7 @@ export default function WorkerSignupPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
                 <input
                   type="tel"
+                  name="phone"
                   placeholder="04XX XXX XXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -389,6 +394,7 @@ export default function WorkerSignupPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                   <input
                     type="password"
+                    name="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -401,6 +407,7 @@ export default function WorkerSignupPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
                   <input
                     type="password"
+                    name="confirm_password"
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}

@@ -65,6 +65,8 @@ export default function RegisterPage() {
           abn,
         }),
       });
+      const form = document.getElementById("ghl-register-form");
+      if (form) form.dispatchEvent(new Event("submit", { bubbles: true }));
       setSuccess({ email });
     } catch (err: unknown) {
       console.error(err);
@@ -187,11 +189,12 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="ghl-register-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
               <input
                 type="text"
+                name="full_name"
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -204,6 +207,7 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
               <input
                 type="email"
+                name="email"
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -221,6 +225,7 @@ export default function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
                 <input
                   type="password"
+                  name="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -232,6 +237,7 @@ export default function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
                 <input
                   type="password"
+                  name="confirm_password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -246,6 +252,7 @@ export default function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                 <input
                   type="tel"
+                  name="phone"
                   placeholder="04XX XXX XXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -265,6 +272,7 @@ export default function RegisterPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Organisation Name</label>
                   <input
                     type="text"
+                    name="organisation_name"
                     placeholder="Sunshine Care Pty Ltd"
                     value={organisationName}
                     onChange={(e) => setOrganisationName(e.target.value)}
@@ -276,6 +284,7 @@ export default function RegisterPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact Person</label>
                   <input
                     type="text"
+                    name="contact_person"
                     placeholder="John Doe"
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
@@ -288,6 +297,7 @@ export default function RegisterPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
                     <input
                       type="tel"
+                      name="phone"
                       placeholder="04XX XXX XXX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -303,6 +313,7 @@ export default function RegisterPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">ABN</label>
                     <input
                       type="text"
+                      name="abn"
                       placeholder="XX XXX XXX XXX"
                       value={abn}
                       onChange={(e) => setAbn(e.target.value)}
