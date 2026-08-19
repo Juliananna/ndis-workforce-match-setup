@@ -1815,6 +1815,7 @@ export namespace offers {
 import { createCheckoutSession as api_payments_checkout_createCheckoutSession } from "~backend/payments/checkout";
 import { createEmployerCheckoutSession as api_payments_employer_checkout_createEmployerCheckoutSession } from "~backend/payments/employer_checkout";
 import { getEmployerSubscriptionStatus as api_payments_employer_status_getEmployerSubscriptionStatus } from "~backend/payments/employer_status";
+import { getEmployerFreemiumStatus as api_payments_freemium_status_getEmployerFreemiumStatus } from "~backend/payments/freemium_status";
 import { getPaymentStatus as api_payments_status_getPaymentStatus } from "~backend/payments/status";
 import { testActivateEmployerSubscription as api_payments_test_activate_testActivateEmployerSubscription } from "~backend/payments/test_activate";
 
@@ -1827,6 +1828,7 @@ export namespace payments {
             this.baseClient = baseClient
             this.createCheckoutSession = this.createCheckoutSession.bind(this)
             this.createEmployerCheckoutSession = this.createEmployerCheckoutSession.bind(this)
+            this.getEmployerFreemiumStatus = this.getEmployerFreemiumStatus.bind(this)
             this.getEmployerSubscriptionStatus = this.getEmployerSubscriptionStatus.bind(this)
             this.getPaymentStatus = this.getPaymentStatus.bind(this)
             this.stripeWebhook = this.stripeWebhook.bind(this)
@@ -1843,6 +1845,12 @@ export namespace payments {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/payments/employer/checkout`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_payments_employer_checkout_createEmployerCheckoutSession>
+        }
+
+        public async getEmployerFreemiumStatus(): Promise<ResponseType<typeof api_payments_freemium_status_getEmployerFreemiumStatus>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/payments/employer/freemium-status`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_payments_freemium_status_getEmployerFreemiumStatus>
         }
 
         public async getEmployerSubscriptionStatus(): Promise<ResponseType<typeof api_payments_employer_status_getEmployerSubscriptionStatus>> {
