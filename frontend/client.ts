@@ -41,6 +41,7 @@ export class Client {
     public readonly employers: employers.ServiceClient
     public readonly ghl: ghl.ServiceClient
     public readonly jobs: jobs.ServiceClient
+    public readonly lifecycle: lifecycle.ServiceClient
     public readonly matching: matching.ServiceClient
     public readonly messages: messages.ServiceClient
     public readonly notifications: notifications.ServiceClient
@@ -76,6 +77,7 @@ export class Client {
         this.employers = new employers.ServiceClient(base)
         this.ghl = new ghl.ServiceClient(base)
         this.jobs = new jobs.ServiceClient(base)
+        this.lifecycle = new lifecycle.ServiceClient(base)
         this.matching = new matching.ServiceClient(base)
         this.messages = new messages.ServiceClient(base)
         this.notifications = new notifications.ServiceClient(base)
@@ -134,6 +136,13 @@ export interface ClientOptions {
 /**
  * Import the endpoint handlers to derive the types for the client.
  */
+import {
+    adminApproveReadiness as api_admin_approve_readiness_adminApproveReadiness,
+    adminGetLiveReadiness as api_admin_approve_readiness_adminGetLiveReadiness,
+    adminGetReadinessEligibility as api_admin_approve_readiness_adminGetReadinessEligibility,
+    adminListReadinessAudit as api_admin_approve_readiness_adminListReadinessAudit,
+    adminRevokeReadiness as api_admin_approve_readiness_adminRevokeReadiness
+} from "~backend/admin/approve_readiness";
 import { bootstrap as api_admin_bootstrap_bootstrap } from "~backend/admin/bootstrap";
 import {
     deleteComplianceOfficer as api_admin_compliance_officers_deleteComplianceOfficer,
@@ -193,6 +202,7 @@ import {
     getPrivacyPolicy as api_admin_privacy_policy_getPrivacyPolicy,
     updatePrivacyPolicy as api_admin_privacy_policy_updatePrivacyPolicy
 } from "~backend/admin/privacy_policy";
+import { adminReadinessReconcile as api_admin_readiness_reconcile_adminReadinessReconcile } from "~backend/admin/readiness_reconcile";
 import {
     adminCancelBooking as api_admin_reference_bookings_adminCancelBooking,
     adminCreateBooking as api_admin_reference_bookings_adminCreateBooking,
@@ -259,6 +269,7 @@ export namespace admin {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.adminApproveReadiness = this.adminApproveReadiness.bind(this)
             this.adminArchiveUser = this.adminArchiveUser.bind(this)
             this.adminBackfillResendLogs = this.adminBackfillResendLogs.bind(this)
             this.adminCancelBooking = this.adminCancelBooking.bind(this)
@@ -273,7 +284,9 @@ export namespace admin {
             this.adminDeleteSchadRatesByDate = this.adminDeleteSchadRatesByDate.bind(this)
             this.adminDeleteUser = this.adminDeleteUser.bind(this)
             this.adminGetDocumentDownloadUrl = this.adminGetDocumentDownloadUrl.bind(this)
+            this.adminGetLiveReadiness = this.adminGetLiveReadiness.bind(this)
             this.adminGetPlatformStats = this.adminGetPlatformStats.bind(this)
+            this.adminGetReadinessEligibility = this.adminGetReadinessEligibility.bind(this)
             this.adminGetReferenceCheck = this.adminGetReferenceCheck.bind(this)
             this.adminGetWorkerDocuments = this.adminGetWorkerDocuments.bind(this)
             this.adminGetWorkerReferences = this.adminGetWorkerReferences.bind(this)
@@ -287,6 +300,7 @@ export namespace admin {
             this.adminListEmployers = this.adminListEmployers.bind(this)
             this.adminListJobs = this.adminListJobs.bind(this)
             this.adminListPendingReferences = this.adminListPendingReferences.bind(this)
+            this.adminListReadinessAudit = this.adminListReadinessAudit.bind(this)
             this.adminListRtoEnquiries = this.adminListRtoEnquiries.bind(this)
             this.adminListRtoPartnerStats = this.adminListRtoPartnerStats.bind(this)
             this.adminListRtoPartners = this.adminListRtoPartners.bind(this)
@@ -298,7 +312,9 @@ export namespace admin {
             this.adminListUserEmailLog = this.adminListUserEmailLog.bind(this)
             this.adminListUsers = this.adminListUsers.bind(this)
             this.adminListWorkers = this.adminListWorkers.bind(this)
+            this.adminReadinessReconcile = this.adminReadinessReconcile.bind(this)
             this.adminResetUserPassword = this.adminResetUserPassword.bind(this)
+            this.adminRevokeReadiness = this.adminRevokeReadiness.bind(this)
             this.adminRevokeSubscription = this.adminRevokeSubscription.bind(this)
             this.adminSendBulkEmail = this.adminSendBulkEmail.bind(this)
             this.adminSendBulkSMS = this.adminSendBulkSMS.bind(this)
@@ -338,6 +354,12 @@ export namespace admin {
             this.updateComplianceOfficer = this.updateComplianceOfficer.bind(this)
             this.updateComplianceProfile = this.updateComplianceProfile.bind(this)
             this.updatePrivacyPolicy = this.updatePrivacyPolicy.bind(this)
+        }
+
+        public async adminApproveReadiness(params: { workerId: string }): Promise<ResponseType<typeof api_admin_approve_readiness_adminApproveReadiness>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/approve-readiness`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_approve_readiness_adminApproveReadiness>
         }
 
         public async adminArchiveUser(params: RequestType<typeof api_admin_platform_adminArchiveUser>): Promise<void> {
@@ -426,10 +448,22 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_verify_document_adminGetDocumentDownloadUrl>
         }
 
+        public async adminGetLiveReadiness(params: { workerId: string }): Promise<ResponseType<typeof api_admin_approve_readiness_adminGetLiveReadiness>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/live-readiness`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_approve_readiness_adminGetLiveReadiness>
+        }
+
         public async adminGetPlatformStats(): Promise<ResponseType<typeof api_admin_platform_adminGetPlatformStats>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/stats`, {method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_platform_adminGetPlatformStats>
+        }
+
+        public async adminGetReadinessEligibility(params: { workerId: string }): Promise<ResponseType<typeof api_admin_approve_readiness_adminGetReadinessEligibility>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/readiness-eligibility`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_approve_readiness_adminGetReadinessEligibility>
         }
 
         public async adminGetReferenceCheck(params: { referenceId: string }): Promise<ResponseType<typeof api_admin_reference_check_adminGetReferenceCheck>> {
@@ -543,6 +577,12 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reference_bookings_adminListPendingReferences>
         }
 
+        public async adminListReadinessAudit(params: { workerId: string }): Promise<ResponseType<typeof api_admin_approve_readiness_adminListReadinessAudit>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/readiness-audit`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_approve_readiness_adminListReadinessAudit>
+        }
+
         public async adminListRtoEnquiries(params: RequestType<typeof api_admin_rto_enquiries_adminListRtoEnquiries>): Promise<ResponseType<typeof api_admin_rto_enquiries_adminListRtoEnquiries>> {
             // Convert our params into the objects we need for the request
             const query = makeRecord<string, string | string[]>({
@@ -626,10 +666,27 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_workers_adminListWorkers>
         }
 
+        public async adminReadinessReconcile(): Promise<ResponseType<typeof api_admin_readiness_reconcile_adminReadinessReconcile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/readiness/reconcile`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_readiness_reconcile_adminReadinessReconcile>
+        }
+
         public async adminResetUserPassword(params: { userId: string }): Promise<ResponseType<typeof api_admin_reset_user_password_adminResetUserPassword>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/users/${encodeURIComponent(params.userId)}/reset-password`, {method: "POST", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_reset_user_password_adminResetUserPassword>
+        }
+
+        public async adminRevokeReadiness(params: RequestType<typeof api_admin_approve_readiness_adminRevokeReadiness>): Promise<ResponseType<typeof api_admin_approve_readiness_adminRevokeReadiness>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                reason: params.reason,
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/workers/${encodeURIComponent(params.workerId)}/revoke-readiness`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_approve_readiness_adminRevokeReadiness>
         }
 
         public async adminRevokeSubscription(params: { employerId: string }): Promise<void> {
@@ -1322,6 +1379,7 @@ export namespace employers {
  * Import the endpoint handlers to derive the types for the client.
  */
 import { bulkSyncToGHL as api_ghl_bulk_sync_bulkSyncToGHL } from "~backend/ghl/bulk_sync";
+import { adminGhlReconciliationReport as api_ghl_reconciliation_adminGhlReconciliationReport } from "~backend/ghl/reconciliation";
 
 export namespace ghl {
 
@@ -1330,7 +1388,14 @@ export namespace ghl {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.adminGhlReconciliationReport = this.adminGhlReconciliationReport.bind(this)
             this.bulkSyncToGHL = this.bulkSyncToGHL.bind(this)
+        }
+
+        public async adminGhlReconciliationReport(): Promise<ResponseType<typeof api_ghl_reconciliation_adminGhlReconciliationReport>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/ghl/reconciliation-report`, {method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_ghl_reconciliation_adminGhlReconciliationReport>
         }
 
         public async bulkSyncToGHL(): Promise<ResponseType<typeof api_ghl_bulk_sync_bulkSyncToGHL>> {
@@ -1485,6 +1550,38 @@ export namespace jobs {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/jobs/${encodeURIComponent(params.jobId)}`, {method: "PUT", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_jobs_update_updateJobRequest>
+        }
+    }
+}
+
+/**
+ * Import the endpoint handlers to derive the types for the client.
+ */
+import { listLifecycleEvents as api_lifecycle_query_listLifecycleEvents } from "~backend/lifecycle/query";
+
+export namespace lifecycle {
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.listLifecycleEvents = this.listLifecycleEvents.bind(this)
+        }
+
+        public async listLifecycleEvents(params: RequestType<typeof api_lifecycle_query_listLifecycleEvents>): Promise<ResponseType<typeof api_lifecycle_query_listLifecycleEvents>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                eventType: params.eventType,
+                limit:     params.limit === undefined ? undefined : String(params.limit),
+                sessionId: params.sessionId,
+                userId:    params.userId,
+                workerId:  params.workerId,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/lifecycle-events`, {query, method: "GET", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_lifecycle_query_listLifecycleEvents>
         }
     }
 }
@@ -2001,9 +2098,6 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_premium_createResumePremiumCheckout>
         }
 
-        /**
-         * Creates a new resume builder session for a guest user.
-         */
         public async createSession(params: RequestType<typeof api_resume_session_create_createSession>): Promise<ResponseType<typeof api_resume_session_create_createSession>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/resume-sessions`, {method: "POST", body: JSON.stringify(params)})
@@ -2182,9 +2276,6 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_updateReferee>
         }
 
-        /**
-         * Updates a resume builder session with new questionnaire data.
-         */
         public async updateSession(params: RequestType<typeof api_resume_session_update_updateSession>): Promise<ResponseType<typeof api_resume_session_update_updateSession>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
