@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, ChevronRight, ShieldCheck, User, Users, Clock, CreditCard, Lock, Unlock } from "lucide-react";
+import { CheckCircle2, Circle, ChevronRight, ShieldCheck, User, Users, Clock, CreditCard, Lock } from "lucide-react";
 import type { VerificationScoreResponse } from "~backend/workers/verification_score";
 
 interface Props {
@@ -24,56 +24,56 @@ const LEVEL_STYLES: Record<Level, {
   glow: string;
   scoreText: string;
 }> = {
-  low: {
+  incomplete: {
     bar: "bg-red-500",
     badge: "bg-red-100 border-red-200 text-red-700",
-    badgeText: "Getting Started",
+    badgeText: "Profile Incomplete",
     ring: "ring-red-200",
     glow: "shadow-red-100",
     scoreText: "text-red-600",
   },
-  medium: {
+  in_progress: {
     bar: "bg-yellow-400",
     badge: "bg-yellow-100 border-yellow-200 text-yellow-700",
-    badgeText: "In Progress",
+    badgeText: "Profile In Progress",
     ring: "ring-yellow-200",
     glow: "shadow-yellow-100",
     scoreText: "text-yellow-600",
   },
-  high: {
+  submission_ready: {
     bar: "bg-green-500",
     badge: "bg-green-100 border-green-200 text-green-700",
-    badgeText: "Priority Profile",
+    badgeText: "Ready to Submit",
     ring: "ring-green-200",
     glow: "shadow-green-100",
     scoreText: "text-green-600",
   },
-  verified: {
-    bar: "bg-emerald-500",
-    badge: "bg-emerald-100 border-emerald-200 text-emerald-700",
-    badgeText: "Verified Worker ✅",
-    ring: "ring-emerald-300",
-    glow: "shadow-emerald-100",
-    scoreText: "text-emerald-600",
+  compliance_pending: {
+    bar: "bg-blue-500",
+    badge: "bg-blue-100 border-blue-200 text-blue-700",
+    badgeText: "Compliance Under Review",
+    ring: "ring-blue-200",
+    glow: "shadow-blue-100",
+    scoreText: "text-blue-600",
   },
 };
 
 const OUTCOME_MESSAGES: Record<Level, string[]> = {
-  low: [
-    "Your profile is not visible to most providers yet",
-    "Complete your profile to start getting matched",
+  incomplete: [
+    "Complete your profile to become visible to employers",
+    "Add your details, upload documents and set your availability",
   ],
-  medium: [
-    "You're visible, but not prioritised by providers",
-    "Verified workers are chosen first — incomplete profiles may not be selected",
+  in_progress: [
+    "Keep going — complete your remaining profile sections",
+    "Upload your compliance documents to begin the review process",
   ],
-  high: [
-    "You're now prioritised by providers",
-    "Complete your final steps to become fully verified",
+  submission_ready: [
+    "Your profile is looking strong — upload your compliance documents",
+    "Once submitted, our team will review your documents and references",
   ],
-  verified: [
-    "Your profile is fully verified and trusted by providers",
-    "You have maximum visibility and priority matching",
+  compliance_pending: [
+    "Your profile is complete and under compliance review",
+    "Our team will verify your documents and references — we'll notify you when done",
   ],
 };
 
@@ -83,15 +83,15 @@ function CircularScore({ score, level }: { score: number; level: Level }) {
   const dash = (score / 100) * circumference;
   const gap = circumference - dash;
 
-  const trackColor = level === "low" ? "#fee2e2"
-    : level === "medium" ? "#fef9c3"
-    : level === "high" ? "#dcfce7"
-    : "#d1fae5";
+  const trackColor = level === "incomplete" ? "#fee2e2"
+    : level === "in_progress" ? "#fef9c3"
+    : level === "submission_ready" ? "#dcfce7"
+    : "#dbeafe";
 
-  const fillColor = level === "low" ? "#ef4444"
-    : level === "medium" ? "#eab308"
-    : level === "high" ? "#22c55e"
-    : "#10b981";
+  const fillColor = level === "incomplete" ? "#ef4444"
+    : level === "in_progress" ? "#eab308"
+    : level === "submission_ready" ? "#22c55e"
+    : "#3b82f6";
 
   return (
     <div className="relative flex items-center justify-center">
@@ -127,19 +127,13 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
   const styles = LEVEL_STYLES[data.level];
   const messages = OUTCOME_MESSAGES[data.level];
   const incomplete = data.pillars.filter((p) => !p.earned);
-  const offersUnlocked = data.offersUnlocked ?? (data.level === "high" || data.level === "verified");
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-2 mb-4">
           <ShieldCheck className="h-4 w-4 text-indigo-500" />
-          <p className="text-sm font-bold text-gray-900">Verification Score</p>
-          {data.level === "verified" && (
-            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-              Verified Worker ✅
-            </span>
-          )}
+          <p className="text-sm font-bold text-gray-900">Profile Completion</p>
         </div>
 
         <div className="flex items-center gap-5">
@@ -169,23 +163,13 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
         </div>
       </div>
 
-      {/* Offer access banner */}
-      <div className={`mx-5 mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border ${
-        offersUnlocked
-          ? "border-green-200 bg-green-50"
-          : "border-amber-200 bg-amber-50"
-      }`}>
-        {offersUnlocked
-          ? <Unlock className="h-4 w-4 text-green-600 shrink-0" />
-          : <Lock className="h-4 w-4 text-amber-500 shrink-0" />}
+      {/* Compliance review notice */}
+      <div className="mx-5 mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50">
+        <Lock className="h-4 w-4 text-amber-500 shrink-0" />
         <div>
-          <p className={`text-xs font-bold ${offersUnlocked ? "text-green-800" : "text-amber-800"}`}>
-            {offersUnlocked ? "Offers unlocked" : "Offers locked — reach 80% to unlock"}
-          </p>
-          <p className={`text-xs mt-0.5 ${offersUnlocked ? "text-green-700" : "text-amber-700"}`}>
-            {offersUnlocked
-              ? "You can receive and respond to offers from providers."
-              : "You unlock more opportunities when you reach Priority Profile (80%). Providers choose verified workers first."}
+          <p className="text-xs font-bold text-amber-800">Compliance review required before starting work</p>
+          <p className="text-xs mt-0.5 text-amber-700">
+            Complete your profile and upload your documents. Our compliance team will review and notify you when cleared.
           </p>
         </div>
       </div>
@@ -241,20 +225,20 @@ export function VerificationScoreCard({ score: data, onGoToProfile }: Props) {
             {`Earn +${incomplete.reduce((s, p) => s + p.points, 0)} Points →`}
           </button>
           <p className="text-xs text-center text-gray-400 mt-2">
-            {data.level === "low"
+            {data.level === "incomplete"
               ? "Complete your profile to increase your chances of getting shifts"
-              : data.level === "medium"
-              ? "Reach 80% to unlock offers and start getting hired"
-              : "Fully verified profiles are prioritised — you're almost there"}
+              : data.level === "in_progress"
+              ? "Upload your documents to begin the compliance review process"
+              : "Strong profiles are prioritised — you're almost ready for review"}
           </p>
         </div>
       )}
 
-      {data.level === "verified" && (
+      {data.level === "compliance_pending" && incomplete.length === 0 && (
         <div className="px-5 pb-5">
-          <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" />
-            <p className="text-sm font-bold text-emerald-700">Verified Worker — Priority Matching Active</p>
+          <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 border border-blue-200">
+            <ShieldCheck className="h-5 w-5 text-blue-500" />
+            <p className="text-sm font-bold text-blue-700">Profile Complete — Compliance Review In Progress</p>
           </div>
         </div>
       )}

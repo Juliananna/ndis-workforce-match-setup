@@ -51,6 +51,18 @@ export const adminVerifyDocument = api<VerifyDocumentRequest, VerifyDocumentResp
       throw APIError.invalidArgument("invalid flagReason");
     }
 
+    if (req.action === "verify") {
+      const docCheck = await db.queryRow<{ expiry_date: Date | null }>`
+        SELECT expiry_date FROM worker_documents WHERE id = ${req.documentId}
+      `;
+      if (!docCheck) throw APIError.notFound("document not found");
+      if (docCheck.expiry_date && docCheck.expiry_date < new Date()) {
+        throw APIError.failedPrecondition(
+          "Cannot verify an expired document. Ask the worker to upload a current version."
+        );
+      }
+    }
+
     let newStatus: string;
     if (req.action === "verify") newStatus = "Verified";
     else if (req.action === "flag") newStatus = "Flagged";

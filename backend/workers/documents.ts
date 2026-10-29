@@ -81,14 +81,16 @@ export interface UpdateDocumentExpiryRequest {
 }
 
 function resolveStatus(expiryDate: Date | null, currentStatus: VerificationStatus = "Pending"): VerificationStatus {
-  if (!expiryDate) return currentStatus === "Verified" ? "Verified" : (currentStatus === "Flagged" ? "Flagged" : "Pending");
+  if (!expiryDate) {
+    if (currentStatus === "Flagged") return "Flagged";
+    return currentStatus === "Verified" ? "Verified" : "Pending";
+  }
   const now = new Date();
-  const diffMs = expiryDate.getTime() - now.getTime();
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  const diffDays = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   if (diffDays < 0) return "Expired";
-  if (diffDays <= 30) return "Expiring Soon";
   if (diffDays <= 60) return "Expiring Soon";
-  return currentStatus === "Verified" ? "Verified" : (currentStatus === "Flagged" ? "Flagged" : "Pending");
+  if (currentStatus === "Flagged") return "Flagged";
+  return currentStatus === "Verified" ? "Verified" : "Pending";
 }
 
 async function getWorkerIdForUser(userId: string): Promise<string> {
@@ -248,14 +250,10 @@ export const listWorkerDocuments = api<void, ListDocumentsResponse>(
 
     for (const row of rows) {
       let status = row.verification_status as VerificationStatus;
-      if (row.expiry_date && status !== "Verified") {
-        const diffDays = (row.expiry_date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-        if (diffDays < 0) {
-          status = "Expired";
-        } else if (diffDays <= 60) {
-          status = "Expiring Soon";
-        }
-        if (status !== row.verification_status) {
+      if (row.expiry_date) {
+        const recomputed = resolveStatus(row.expiry_date, status);
+        if (recomputed !== status) {
+          status = recomputed;
           await db.exec`UPDATE worker_documents SET verification_status = ${status} WHERE id = ${row.id}`;
         }
       }
@@ -344,7 +342,8 @@ export const updateDocumentExpiry = api<UpdateDocumentExpiryRequest, WorkerDocum
 
     const expiryDate = req.expiryDate ? new Date(req.expiryDate) : null;
     const currentStatus = doc.verification_status as VerificationStatus;
-    const newStatus = resolveStatus(expiryDate, currentStatus);
+    const priorStatus: VerificationStatus = currentStatus === "Verified" ? "Pending" : currentStatus;
+    const newStatus = resolveStatus(expiryDate, priorStatus);
     const updatedRefNumber = req.referenceNumber !== undefined ? (req.referenceNumber?.trim() || null) : doc.reference_number;
 
     const row = await db.queryRow<{

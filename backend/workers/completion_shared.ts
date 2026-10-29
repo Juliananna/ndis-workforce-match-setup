@@ -38,6 +38,30 @@ const SECTION_DEFS: { key: keyof CompletionInputs; label: string; weight: number
   { key: "references",   label: "References",            weight: 5  },
 ];
 
+export type HiringReadinessStatus =
+  | "registration_incomplete"
+  | "profile_incomplete"
+  | "compliance_pending"
+  | "action_required"
+  | "verification_in_progress";
+
+export interface HiringReadinessInputs {
+  isEmailVerified: boolean;
+  eligibleDocCount: number;
+  verifiedDocCount: number;
+  flaggedDocCount: number;
+  referenceCount: number;
+  verifiedReferenceCount: number;
+}
+
+export function computeHiringReadiness(inputs: HiringReadinessInputs): HiringReadinessStatus {
+  if (!inputs.isEmailVerified) return "registration_incomplete";
+  if (inputs.eligibleDocCount === 0) return "profile_incomplete";
+  if (inputs.flaggedDocCount > 0 && inputs.verifiedDocCount === 0) return "action_required";
+  if (inputs.verifiedDocCount === 0) return "compliance_pending";
+  return "verification_in_progress";
+}
+
 export function computeCompletion(inputs: CompletionInputs): CompletionResult {
   const sections: CompletionSection[] = SECTION_DEFS.map((def) => ({
     key: def.key,

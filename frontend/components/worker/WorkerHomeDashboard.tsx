@@ -53,45 +53,45 @@ const LEVEL_CONFIG: Record<Level, {
   label: string;
   scoreColor: string;
 }> = {
-  low: {
+  incomplete: {
     gradient: "from-slate-800 via-slate-700 to-slate-800",
     ring: "#ef4444",
     fill: "#ef4444",
     track: "rgba(239,68,68,0.2)",
     badge: "bg-red-500/20 text-red-200 border-red-400/30",
-    badgeText: "Low Visibility",
-    label: "Complete your profile to start getting matched with providers.",
+    badgeText: "Profile Incomplete",
+    label: "Complete your profile to become visible to employers and begin the compliance process.",
     scoreColor: "text-red-300",
   },
-  medium: {
+  in_progress: {
     gradient: "from-blue-900 via-indigo-800 to-blue-900",
     ring: "#eab308",
     fill: "#eab308",
     track: "rgba(234,179,8,0.2)",
     badge: "bg-yellow-500/20 text-yellow-200 border-yellow-400/30",
-    badgeText: "Medium Visibility",
-    label: "You're making progress — boost your score to appear in more searches.",
+    badgeText: "Profile In Progress",
+    label: "Keep going — upload your compliance documents to begin the review process.",
     scoreColor: "text-yellow-300",
   },
-  high: {
+  submission_ready: {
     gradient: "from-indigo-800 via-blue-700 to-violet-800",
     ring: "#22c55e",
     fill: "#22c55e",
     track: "rgba(34,197,94,0.2)",
     badge: "bg-green-500/20 text-green-200 border-green-400/30",
-    badgeText: "High Visibility",
-    label: "Providers can see your profile. One more step to reach priority status.",
+    badgeText: "Ready to Submit",
+    label: "Your profile is strong — upload your compliance documents to begin your review.",
     scoreColor: "text-green-300",
   },
-  verified: {
-    gradient: "from-emerald-800 via-teal-700 to-emerald-800",
-    ring: "#10b981",
-    fill: "#10b981",
-    track: "rgba(16,185,129,0.2)",
-    badge: "bg-emerald-500/20 text-emerald-200 border-emerald-400/30",
-    badgeText: "Fully Verified ✅",
-    label: "You have maximum visibility and priority matching with providers.",
-    scoreColor: "text-emerald-300",
+  compliance_pending: {
+    gradient: "from-blue-900 via-blue-800 to-indigo-900",
+    ring: "#3b82f6",
+    fill: "#3b82f6",
+    track: "rgba(59,130,246,0.2)",
+    badge: "bg-blue-500/20 text-blue-200 border-blue-400/30",
+    badgeText: "Compliance Under Review",
+    label: "Your profile is complete. Our compliance team is reviewing your documents and references.",
+    scoreColor: "text-blue-300",
   },
 };
 
@@ -431,7 +431,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const topJobs = allJobs.slice(0, 4);
   const jobCount = allJobs.length;
 
-  const level: Level = verificationScore?.level ?? "low";
+  const level: Level = verificationScore?.level ?? "incomplete";
   const cfg = LEVEL_CONFIG[level];
   const score = verificationScore?.score ?? 0;
   const incompletePillars = verificationScore?.pillars.filter((p) => !p.earned) ?? [];
@@ -479,7 +479,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
           ))}
         </nav>
         <div className="mt-auto space-y-2">
-          {verificationScore && verificationScore.level !== "verified" && (
+          {verificationScore && verificationScore.level !== "compliance_pending" && (
             <button
               onClick={() => onTabChange("profile")}
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors text-left"
@@ -623,12 +623,12 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                 <p className="text-white/75 text-sm mb-4 leading-relaxed max-w-sm">{cfg.label}</p>
 
                 <div className="flex gap-2.5 flex-wrap">
-                  {level !== "verified" && (
+                  {level !== "compliance_pending" && (
                     <button
                       onClick={() => onTabChange("profile")}
                       className="px-4 py-2 bg-white text-gray-900 font-bold rounded-xl text-sm hover:bg-white/90 transition-colors"
                     >
-                      Boost Score →
+                      Complete Profile →
                     </button>
                   )}
                   {jobCount > 0 && (
@@ -637,14 +637,6 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                       className="px-4 py-2 bg-white/15 border border-white/25 text-white font-semibold rounded-xl text-sm hover:bg-white/25 transition-colors backdrop-blur"
                     >
                       {jobCount} Job{jobCount !== 1 ? "s" : ""} Matched
-                    </button>
-                  )}
-                  {jobCount === 0 && level === "verified" && (
-                    <button
-                      onClick={() => onTabChange("offers")}
-                      className="px-4 py-2 bg-white text-gray-900 font-bold rounded-xl text-sm hover:bg-white/90 transition-colors"
-                    >
-                      View Offers →
                     </button>
                   )}
                 </div>
@@ -685,13 +677,13 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                   : <><MapPin className="h-3 w-3" />Add your location for distance sorting</>}
               </p>
 
-              {(level === "low" || level === "medium") && (
+              {(level === "incomplete" || level === "in_progress") && (
                 <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                   <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-amber-800">Offers locked — reach 80% to unlock</p>
+                    <p className="text-xs font-bold text-amber-800">Complete your profile to be matched with providers</p>
                     <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                      You unlock more opportunities when you reach <strong>Priority Profile</strong> (80% score). Providers choose verified workers first.
+                      Upload your compliance documents and complete your profile to begin the review process.
                     </p>
                     <button
                       onClick={() => onTabChange("profile")}
@@ -709,13 +701,13 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                     <Briefcase className="h-9 w-9 text-gray-200 mx-auto mb-2" />
                     <p className="text-sm text-gray-400 font-medium">No matched jobs yet</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {level === "low"
+                      {level === "incomplete"
                         ? "Complete your profile to start getting matched with providers"
-                        : level === "medium"
-                        ? "You're visible, but incomplete profiles may not be selected"
+                        : level === "in_progress"
+                        ? "Upload your compliance documents to begin the review process"
                         : "Providers will match you when shifts become available"}
                     </p>
-                    {(level === "low" || level === "medium") && (
+                    {(level === "incomplete" || level === "in_progress") && (
                       <button
                         onClick={() => onTabChange("profile")}
                         className="mt-3 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors"
@@ -797,9 +789,9 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                   </div>
                   {verificationScore && (
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
-                      level === "verified" ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                      : level === "high" ? "bg-green-100 text-green-700 border-green-200"
-                      : level === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200"
+                      level === "compliance_pending" ? "bg-blue-100 text-blue-700 border-blue-200"
+                      : level === "submission_ready" ? "bg-green-100 text-green-700 border-green-200"
+                      : level === "in_progress" ? "bg-yellow-100 text-yellow-700 border-yellow-200"
                       : "bg-red-100 text-red-700 border-red-200"
                     }`}>
                       {score}%
@@ -848,7 +840,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                   <div className="px-5 py-8 text-center text-sm text-gray-400">Loading…</div>
                 )}
 
-                {level !== "verified" && (
+                {level !== "compliance_pending" && (
                   <div className="px-5 py-3 border-t border-gray-100">
                     <button
                       onClick={() => onTabChange("profile")}
@@ -859,11 +851,11 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
                   </div>
                 )}
 
-                {level === "verified" && (
+                {level === "compliance_pending" && (
                   <div className="px-5 py-3 border-t border-gray-100">
-                    <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-emerald-50">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                      <p className="text-sm font-bold text-emerald-700">Priority Matching Active</p>
+                    <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-blue-50">
+                      <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                      <p className="text-sm font-bold text-blue-700">Compliance Review In Progress</p>
                     </div>
                   </div>
                 )}

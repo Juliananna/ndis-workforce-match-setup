@@ -56,10 +56,16 @@ export const createOffer = api<CreateOfferRequest, Offer>(
     if (!worker) throw APIError.notFound("worker not found");
 
     const hasDoc = await db.queryRow<{ exists: boolean }>`
-      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${req.workerId}) AS exists
+      SELECT EXISTS (
+        SELECT 1 FROM worker_documents
+        WHERE worker_id = ${req.workerId}
+          AND verification_status NOT IN ('Expired', 'Flagged')
+      ) AS exists
     `;
     if (!hasDoc?.exists) {
-      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
+      throw APIError.failedPrecondition(
+        "This worker's compliance documents are not currently eligible. They may need to upload current documents before an offer can be made."
+      );
     }
 
     const existing = await db.queryRow<{ offer_id: string }>`

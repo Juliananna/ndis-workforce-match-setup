@@ -150,13 +150,13 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           ) AS docs_verified,
           EXISTS (
             SELECT 1 FROM worker_references wr
-            JOIN reference_checks rc ON rc.reference_id = wr.id
-            WHERE wr.worker_id = w.worker_id
+            WHERE wr.worker_id = w.worker_id AND wr.status = 'Verified'
           ) AS refs_verified,
           EXISTS (
             SELECT 1 FROM worker_documents wd
             WHERE wd.worker_id = w.worker_id
             AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
           ) AS has_id_doc,
           EXISTS (
             SELECT 1 FROM worker_documents wd
@@ -167,6 +167,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
               'First Aid Certificate', 'CPR Certificate',
               'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
             )
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
           ) AS has_cert_doc,
           EXISTS (
             SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -198,7 +199,11 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           AND (${!req.vehicleAccess} OR w.vehicle_access = TRUE)
           AND u.is_demo = FALSE
           AND w.is_hidden = FALSE
-          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
+          AND EXISTS (
+            SELECT 1 FROM worker_documents wd_gate
+            WHERE wd_gate.worker_id = w.worker_id
+              AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+          )
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
             6371 * 2 * ASIN(SQRT(
@@ -212,8 +217,8 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           w.priority_boost DESC,
           (
             (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID')) THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
           ) DESC,
@@ -237,13 +242,13 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           ) AS docs_verified,
           EXISTS (
             SELECT 1 FROM worker_references wr
-            JOIN reference_checks rc ON rc.reference_id = wr.id
-            WHERE wr.worker_id = w.worker_id
+            WHERE wr.worker_id = w.worker_id AND wr.status = 'Verified'
           ) AS refs_verified,
           EXISTS (
             SELECT 1 FROM worker_documents wd
             WHERE wd.worker_id = w.worker_id
             AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
           ) AS has_id_doc,
           EXISTS (
             SELECT 1 FROM worker_documents wd
@@ -254,6 +259,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
               'First Aid Certificate', 'CPR Certificate',
               'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
             )
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
           ) AS has_cert_doc,
           EXISTS (
             SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -285,14 +291,18 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           AND (${!req.vehicleAccess} OR w.vehicle_access = TRUE)
           AND u.is_demo = FALSE
           AND w.is_hidden = FALSE
-          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
+          AND EXISTS (
+            SELECT 1 FROM worker_documents wd_gate
+            WHERE wd_gate.worker_id = w.worker_id
+              AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+          )
         GROUP BY w.worker_id, wa.available_days, wa.minimum_pay_rate, u.last_login_at
         ORDER BY
           w.priority_boost DESC,
           (
             (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID')) THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
           ) DESC,
@@ -313,7 +323,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
     };
 
     const preFiltered = verifiedOnly
-      ? rows.filter((r) => computeVerificationScore(r) === 100)
+      ? rows.filter((r) => r.docs_verified && r.refs_verified)
       : rows;
 
     let filteredWorkerIds = preFiltered.map((r) => r.worker_id);
@@ -377,7 +387,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
       refsVerified: r.refs_verified,
       lastLoginAt: r.last_login_at ? r.last_login_at.toISOString() : null,
       verificationScore: computeVerificationScore(r),
-      isFullyVerified: computeVerificationScore(r) === 100,
+      isFullyVerified: r.docs_verified && r.refs_verified,
       latitude: r.latitude,
       longitude: r.longitude,
     }));

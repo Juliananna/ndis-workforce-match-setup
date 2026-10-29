@@ -125,15 +125,15 @@ function ScoreRing({ score, level }: { score: number; level: string }) {
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
 
-  const fillColor = level === "low" ? "#ef4444"
-    : level === "medium" ? "#eab308"
-    : level === "high" ? "#22c55e"
-    : "#10b981";
+  const fillColor = level === "incomplete" ? "#ef4444"
+    : level === "in_progress" ? "#eab308"
+    : level === "submission_ready" ? "#22c55e"
+    : "#3b82f6";
 
-  const textColor = level === "low" ? "text-red-600"
-    : level === "medium" ? "text-yellow-600"
-    : level === "high" ? "text-green-600"
-    : "text-emerald-600";
+  const textColor = level === "incomplete" ? "text-red-600"
+    : level === "in_progress" ? "text-yellow-600"
+    : level === "submission_ready" ? "text-green-600"
+    : "text-blue-600";
 
   return (
     <div className="relative flex items-center justify-center shrink-0">
@@ -177,15 +177,15 @@ function SidebarProfileCard({
   const isVerified = verifiedCount >= 5;
   const displayName = profile?.fullName || profile?.name || "";
   const score = verificationScore?.score ?? 0;
-  const level = verificationScore?.level ?? "low";
+  const level = verificationScore?.level ?? "incomplete";
 
-  const levelBadge = level === "verified"
-    ? { text: "Fully Verified ✅", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" }
-    : level === "high"
-    ? { text: "High Visibility 🟢", cls: "bg-green-100 text-green-700 border-green-200" }
-    : level === "medium"
-    ? { text: "Medium Visibility 🟡", cls: "bg-yellow-100 text-yellow-700 border-yellow-200" }
-    : { text: "Low Visibility 🔴", cls: "bg-red-100 text-red-700 border-red-200" };
+  const levelBadge = level === "compliance_pending"
+    ? { text: "Compliance Under Review", cls: "bg-blue-100 text-blue-700 border-blue-200" }
+    : level === "submission_ready"
+    ? { text: "Ready to Submit", cls: "bg-green-100 text-green-700 border-green-200" }
+    : level === "in_progress"
+    ? { text: "Profile In Progress", cls: "bg-yellow-100 text-yellow-700 border-yellow-200" }
+    : { text: "Profile Incomplete", cls: "bg-red-100 text-red-700 border-red-200" };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

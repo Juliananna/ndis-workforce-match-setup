@@ -3,7 +3,7 @@ import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { assertAdminOrCompliance } from "./guard";
 import type { ReferenceStatus } from "../workers/references";
-import { computeCompletion, type CompletionSection } from "../workers/completion_shared";
+import { computeCompletion, computeHiringReadiness, type CompletionSection, type HiringReadinessStatus } from "../workers/completion_shared";
 
 export interface AdminWorkerSummary {
   workerId: string;
@@ -15,7 +15,10 @@ export interface AdminWorkerSummary {
   isVerified: boolean;
   documentCount: number;
   pendingDocumentCount: number;
+  verifiedDocumentCount: number;
+  flaggedDocumentCount: number;
   pendingReferenceCount: number;
+  verifiedReferenceCount: number;
   createdAt: Date;
   resumeSessionId: string | null;
   isHidden: boolean;
@@ -24,6 +27,7 @@ export interface AdminWorkerSummary {
   hiddenBy: string | null;
   profileCompletionPct: number;
   profileCompletionSections: CompletionSection[];
+  hiringReadinessStatus: HiringReadinessStatus;
   profileCompletionItems: {
     location: boolean;
     bio: boolean;
@@ -73,6 +77,10 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
       has_references: boolean;
       has_video: boolean;
       has_photo: boolean;
+      verified_doc_count: number;
+      flagged_doc_count: number;
+      eligible_doc_count: number;
+      verified_ref_count: number;
     }>`
       SELECT
         w.worker_id,
@@ -89,7 +97,11 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
         w.hidden_by,
         COUNT(wd.id)::int AS doc_count,
         COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Pending')::int AS pending_count,
+        COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Verified')::int AS verified_doc_count,
+        COUNT(wd.id) FILTER (WHERE wd.verification_status = 'Flagged')::int AS flagged_doc_count,
+        COUNT(wd.id) FILTER (WHERE wd.verification_status NOT IN ('Expired', 'Flagged'))::int AS eligible_doc_count,
         (SELECT COUNT(*)::int FROM worker_references wr WHERE wr.worker_id = w.worker_id AND wr.status IN ('Pending', 'Contacted')) AS pending_ref_count,
+        (SELECT COUNT(*)::int FROM worker_references wr WHERE wr.worker_id = w.worker_id AND wr.status = 'Verified') AS verified_ref_count,
         u.created_at,
         (w.bio IS NOT NULL AND w.bio <> '') AS has_bio,
         (w.experience_years IS NOT NULL) AS has_experience,
@@ -125,6 +137,14 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           references:     r.has_references,
         };
         const { completionPercent, sections } = computeCompletion(inputs);
+        const hiringReadinessStatus = computeHiringReadiness({
+          isEmailVerified: r.is_verified,
+          eligibleDocCount: r.eligible_doc_count,
+          verifiedDocCount: r.verified_doc_count,
+          flaggedDocCount: r.flagged_doc_count,
+          referenceCount: r.pending_ref_count + r.verified_ref_count,
+          verifiedReferenceCount: r.verified_ref_count,
+        });
         const items = {
           location: !!r.location,
           bio: r.has_bio,
@@ -147,7 +167,10 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           isVerified: r.is_verified,
           documentCount: r.doc_count,
           pendingDocumentCount: r.pending_count,
+          verifiedDocumentCount: r.verified_doc_count,
+          flaggedDocumentCount: r.flagged_doc_count,
           pendingReferenceCount: r.pending_ref_count,
+          verifiedReferenceCount: r.verified_ref_count,
           createdAt: r.created_at,
           resumeSessionId: r.resume_session_id ?? null,
           isHidden: r.is_hidden,
@@ -157,6 +180,7 @@ export const adminListWorkers = api<void, ListWorkersResponse>(
           profileCompletionPct: completionPercent,
           profileCompletionItems: items,
           profileCompletionSections: sections,
+          hiringReadinessStatus,
         };
       }),
     };

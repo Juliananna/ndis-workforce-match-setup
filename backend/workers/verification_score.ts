@@ -13,7 +13,7 @@ export interface VerificationPillar {
 export interface VerificationScoreResponse {
   score: number;
   pillars: VerificationPillar[];
-  level: "low" | "medium" | "high" | "verified";
+  level: "incomplete" | "in_progress" | "submission_ready" | "compliance_pending";
   levelLabel: string;
   visibilityLabel: string;
   tierName: string;
@@ -124,34 +124,33 @@ export const getVerificationScore = api<void, VerificationScoreResponse>(
     let level: VerificationScoreResponse["level"];
     let levelLabel: string;
     let visibilityLabel: string;
-
     let tierName: string;
     let offersUnlocked: boolean;
 
-    if (score <= 49) {
-      level = "low";
-      levelLabel = "Getting Started";
-      visibilityLabel = "Your profile is not visible to most providers yet. Complete your profile to start getting matched.";
-      tierName = "Getting Started";
+    if (score <= 39) {
+      level = "incomplete";
+      levelLabel = "Profile Incomplete";
+      visibilityLabel = "Complete your profile to become visible to employers and begin the compliance process.";
+      tierName = "Profile Incomplete";
+      offersUnlocked = false;
+    } else if (score <= 59) {
+      level = "in_progress";
+      levelLabel = "Profile In Progress";
+      visibilityLabel = "Keep going — complete your remaining profile sections to submit for compliance review.";
+      tierName = "Profile In Progress";
       offersUnlocked = false;
     } else if (score <= 79) {
-      level = "medium";
-      levelLabel = "In Progress";
-      visibilityLabel = "You're visible, but not prioritised. Verified workers are chosen first.";
-      tierName = "In Progress";
+      level = "submission_ready";
+      levelLabel = "Ready to Submit";
+      visibilityLabel = "Your profile is looking good. Upload your compliance documents to begin the review process.";
+      tierName = "Ready to Submit";
       offersUnlocked = false;
-    } else if (score <= 99) {
-      level = "high";
-      levelLabel = "Priority Profile";
-      visibilityLabel = "You're now prioritised by providers. Complete your final steps to become fully verified.";
-      tierName = "Priority Profile";
-      offersUnlocked = true;
     } else {
-      level = "verified";
-      levelLabel = "Verified Worker ✅";
-      visibilityLabel = "Your profile is fully verified and trusted by providers.";
-      tierName = "Verified Worker";
-      offersUnlocked = true;
+      level = "compliance_pending";
+      levelLabel = "Compliance Under Review";
+      visibilityLabel = "Your profile is complete. Our compliance team will review your documents and references — we'll notify you when this is done.";
+      tierName = "Compliance Under Review";
+      offersUnlocked = false;
     }
 
     return { score, pillars, level, levelLabel, visibilityLabel, tierName, offersUnlocked };

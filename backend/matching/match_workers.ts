@@ -97,10 +97,10 @@ function computeCompatibility(params: {
 
   if (params.verificationScore === 100) {
     score += 15;
-    reasons.push("Fully verified worker");
+    reasons.push("Complete profile");
   } else if (params.verificationScore >= 80) {
     score += 8;
-    reasons.push("High verification score");
+    reasons.push("Strong profile");
   } else if (params.verificationScore >= 60) {
     score += 4;
   }
@@ -198,8 +198,8 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
               )))::numeric, 1)::double precision
             ELSE NULL
           END AS distance_km,
-          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
-          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd.verification_status NOT IN ('Expired', 'Flagged')) AS has_id_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd.verification_status NOT IN ('Expired', 'Flagged')) AS has_cert_doc,
           EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
           (
@@ -216,7 +216,11 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
           u.is_demo = FALSE
           AND u.is_suspended = FALSE
           AND w.is_hidden = FALSE
-          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
+          AND EXISTS (
+            SELECT 1 FROM worker_documents wd_gate
+            WHERE wd_gate.worker_id = w.worker_id
+              AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+          )
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
@@ -257,8 +261,8 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
           wa.available_days,
           wa.minimum_pay_rate,
           NULL::double precision AS distance_km,
-          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')) AS has_id_doc,
-          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance')) AS has_cert_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd.verification_status NOT IN ('Expired', 'Flagged')) AS has_id_doc,
+          EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = w.worker_id AND wd.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd.verification_status NOT IN ('Expired', 'Flagged')) AS has_cert_doc,
           EXISTS (SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id) AS has_avail,
           EXISTS (SELECT 1 FROM worker_references wrf WHERE wrf.worker_id = w.worker_id) AS has_refs,
           (
@@ -274,7 +278,11 @@ export const matchWorkersForJob = api<MatchWorkersRequest, MatchWorkersResponse>
         WHERE
           u.is_demo = FALSE
           AND u.is_suspended = FALSE
-          AND EXISTS (SELECT 1 FROM worker_documents wd_gate WHERE wd_gate.worker_id = w.worker_id)
+          AND EXISTS (
+            SELECT 1 FROM worker_documents wd_gate
+            WHERE wd_gate.worker_id = w.worker_id
+              AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+          )
           AND (wa.minimum_pay_rate IS NULL OR wa.minimum_pay_rate <= ${job.weekday_rate})
         ORDER BY
           w.priority_boost DESC,

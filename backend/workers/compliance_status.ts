@@ -10,7 +10,10 @@ export interface ComplianceStatusResponse {
 
 export async function syncOnboardingStatus(workerId: string): Promise<"active" | "compliance_required"> {
   const docRow = await db.queryRow<{ cnt: number }>`
-    SELECT COUNT(*)::int AS cnt FROM worker_documents WHERE worker_id = ${workerId}
+    SELECT COUNT(*)::int AS cnt
+    FROM worker_documents
+    WHERE worker_id = ${workerId}
+      AND verification_status NOT IN ('Expired', 'Flagged')
   `;
   const documentCount = docRow?.cnt ?? 0;
   const newStatus = documentCount > 0 ? "active" : "compliance_required";
@@ -38,7 +41,10 @@ export const getComplianceStatus = api<void, ComplianceStatusResponse>(
     const newStatus = await syncOnboardingStatus(worker.worker_id);
 
     const docRow = await db.queryRow<{ cnt: number }>`
-      SELECT COUNT(*)::int AS cnt FROM worker_documents WHERE worker_id = ${worker.worker_id}
+      SELECT COUNT(*)::int AS cnt
+      FROM worker_documents
+      WHERE worker_id = ${worker.worker_id}
+        AND verification_status NOT IN ('Expired', 'Flagged')
     `;
     const documentCount = docRow?.cnt ?? 0;
 
