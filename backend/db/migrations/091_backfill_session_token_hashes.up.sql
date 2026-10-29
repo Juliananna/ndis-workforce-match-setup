@@ -6,7 +6,7 @@
 -- (anonymous sessions created before token enforcement) — these should be
 -- resolved via admin support.
 UPDATE resume_sessions
-SET session_token_hash = encode(sha256(gen_random_bytes(32)), 'hex'),
+SET session_token_hash = md5(random()::text || id::text || clock_timestamp()::text),
     updated_at         = NOW()
 WHERE session_token_hash IS NULL
   AND converted_worker_id IS NOT NULL;
