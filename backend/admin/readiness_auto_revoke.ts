@@ -13,6 +13,9 @@ import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
  * mandatory criteria, readiness is automatically revoked and an audit record
  * is written.
  *
+ * The lifecycle event idempotency key is derived from the audit row UUID so
+ * that the reconciler produces the exact same event ID for this decision.
+ *
  * This function is intentionally silent on errors — it must not interrupt
  * the calling compliance action.
  */
@@ -49,7 +52,11 @@ export async function autoRevokeReadinessIfInvalid(
         AND ready_to_hire = TRUE
     `;
 
-    await db.exec`
+    // Write audit row first and capture its UUID. The lifecycle event
+    // idempotency key is derived from this UUID so that the live writer
+    // and the reconciler always produce identical event IDs for the same
+    // auto-revocation decision.
+    const auditRow = await db.queryRow<{ id: string }>`
       INSERT INTO ready_to_hire_audit
         (worker_id, action, acted_by_user_id, acted_by_email, reason,
          eligible_doc_count, verified_doc_count, verified_ref_count,
@@ -60,6 +67,7 @@ export async function autoRevokeReadinessIfInvalid(
          ${snapshot.verifiedRefCount},
          ${JSON.stringify([...MANDATORY_COMPLIANCE_DOC_TYPES])},
          ${JSON.stringify(snapshot)}::jsonb)
+      RETURNING id
     `;
 
     const workerEmailRow = await db.queryRow<{ email: string }>`
@@ -71,7 +79,7 @@ export async function autoRevokeReadinessIfInvalid(
       eventType: "ready_to_hire_auto_revoked",
       entityType: "worker",
       entityId: workerId,
-      idempotencyKey: deriveEventId("worker", workerId, "ready_to_hire_auto_revoked", new Date().toISOString().slice(0, 13)),
+      idempotencyKey: deriveEventId("worker", workerId, "ready_to_hire_auto_revoked", `audit:${auditRow!.id}`),
       payload: {
         eventType: "ready_to_hire_auto_revoked",
         occurredAt: new Date().toISOString(),

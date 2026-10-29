@@ -112,7 +112,11 @@ export const adminApproveReadiness =
       `;
       if (!workerRow) throw APIError.notFound("worker not found");
 
-      await db.exec`
+      // Write audit row first and capture its UUID. The lifecycle event
+      // idempotency key is derived from this UUID so that the live writer
+      // and the reconciler always produce identical event IDs for the same
+      // decision, regardless of when either runs.
+      const auditRow = await db.queryRow<{ id: string }>`
         INSERT INTO ready_to_hire_audit
           (worker_id, action, acted_by_user_id, acted_by_email, reason,
            eligible_doc_count, verified_doc_count, verified_ref_count,
@@ -123,6 +127,7 @@ export const adminApproveReadiness =
            ${snapshot.verifiedRefCount},
            ${JSON.stringify(snapshot.mandatoryDocsPresent)},
            ${JSON.stringify(snapshot)}::jsonb)
+        RETURNING id
       `;
 
       await writeAuditLog(
@@ -147,7 +152,7 @@ export const adminApproveReadiness =
         eventType: "ready_to_hire_approved",
         entityType: "worker",
         entityId: req.workerId,
-        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_approved", new Date().toISOString().slice(0, 10)),
+        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_approved", `audit:${auditRow!.id}`),
         payload: {
           eventType: "ready_to_hire_approved",
           occurredAt: new Date().toISOString(),
@@ -221,7 +226,8 @@ export const adminRevokeReadiness =
 
       const snapshot = await computeReadinessEligibility(req.workerId);
 
-      await db.exec`
+      // Write audit row first and capture its UUID for the lifecycle key.
+      const auditRow = await db.queryRow<{ id: string }>`
         INSERT INTO ready_to_hire_audit
           (worker_id, action, acted_by_user_id, acted_by_email, reason,
            eligible_doc_count, verified_doc_count, verified_ref_count,
@@ -232,6 +238,7 @@ export const adminRevokeReadiness =
            ${snapshot.verifiedRefCount},
            ${JSON.stringify(snapshot.mandatoryDocsPresent)},
            ${JSON.stringify(snapshot)}::jsonb)
+        RETURNING id
       `;
 
       await writeAuditLog(
@@ -252,7 +259,7 @@ export const adminRevokeReadiness =
         eventType: "ready_to_hire_revoked",
         entityType: "worker",
         entityId: req.workerId,
-        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_revoked", new Date().toISOString().slice(0, 16)),
+        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_revoked", `audit:${auditRow!.id}`),
         payload: {
           eventType: "ready_to_hire_revoked",
           occurredAt: new Date().toISOString(),

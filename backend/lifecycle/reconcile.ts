@@ -109,11 +109,10 @@ async function tryWrite(
  *
  *   ready_to_hire_approved / ready_to_hire_revoked / ready_to_hire_auto_revoked
  *     — ALL sourced from ready_to_hire_audit using the audit row UUID as suffix.
- *       This correctly handles repeated approval/revocation/reapproval cycles:
- *       each audit row represents a distinct decision and gets a distinct stable key.
- *       The original live-path writer uses a time-scoped suffix; the reconciler
- *       uses audit IDs instead, which are stable even after the workers row is
- *       overwritten by a later decision.
+ *       The live writers (approve_readiness.ts, readiness_auto_revoke.ts) use the
+ *       same "audit:<uuid>" suffix, so live and reconciler keys are identical for
+ *       any decision made after this change was deployed. Each audit row represents
+ *       one distinct decision and produces one distinct stable lifecycle event ID.
  *
  * Events not modified: GHL contact IDs, tags, sync logs, or any other state.
  */
@@ -390,25 +389,40 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
   // 6. ready_to_hire_approved / ready_to_hire_revoked / ready_to_hire_auto_revoked
   //
   //    ALL sourced from ready_to_hire_audit — the authoritative decision log.
-  //    The audit UUID is used as the idempotency suffix so that:
-  //      - Each distinct decision (approve, revoke, re-approve) gets a unique key.
-  //      - Repeated reconciliation runs are always no-ops for existing rows.
-  //      - Approval/revocation/reapproval cycles are preserved: e.g. a worker
-  //        approved, then revoked, then re-approved produces THREE rows with
-  //        THREE distinct keys, all correctly reconstructed.
   //
-  //    The original live-path writers use time-scoped suffixes (date for approve,
-  //    minute for revoke, hour for auto_revoke). The reconciler cannot reproduce
-  //    those suffixes exactly for historical rows without storing them, so it uses
-  //    audit UUIDs instead. Live events written by the original writers will appear
-  //    as "already_present" when their key collides, or as independent events when
-  //    the audit-UUID key differs from the time-scoped key. Both outcomes are safe:
-  //    the lifecycle log is append-only and consumers must tolerate duplicates.
+  //    Key formula (live writers and reconciler are identical):
+  //      sha256("worker:<workerId>:<eventType>:audit:<auditRowUUID>")
+  //
+  //    Properties:
+  //      - Each audit row has a unique UUID (gen_random_uuid()), so each
+  //        distinct decision produces a distinct lifecycle event — even when
+  //        a worker is approved, revoked, and re-approved on the same day.
+  //      - The live writers (approve_readiness.ts, readiness_auto_revoke.ts)
+  //        INSERT the audit row first, capture RETURNING id, and pass
+  //        "audit:<id>" as the suffix. This reconciler does the same.
+  //        The two code paths therefore produce identical event_id values for
+  //        the same decision, making reconciliation a provable no-op for any
+  //        event that was successfully written at action time.
+  //      - Repeated reconciliation runs are always safe: the pre-write
+  //        existence check and ON CONFLICT DO NOTHING guarantee no duplicates.
+  //
+  //    Transition note — historical events written before this change:
+  //      Prior to this change the live writers used time-scoped suffixes
+  //      (YYYY-MM-DD for approve, YYYY-MM-DDTHH:MM for revoke, YYYY-MM-DDTHH
+  //      for auto_revoke). Those event rows still exist in lifecycle_events and
+  //      are NOT deleted or rewritten — requirement 5 is preserved.
+  //      When the reconciler encounters an audit row whose old time-scoped event
+  //      is already present under a different key, the audit-UUID-keyed INSERT
+  //      will succeed and add a second event row for the same decision. This is
+  //      a one-time consequence of the key-scheme migration; the event log is
+  //      append-only and consumers must tolerate multiple events of the same
+  //      type for the same entity. The GHL sync pipeline is not affected.
+  //      Going forward, all new decisions produce exactly one event row anchored
+  //      to the audit UUID, and reconciliation is always a no-op for those rows.
   //
   //    Original timestamps (created_at from audit) are preserved exactly.
-  //    No data is invented: every field comes directly from the audit row or the
-  //    associated workers/users join. mandatoryDocsPresent is taken from the
-  //    stored eligibility_snapshot when available; empty array otherwise.
+  //    No data is invented: every field comes directly from the audit row or
+  //    the associated workers/users join.
   // ------------------------------------------------------------------
   const auditRows = await db.queryAll<{
     id: string;
