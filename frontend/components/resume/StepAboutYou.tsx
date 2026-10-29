@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { AUSTRALIAN_STATES } from "./types";
 import type { SessionData } from "./types";
 
@@ -8,6 +9,15 @@ interface Props {
 }
 
 export function StepAboutYou({ data, onChange, emailLocked }: Props) {
+  const [languagesRaw, setLanguagesRaw] = useState(data.languages.join(", "));
+
+  useEffect(() => {
+    const fromArray = data.languages.join(", ");
+    if (fromArray !== languagesRaw.split(",").map((l) => l.trim()).filter(Boolean).join(", ")) {
+      setLanguagesRaw(fromArray);
+    }
+  }, [data.languages]);
+
   return (
     <div className="space-y-5">
       <div>
@@ -131,8 +141,13 @@ export function StepAboutYou({ data, onChange, emailLocked }: Props) {
         <label className="block text-sm font-medium text-slate-700 mb-2">Languages spoken</label>
         <input
           type="text"
-          value={data.languages.join(", ")}
-          onChange={(e) => onChange("languages", e.target.value.split(",").map((l) => l.trim()).filter(Boolean))}
+          value={languagesRaw}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setLanguagesRaw(raw);
+            onChange("languages", raw.split(",").map((l) => l.trim()).filter(Boolean));
+          }}
+          onBlur={() => setLanguagesRaw(data.languages.join(", "))}
           placeholder="e.g. English, Mandarin, Arabic"
           className="w-full px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
         />
