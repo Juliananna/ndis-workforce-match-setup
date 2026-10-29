@@ -7,6 +7,7 @@ import {
   computeReadinessEligibility,
   type EligibilitySnapshot,
 } from "./readiness_eligibility";
+import { getLiveReadinessStatus, type LiveReadinessStatus } from "./readiness_live";
 
 export interface ReadinessEligibilityRequest {
   workerId: string;
@@ -32,7 +33,6 @@ export const adminGetReadinessEligibility =
       await assertAdminOrCompliance(auth.userID);
 
       const snapshot = await computeReadinessEligibility(req.workerId);
-
       return {
         workerId: req.workerId,
         eligible: snapshot.eligible,
@@ -41,6 +41,24 @@ export const adminGetReadinessEligibility =
       };
     }
   );
+
+export interface GetLiveReadinessRequest {
+  workerId: string;
+}
+
+export const adminGetLiveReadiness = api<GetLiveReadinessRequest, LiveReadinessStatus>(
+  {
+    expose: true,
+    auth: true,
+    method: "GET",
+    path: "/admin/workers/:workerId/live-readiness",
+  },
+  async (req) => {
+    const auth = getAuthData()!;
+    await assertAdminOrCompliance(auth.userID);
+    return getLiveReadinessStatus(req.workerId);
+  }
+);
 
 export interface ApproveReadinessRequest {
   workerId: string;

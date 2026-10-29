@@ -1,7 +1,8 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { captureAttribution, getEffectiveAttribution } from "../lib/attribution";
 import { CheckCircle, FileText, Star, Users, ShieldCheck, Download, ArrowRight, Sparkles, GraduationCap } from "lucide-react";
 
 const BENEFITS = [
@@ -32,16 +33,15 @@ export default function ResumeBuilderLandingPage() {
   const rtoId = searchParams.get("rtoId") ?? "";
   const isRtoSource = sourceParam === "rto";
 
+  useEffect(() => {
+    captureAttribution();
+  }, []);
+
   const handleStart = async () => {
     setLoading(true);
     try {
-      const { session } = await backend.resume.createSession({});
-      const params = new URLSearchParams({ id: session.id });
-      if (isRtoSource) {
-        params.set("source", "rto");
-        if (rtoCode) params.set("rtoCode", rtoCode);
-        if (rtoId) params.set("rtoId", rtoId);
-      }
+      const attribution = getEffectiveAttribution();
+      const { session } = await backend.resume.createSession({ attribution });
       navigate(`/resume-builder/session/${session.id}${isRtoSource ? `?source=rto&rtoCode=${rtoCode}&rtoId=${rtoId}` : ""}`);
     } catch (err) {
       console.error(err);
