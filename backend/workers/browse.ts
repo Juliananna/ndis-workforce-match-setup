@@ -147,6 +147,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           EXISTS (
             SELECT 1 FROM worker_documents wd
             WHERE wd.worker_id = w.worker_id AND wd.verification_status = 'Verified'
+              AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS docs_verified,
           EXISTS (
             SELECT 1 FROM worker_references wr
@@ -157,6 +158,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             WHERE wd.worker_id = w.worker_id
             AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
             AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS has_id_doc,
           EXISTS (
             SELECT 1 FROM worker_documents wd
@@ -168,6 +170,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
               'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
             )
             AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS has_cert_doc,
           EXISTS (
             SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -203,6 +206,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             SELECT 1 FROM worker_documents wd_gate
             WHERE wd_gate.worker_id = w.worker_id
               AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+              AND (wd_gate.expiry_date IS NULL OR wd_gate.expiry_date > NOW())
           )
           AND (
             w.latitude IS NULL OR w.longitude IS NULL OR
@@ -217,8 +221,8 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           w.priority_boost DESC,
           (
             (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged') AND (wd2.expiry_date IS NULL OR wd2.expiry_date > NOW())) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged') AND (wd3.expiry_date IS NULL OR wd3.expiry_date > NOW())) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
           ) DESC,
@@ -239,6 +243,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
           EXISTS (
             SELECT 1 FROM worker_documents wd
             WHERE wd.worker_id = w.worker_id AND wd.verification_status = 'Verified'
+              AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS docs_verified,
           EXISTS (
             SELECT 1 FROM worker_references wr
@@ -249,6 +254,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             WHERE wd.worker_id = w.worker_id
             AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
             AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS has_id_doc,
           EXISTS (
             SELECT 1 FROM worker_documents wd
@@ -260,6 +266,7 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
               'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
             )
             AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
           ) AS has_cert_doc,
           EXISTS (
             SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -295,14 +302,15 @@ export const browseWorkers = api<BrowseWorkersRequest, BrowseWorkersResponse>(
             SELECT 1 FROM worker_documents wd_gate
             WHERE wd_gate.worker_id = w.worker_id
               AND wd_gate.verification_status NOT IN ('Expired', 'Flagged')
+              AND (wd_gate.expiry_date IS NULL OR wd_gate.expiry_date > NOW())
           )
         GROUP BY w.worker_id, wa.available_days, wa.minimum_pay_rate, u.last_login_at
         ORDER BY
           w.priority_boost DESC,
           (
             (CASE WHEN w.full_name IS NOT NULL AND w.full_name <> '' AND w.location IS NOT NULL AND w.location <> '' AND w.bio IS NOT NULL AND w.bio <> '' AND w.experience_years IS NOT NULL AND w.phone IS NOT NULL AND w.phone <> '' THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
-            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged')) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd2 WHERE wd2.worker_id = w.worker_id AND wd2.document_type IN ('Driver''s Licence', 'Passport / ID') AND wd2.verification_status NOT IN ('Expired', 'Flagged') AND (wd2.expiry_date IS NULL OR wd2.expiry_date > NOW())) THEN 20 ELSE 0 END) +
+            (CASE WHEN EXISTS (SELECT 1 FROM worker_documents wd3 WHERE wd3.worker_id = w.worker_id AND wd3.document_type IN ('NDIS Worker Screening Check','NDIS Worker Orientation Module','NDIS Code of Conduct acknowledgement','Infection Control Certificate','First Aid Certificate','CPR Certificate','Certificate III / IV Disability','Working With Children Check','Police Clearance') AND wd3.verification_status NOT IN ('Expired', 'Flagged') AND (wd3.expiry_date IS NULL OR wd3.expiry_date > NOW())) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_references wrf2 WHERE wrf2.worker_id = w.worker_id) THEN 20 ELSE 0 END) +
             (CASE WHEN EXISTS (SELECT 1 FROM worker_availability wva2 WHERE wva2.worker_id = w.worker_id) THEN 20 ELSE 0 END)
           ) DESC,

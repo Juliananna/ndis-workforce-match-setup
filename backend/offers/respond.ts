@@ -33,6 +33,7 @@ export const workerRespond = api<WorkerRespondRequest, Offer>(
           SELECT 1 FROM worker_documents
           WHERE worker_id = ${worker.worker_id}
             AND verification_status NOT IN ('Expired', 'Flagged')
+            AND (expiry_date IS NULL OR expiry_date > NOW())
         ) AS exists
       `;
       if (!eligibleDoc?.exists) {

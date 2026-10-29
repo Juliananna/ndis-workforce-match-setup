@@ -60,10 +60,15 @@ export const saveWorker = api<SaveWorkerRequest, SaveWorkerResponse>(
     }
 
     const hasDoc = await db.queryRow<{ exists: boolean }>`
-      SELECT EXISTS (SELECT 1 FROM worker_documents WHERE worker_id = ${req.workerId}) AS exists
+      SELECT EXISTS (
+        SELECT 1 FROM worker_documents
+        WHERE worker_id = ${req.workerId}
+          AND verification_status NOT IN ('Expired', 'Flagged')
+          AND (expiry_date IS NULL OR expiry_date > NOW())
+      ) AS exists
     `;
     if (!hasDoc?.exists) {
-      throw APIError.failedPrecondition("worker has not uploaded any compliance documents yet");
+      throw APIError.failedPrecondition("worker has not uploaded any current compliance documents yet");
     }
 
     await db.exec`
@@ -109,8 +114,12 @@ export const getSavedWorkerStatus = api<GetSavedStatusRequest, GetSavedStatusRes
       SELECT sw.worker_id FROM saved_workers sw
       WHERE sw.employer_id = ${auth.userID}
         AND sw.worker_id = ANY(${req.workerIds})
-        AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = sw.worker_id)
-        AND EXISTS (SELECT 1 FROM workers w WHERE w.worker_id = sw.worker_id AND w.onboarding_status = 'active')
+        AND EXISTS (
+          SELECT 1 FROM worker_documents wd
+          WHERE wd.worker_id = sw.worker_id
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
+        )
     `;
 
     return { savedIds: rows.map((r) => r.worker_id) };
@@ -168,17 +177,20 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
         COUNT(r.id) AS review_count,
         EXISTS (
           SELECT 1 FROM worker_documents wd
-          WHERE wd.worker_id = w.worker_id AND wd.verification_status = 'Verified'
+          WHERE wd.worker_id = w.worker_id
+            AND wd.verification_status = 'Verified'
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS docs_verified,
         EXISTS (
           SELECT 1 FROM worker_references wr
-          JOIN reference_checks rc ON rc.reference_id = wr.id
-          WHERE wr.worker_id = w.worker_id
+          WHERE wr.worker_id = w.worker_id AND wr.status = 'Verified'
         ) AS refs_verified,
         EXISTS (
           SELECT 1 FROM worker_documents wd
           WHERE wd.worker_id = w.worker_id
           AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+          AND wd.verification_status NOT IN ('Expired', 'Flagged')
+          AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS has_id_doc,
         EXISTS (
           SELECT 1 FROM worker_documents wd
@@ -189,6 +201,8 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
             'First Aid Certificate', 'CPR Certificate',
             'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
           )
+          AND wd.verification_status NOT IN ('Expired', 'Flagged')
+          AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS has_cert_doc,
         EXISTS (
           SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -204,12 +218,17 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
           (w.phone IS NOT NULL AND w.phone <> '')
         ) AS profile_complete
       FROM saved_workers sw
-      JOIN workers w ON w.worker_id = sw.worker_id AND w.onboarding_status = 'active'
+      JOIN workers w ON w.worker_id = sw.worker_id
       LEFT JOIN worker_availability wa ON wa.worker_id = w.worker_id
       LEFT JOIN reviews r ON r.reviewee_user_id = w.user_id AND r.reviewee_role = 'WORKER'
       LEFT JOIN users u ON u.user_id = w.user_id
       WHERE sw.employer_id = ${auth.userID}
-        AND EXISTS (SELECT 1 FROM worker_documents wd WHERE wd.worker_id = sw.worker_id)
+        AND EXISTS (
+          SELECT 1 FROM worker_documents wd
+          WHERE wd.worker_id = sw.worker_id
+            AND wd.verification_status NOT IN ('Expired', 'Flagged')
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
+        )
       GROUP BY w.worker_id, wa.available_days, wa.minimum_pay_rate, u.last_login_at, sw.created_at
       ORDER BY sw.created_at DESC
     `;
@@ -266,7 +285,7 @@ export const listSavedWorkers = api<void, ListSavedWorkersResponse>(
       refsVerified: r.refs_verified,
       lastLoginAt: r.last_login_at ? r.last_login_at.toISOString() : null,
       verificationScore: computeVerificationScore(r),
-      isFullyVerified: computeVerificationScore(r) === 100,
+      isFullyVerified: r.docs_verified && r.refs_verified,
       latitude: null,
       longitude: null,
     }));

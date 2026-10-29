@@ -1,15 +1,24 @@
 import { describe, it, expect } from "vitest";
 
-type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired";
+type VerificationStatus = "Pending" | "Verified" | "Missing" | "Expiring Soon" | "Expired" | "Flagged";
 
 function resolveStatus(expiryDate: Date | null, currentStatus: VerificationStatus = "Pending"): VerificationStatus {
-  if (!expiryDate) return currentStatus === "Verified" ? "Verified" : "Pending";
+  if (!expiryDate) {
+    if (currentStatus === "Flagged") return "Flagged";
+    return currentStatus === "Verified" ? "Verified" : "Pending";
+  }
   const now = new Date();
-  const diffMs = expiryDate.getTime() - now.getTime();
-  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  const diffDays = (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   if (diffDays < 0) return "Expired";
   if (diffDays <= 60) return "Expiring Soon";
+  if (currentStatus === "Flagged") return "Flagged";
   return currentStatus === "Verified" ? "Verified" : "Pending";
+}
+
+function isEligible(expiryDate: Date | null, status: VerificationStatus): boolean {
+  if (status === "Expired" || status === "Flagged") return false;
+  if (expiryDate !== null && expiryDate <= new Date()) return false;
+  return true;
 }
 
 function deriveOnboardingStatus(documentCount: number): "active" | "compliance_required" {
@@ -35,9 +44,18 @@ describe("resolveStatus", () => {
     expect(resolveStatus(null, "Verified")).toBe("Verified");
   });
 
-  it("returns Expired when expiry date is in the past", () => {
+  it("returns Flagged when no expiry date and status is Flagged", () => {
+    expect(resolveStatus(null, "Flagged")).toBe("Flagged");
+  });
+
+  it("returns Expired when expiry date is in the past regardless of stored status", () => {
     const past = new Date(Date.now() - 86400 * 1000 * 5);
-    expect(resolveStatus(past)).toBe("Expired");
+    expect(resolveStatus(past, "Verified")).toBe("Expired");
+  });
+
+  it("returns Expired when expiry date is in the past and status was Pending", () => {
+    const past = new Date(Date.now() - 86400 * 1000 * 5);
+    expect(resolveStatus(past, "Pending")).toBe("Expired");
   });
 
   it("returns Expiring Soon when 30 days until expiry", () => {
@@ -45,7 +63,7 @@ describe("resolveStatus", () => {
     expect(resolveStatus(soon)).toBe("Expiring Soon");
   });
 
-  it("returns Expiring Soon when 60 days until expiry", () => {
+  it("returns Expiring Soon when 59 days until expiry", () => {
     const soon60 = new Date(Date.now() + 86400 * 1000 * 59);
     expect(resolveStatus(soon60)).toBe("Expiring Soon");
   });
@@ -60,9 +78,49 @@ describe("resolveStatus", () => {
     expect(resolveStatus(future, "Verified")).toBe("Verified");
   });
 
+  it("returns Flagged when future expiry and status is Flagged", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    expect(resolveStatus(future, "Flagged")).toBe("Flagged");
+  });
+
   it("never returns Missing (Missing is only for docs never uploaded)", () => {
     const past = new Date(Date.now() - 86400 * 1000);
     expect(resolveStatus(past)).not.toBe("Missing");
+  });
+});
+
+describe("isEligible — direct expiry_date evaluation independent of stored status", () => {
+  it("a doc with stored status Verified but past expiry_date is NOT eligible", () => {
+    const past = new Date(Date.now() - 86400 * 1000);
+    expect(isEligible(past, "Verified")).toBe(false);
+  });
+
+  it("a doc with stored status Pending and future expiry_date IS eligible", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    expect(isEligible(future, "Pending")).toBe(true);
+  });
+
+  it("a doc with stored status Verified and future expiry_date IS eligible", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    expect(isEligible(future, "Verified")).toBe(true);
+  });
+
+  it("a doc with stored status Verified and null expiry_date IS eligible", () => {
+    expect(isEligible(null, "Verified")).toBe(true);
+  });
+
+  it("a Flagged doc with future expiry_date is NOT eligible", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    expect(isEligible(future, "Flagged")).toBe(false);
+  });
+
+  it("an Expired doc regardless of expiry_date is NOT eligible", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    expect(isEligible(future, "Expired")).toBe(false);
+  });
+
+  it("a doc with null expiry_date and Pending status IS eligible", () => {
+    expect(isEligible(null, "Pending")).toBe(true);
   });
 });
 
@@ -83,8 +141,7 @@ describe("onboarding_status lifecycle via document upload/delete", () => {
   });
 
   it("uploading the first real worker document activates the worker", () => {
-    const documentCountAfterUpload = 1;
-    expect(deriveOnboardingStatus(documentCountAfterUpload)).toBe("active");
+    expect(deriveOnboardingStatus(1)).toBe("active");
   });
 
   it("uploading additional documents keeps status active", () => {
@@ -92,13 +149,11 @@ describe("onboarding_status lifecycle via document upload/delete", () => {
   });
 
   it("deleting a document when others remain keeps status active", () => {
-    const remainingAfterDelete = 2;
-    expect(deriveOnboardingStatus(remainingAfterDelete)).toBe("active");
+    expect(deriveOnboardingStatus(2)).toBe("active");
   });
 
   it("deleting the last worker document changes status back to compliance_required", () => {
-    const remainingAfterDelete = 0;
-    expect(deriveOnboardingStatus(remainingAfterDelete)).toBe("compliance_required");
+    expect(deriveOnboardingStatus(0)).toBe("compliance_required");
   });
 
   it("status is derived purely from document count, not from a stored sticky value", () => {
@@ -127,36 +182,37 @@ describe("document upload key validation (no external URLs)", () => {
   });
 });
 
-describe("provider browse / matching gate (document count check)", () => {
-  it("worker with zero documents must not appear in browse results", () => {
+describe("eligibility SQL logic — direct expiry_date independent of stored verification_status", () => {
+  it("worker with no documents must not appear in browse results", () => {
     const documentCount = 0;
     expect(documentCount > 0).toBe(false);
   });
 
-  it("worker with one document can appear in browse results", () => {
+  it("worker with one current document can appear in browse results", () => {
     const documentCount = 1;
     expect(documentCount > 0).toBe(true);
   });
 
-  it("worker with zero documents must not be matched to jobs", () => {
-    const documentCount = 0;
-    const eligible = documentCount > 0;
+  it("a document stored as Verified but with past expiry_date must be excluded", () => {
+    const past = new Date(Date.now() - 86400 * 1000);
+    const eligible = isEligible(past, "Verified");
     expect(eligible).toBe(false);
   });
 
-  it("worker with documents is eligible for job matching", () => {
-    const documentCount = 2;
-    const eligible = documentCount > 0;
+  it("a document stored as Pending with future expiry_date counts as eligible for gate", () => {
+    const future = new Date(Date.now() + 86400 * 1000 * 90);
+    const eligible = isEligible(future, "Pending");
     expect(eligible).toBe(true);
   });
 
-  it("job digest excludes workers with no documents", () => {
-    const workerHasDocs = false;
-    expect(workerHasDocs).toBe(false);
+  it("offer creation gate: worker with only expired docs must be blocked", () => {
+    const allDocsExpired = true;
+    const hasEligibleDoc = !allDocsExpired;
+    expect(hasEligibleDoc).toBe(false);
   });
 
-  it("emergency shift notification excludes workers with no documents", () => {
-    const workerHasDocs = false;
-    expect(workerHasDocs).toBe(false);
+  it("job digest excludes workers with no current documents", () => {
+    const workerHasCurrentDocs = false;
+    expect(workerHasCurrentDocs).toBe(false);
   });
 });

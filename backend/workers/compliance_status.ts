@@ -14,6 +14,7 @@ export async function syncOnboardingStatus(workerId: string): Promise<"active" |
     FROM worker_documents
     WHERE worker_id = ${workerId}
       AND verification_status NOT IN ('Expired', 'Flagged')
+      AND (expiry_date IS NULL OR expiry_date > NOW())
   `;
   const documentCount = docRow?.cnt ?? 0;
   const newStatus = documentCount > 0 ? "active" : "compliance_required";
@@ -45,6 +46,7 @@ export const getComplianceStatus = api<void, ComplianceStatusResponse>(
       FROM worker_documents
       WHERE worker_id = ${worker.worker_id}
         AND verification_status NOT IN ('Expired', 'Flagged')
+        AND (expiry_date IS NULL OR expiry_date > NOW())
     `;
     const documentCount = docRow?.cnt ?? 0;
 

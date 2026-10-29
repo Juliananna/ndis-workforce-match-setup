@@ -69,17 +69,20 @@ export const getWorkerSummary = api<GetWorkerSummaryRequest, WorkerSummary>(
         COUNT(r.id) AS review_count,
         EXISTS (
           SELECT 1 FROM worker_documents wd
-          WHERE wd.worker_id = w.worker_id AND wd.verification_status = 'Verified'
+          WHERE wd.worker_id = w.worker_id
+            AND wd.verification_status = 'Verified'
+            AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS docs_verified,
         EXISTS (
           SELECT 1 FROM worker_references wr
-          JOIN reference_checks rc ON rc.reference_id = wr.id
-          WHERE wr.worker_id = w.worker_id
+          WHERE wr.worker_id = w.worker_id AND wr.status = 'Verified'
         ) AS refs_verified,
         EXISTS (
           SELECT 1 FROM worker_documents wd
           WHERE wd.worker_id = w.worker_id
           AND wd.document_type IN ('Driver''s Licence', 'Passport / ID')
+          AND wd.verification_status NOT IN ('Expired', 'Flagged')
+          AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS has_id_doc,
         EXISTS (
           SELECT 1 FROM worker_documents wd
@@ -90,6 +93,8 @@ export const getWorkerSummary = api<GetWorkerSummaryRequest, WorkerSummary>(
             'First Aid Certificate', 'CPR Certificate',
             'Certificate III / IV Disability', 'Working With Children Check', 'Police Clearance'
           )
+          AND wd.verification_status NOT IN ('Expired', 'Flagged')
+          AND (wd.expiry_date IS NULL OR wd.expiry_date > NOW())
         ) AS has_cert_doc,
         EXISTS (
           SELECT 1 FROM worker_availability wva WHERE wva.worker_id = w.worker_id
@@ -159,7 +164,7 @@ export const getWorkerSummary = api<GetWorkerSummaryRequest, WorkerSummary>(
       refsVerified: row.refs_verified,
       lastLoginAt: row.last_login_at ? row.last_login_at.toISOString() : null,
       verificationScore: score,
-      isFullyVerified: score === 100,
+      isFullyVerified: row.docs_verified && row.refs_verified,
       latitude: row.latitude,
       longitude: row.longitude,
     };
