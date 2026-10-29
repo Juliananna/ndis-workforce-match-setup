@@ -24,6 +24,7 @@ interface EmailCaptureResponse {
   profileCreated: boolean;
   workerId: string | null;
   profileError: string | null;
+  pendingLink: boolean;
 }
 
 export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
@@ -103,14 +104,20 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
     let profileCreated = false;
     let workerId: string | null = existing.converted_worker_id;
     let profileError: string | null = null;
+    let pendingLink = false;
 
     if (alreadyConverted) {
       profileCreated = false;
     } else if (req.consentProfileCreation) {
       try {
         const result = await convertSessionToProfile(req.id, session);
-        profileCreated = !result.alreadyExists;
-        workerId = result.workerId;
+        if (result.alreadyExists) {
+          pendingLink = true;
+          workerId = result.workerId;
+        } else {
+          profileCreated = true;
+          workerId = result.workerId;
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[email_capture] profile conversion failed for session", req.id, err);
@@ -167,11 +174,11 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
       });
     }
 
-    if (profileCreated || workerId) {
+    if (profileCreated || pendingLink || workerId) {
       const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
-      return { session: rowToSession(updatedRow!), profileCreated, workerId, profileError };
+      return { session: rowToSession(updatedRow!), profileCreated, workerId, profileError, pendingLink };
     }
 
-    return { session, profileCreated, workerId, profileError };
+    return { session, profileCreated, workerId, profileError, pendingLink };
   }
 );

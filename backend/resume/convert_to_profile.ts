@@ -81,14 +81,22 @@ export const convertToProfile = api<ConvertToProfileRequest, ConvertToProfileRes
   }
 );
 
+interface ConfirmAccountLinkRequest {
+  sessionId: string;
+}
+
 interface ConfirmAccountLinkResponse {
   workerId: string;
   message: string;
 }
 
-export const confirmAccountLink = api<void, ConfirmAccountLinkResponse>(
+export const confirmAccountLink = api<ConfirmAccountLinkRequest, ConfirmAccountLinkResponse>(
   { expose: true, auth: true, method: "POST", path: "/resume-sessions/confirm-link" },
-  async () => {
+  async (req) => {
+    if (!req.sessionId) {
+      throw APIError.invalidArgument("sessionId is required");
+    }
+
     const auth = getAuthData()!;
     if (auth.role !== "WORKER") {
       throw APIError.permissionDenied("only workers can confirm an account link");
@@ -102,17 +110,24 @@ export const confirmAccountLink = api<void, ConfirmAccountLinkResponse>(
     const session = await db.queryRow<{
       id: string;
       email: string | null;
+      pending_link_worker_id: string | null;
+      converted_worker_id: string | null;
     }>`
-      SELECT id, email
+      SELECT id, email, pending_link_worker_id, converted_worker_id
       FROM resume_sessions
-      WHERE pending_link_worker_id = ${worker.worker_id}
-        AND converted_worker_id IS NULL
-      ORDER BY updated_at DESC
-      LIMIT 1
+      WHERE id = ${req.sessionId}
     `;
 
     if (!session) {
-      throw APIError.notFound("no pending resume link found for this account");
+      throw APIError.notFound("resume session not found");
+    }
+
+    if (session.converted_worker_id === worker.worker_id) {
+      return { workerId: worker.worker_id, message: "Resume linked to your KizaziHire profile" };
+    }
+
+    if (session.pending_link_worker_id !== worker.worker_id) {
+      throw APIError.permissionDenied("this resume session is not pending link for your account");
     }
 
     const fullSessionRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${session.id}`;

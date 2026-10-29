@@ -44,7 +44,12 @@ export default function LoginPage() {
       const resp = await backend.auth.login({ email, password });
       await login(resp.token);
       const onboarding = searchParams.get("onboarding");
-      navigate(onboarding ? `/dashboard?onboarding=${onboarding}` : "/dashboard");
+      const pendingSession = searchParams.get("pendingSession");
+      const params = new URLSearchParams();
+      if (onboarding) params.set("onboarding", onboarding);
+      if (pendingSession) params.set("pendingSession", pendingSession);
+      const query = params.toString();
+      navigate(query ? `/dashboard?${query}` : "/dashboard");
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : "Login failed. Check your credentials.";

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Home, Briefcase, ShieldCheck, Settings as SettingsIcon, LogOut,
   Bell, HelpCircle, MapPin, CheckCircle2, AlertTriangle, XCircle,
   User, Zap, Star, Navigation, Clock, Menu, X,
   CreditCard, Users, FileText, ChevronRight, TrendingUp, Lock, Eye, EyeOff,
-  Sparkles, BarChart2, ArrowRight,
+  Sparkles, BarChart2, ArrowRight, LinkIcon, Loader2,
 } from "lucide-react";
 
 import backend from "~backend/client";
@@ -241,6 +242,64 @@ function SetPasswordBanner() {
 
 const TOTAL_STEPS = STEPS.length;
 
+function PendingResumeLinkBanner({ sessionId, onLinked }: { sessionId: string; onLinked: () => void }) {
+  const { toast } = useToast();
+  const api = useAuthedBackend();
+  const [confirming, setConfirming] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  const handleConfirm = async () => {
+    if (!api) return;
+    setConfirming(true);
+    try {
+      await api.resume.confirmAccountLink({ sessionId });
+      toast({ title: "Resume linked!", description: "Your resume data has been transferred to your profile." });
+      onLinked();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Could not link resume", description: err?.message ?? "Please try again.", variant: "destructive" });
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-amber-100 p-2 shrink-0">
+          <LinkIcon className="h-4 w-4 text-amber-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-amber-900 text-sm">Resume pending link</h3>
+          <p className="text-xs text-amber-700 mt-0.5">
+            You built a resume before logging in. Confirm below to link it to your account —
+            documents, photo and preferences will be transferred automatically.
+          </p>
+        </div>
+        <button onClick={() => setDismissed(true)} className="ml-auto text-amber-400 hover:text-amber-600 shrink-0 text-xs">✕</button>
+      </div>
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={handleConfirm}
+          disabled={confirming}
+          className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm disabled:opacity-60 transition-colors"
+        >
+          {confirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
+          {confirming ? "Linking…" : "Link my resume to this account"}
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="px-4 py-2 text-xs text-amber-700 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors"
+        >
+          Not now
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ResumeBannerCard({ onTabChange }: { onTabChange: (tab: string) => void }) {
   const api = useAuthedBackend();
   const { toast } = useToast();
@@ -384,6 +443,7 @@ function ResumeBannerCard({ onTabChange }: { onTabChange: (tab: string) => void 
 export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const { user } = useAuth();
   const api = useAuthedBackend();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("home");
   const [allJobs, setAllJobs] = useState<MatchedJob[]>([]);
   const [documents, setDocuments] = useState<WorkerDocument[]>([]);
@@ -393,6 +453,7 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
   const [pendingOffers, setPendingOffers] = useState<Offer[]>([]);
   const [selectedJob, setSelectedJob] = useState<MatchedJob | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pendingSessionId = searchParams.get("pendingSession") ?? null;
 
   const displayName = workerName ?? user?.email?.split("@")[0] ?? "User";
   const firstName = displayName.split(" ")[0];
@@ -578,6 +639,13 @@ export function WorkerHomeDashboard({ onTabChange, onLogout }: Props) {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
 
           {!user?.hasPassword && <SetPasswordBanner />}
+
+          {pendingSessionId && (
+            <PendingResumeLinkBanner
+              sessionId={pendingSessionId}
+              onLinked={() => setSearchParams({}, { replace: true })}
+            />
+          )}
 
           <ResumeBannerCard onTabChange={onTabChange} />
 

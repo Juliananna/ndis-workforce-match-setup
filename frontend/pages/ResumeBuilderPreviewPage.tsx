@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Download, ArrowLeft, Sparkles, RefreshCw, Mail, CheckCircle, Crown } from "lucide-react";
+import { Download, ArrowLeft, Sparkles, RefreshCw, Mail, CheckCircle, Crown, LogIn, ArrowRight } from "lucide-react";
 import { ResumePreviewCard } from "../components/resume/ResumePreviewCard";
 import type { ResumeTheme } from "../components/resume/ResumePreviewCard";
 import { ResumeStrengthMeter } from "../components/resume/ResumeStrengthMeter";
@@ -47,6 +47,7 @@ export default function ResumeBuilderPreviewPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<ResumeTheme>("classic_free");
   const [premiumLoading, setPremiumLoading] = useState(true);
+  const [pendingLinkDetected, setPendingLinkDetected] = useState(false);
 
   const loadSession = async () => {
     if (!id) return;
@@ -142,7 +143,9 @@ export default function ResumeBuilderPreviewPage() {
       const result = await backend.resume.emailCapture({ id, sessionToken, email, ...consents });
       setSession(result.session as SessionData);
       setShowEmailForm(false);
-      if (result.profileCreated) {
+      if (result.pendingLink) {
+        setPendingLinkDetected(true);
+      } else if (result.profileCreated) {
         setProfileJustCreated(true);
         toast({ title: "Profile created!", description: "Check your email to set your password and log in." });
       } else if (result.profileError) {
@@ -393,6 +396,26 @@ export default function ResumeBuilderPreviewPage() {
         </div>
 
         <div className="space-y-5">
+          {pendingLinkDetected && (
+            <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <LogIn size={20} className="text-amber-500 shrink-0" />
+                <h3 className="font-bold text-amber-800 text-sm">Account already exists</h3>
+              </div>
+              <p className="text-sm text-amber-700">
+                A KizaziHire account is registered to <strong>{session.email}</strong>.
+                Log in to link this resume to your profile — your data will not be lost.
+              </p>
+              <button
+                onClick={() => navigate(`/login?pendingSession=${id}`)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-teal-600 text-white font-bold rounded-xl text-sm hover:bg-teal-700 transition-colors"
+              >
+                Log in to link my resume <ArrowRight size={14} />
+              </button>
+              <p className="text-xs text-amber-600 text-center">Your resume data is saved and will not be lost.</p>
+            </div>
+          )}
+
           {showEmailForm && !hasEmail && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
               <EmailConsentForm onSubmit={handleEmailSubmit} loading={emailLoading} />

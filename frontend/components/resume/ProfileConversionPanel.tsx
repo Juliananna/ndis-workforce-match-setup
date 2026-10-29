@@ -50,7 +50,7 @@ export function ProfileConversionPanel({ session, onConverted }: Props) {
           Log in to link this resume to your profile — your data will be transferred automatically.
         </p>
         <button
-          onClick={() => navigate("/login")}
+          onClick={() => navigate(`/login?pendingSession=${session.id}`)}
           className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-bold rounded-xl text-sm hover:bg-teal-700 transition-colors"
         >
           Log in to link my resume <ArrowRight size={16} />
