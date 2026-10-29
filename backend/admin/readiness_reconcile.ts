@@ -1,7 +1,9 @@
 import { api } from "encore.dev/api";
+import { getAuthData } from "~encore/auth";
 import { CronJob } from "encore.dev/cron";
 import db from "../db";
 import { autoRevokeReadinessIfInvalid } from "./readiness_auto_revoke";
+import { assertSysAdmin } from "./guard";
 
 export interface ReadinessReconcileResponse {
   checkedCount: number;
@@ -51,18 +53,35 @@ export async function runReadinessReconcile(): Promise<ReadinessReconcileRespons
   };
 }
 
+// Cron-only endpoint — auth: false is required by Encore.ts for scheduled jobs.
+// Not exposed externally; invocations come exclusively from the scheduler.
+export const readinessReconcileCron = api<void, ReadinessReconcileResponse>(
+  {
+    expose: false,
+    auth: false,
+    method: "POST",
+    path: "/internal/readiness/reconcile-cron",
+  },
+  async () => runReadinessReconcile()
+);
+
+// Manual trigger restricted to SysAdmin users.
 export const adminReadinessReconcile = api<void, ReadinessReconcileResponse>(
   {
     expose: true,
-    auth: false,
+    auth: true,
     method: "POST",
     path: "/admin/readiness/reconcile",
   },
-  async () => runReadinessReconcile()
+  async () => {
+    const auth = getAuthData()!;
+    await assertSysAdmin(auth.userID);
+    return runReadinessReconcile();
+  }
 );
 
 const _ = new CronJob("readiness-expiry-check", {
   title: "Ready-to-Hire Expiry Reconciliation",
   schedule: "0 2 * * *",
-  endpoint: adminReadinessReconcile,
+  endpoint: readinessReconcileCron,
 });

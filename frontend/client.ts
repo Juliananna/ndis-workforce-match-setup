@@ -666,6 +666,9 @@ export namespace admin {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_admin_workers_adminListWorkers>
         }
 
+        /**
+         * Manual trigger restricted to SysAdmin users.
+         */
         public async adminReadinessReconcile(): Promise<ResponseType<typeof api_admin_readiness_reconcile_adminReadinessReconcile>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/admin/readiness/reconcile`, {method: "POST", body: undefined})
@@ -1558,6 +1561,7 @@ export namespace jobs {
  * Import the endpoint handlers to derive the types for the client.
  */
 import { listLifecycleEvents as api_lifecycle_query_listLifecycleEvents } from "~backend/lifecycle/query";
+import { adminLifecycleReconcile as api_lifecycle_reconcile_adminLifecycleReconcile } from "~backend/lifecycle/reconcile";
 
 export namespace lifecycle {
 
@@ -1566,7 +1570,14 @@ export namespace lifecycle {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.adminLifecycleReconcile = this.adminLifecycleReconcile.bind(this)
             this.listLifecycleEvents = this.listLifecycleEvents.bind(this)
+        }
+
+        public async adminLifecycleReconcile(): Promise<ResponseType<typeof api_lifecycle_reconcile_adminLifecycleReconcile>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/admin/lifecycle/reconcile`, {method: "POST", body: undefined})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_lifecycle_reconcile_adminLifecycleReconcile>
         }
 
         public async listLifecycleEvents(params: RequestType<typeof api_lifecycle_query_listLifecycleEvents>): Promise<ResponseType<typeof api_lifecycle_query_listLifecycleEvents>> {
