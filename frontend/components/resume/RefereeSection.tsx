@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Users, CheckCircle } from "lucide-react";
 import backend from "~backend/client";
 import type { RefereeRecord } from "~backend/resume/types";
+import { getSessionToken } from "../../lib/sessionToken";
 
 interface Props {
   sessionId: string;
@@ -37,8 +38,10 @@ export function RefereeSection({ sessionId, referees, onRefereesChange }: Props)
     }
     setAdding(true);
     try {
+      const sessionToken = getSessionToken(sessionId);
       const { referee } = await backend.resume.addReferee({
         id: sessionId,
+        sessionToken,
         ...form,
         yearsKnown: form.yearsKnown,
         organisation: form.organisation || undefined,

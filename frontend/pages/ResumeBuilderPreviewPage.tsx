@@ -14,6 +14,7 @@ import { ResumePhotoUpload } from "../components/resume/ResumePhotoUpload";
 import { ResumeThemePicker } from "../components/resume/ResumeThemePicker";
 import type { SessionData } from "../components/resume/types";
 import type { RefereeRecord } from "~backend/resume/types";
+import { getSessionToken } from "../lib/sessionToken";
 
 const defaultSession = (): SessionData => ({
   id: "", stepCompleted: 0, email: null, firstName: null, lastName: null, phone: null,
@@ -50,7 +51,8 @@ export default function ResumeBuilderPreviewPage() {
   const loadSession = async () => {
     if (!id) return;
     try {
-      const { session: s, referees: r } = await backend.resume.getSession({ id });
+      const sessionToken = getSessionToken(id);
+      const { session: s, referees: r } = await backend.resume.getSession({ id, sessionToken });
       setSession(s as SessionData);
       setReferees(r as RefereeRecord[]);
       if (!s.email) {
@@ -67,7 +69,8 @@ export default function ResumeBuilderPreviewPage() {
   const loadPremium = async () => {
     if (!id) return;
     try {
-      const { isPremium: p, selectedTheme: t } = await backend.resume.getResumePremiumStatus({ id });
+      const sessionToken = getSessionToken(id);
+      const { isPremium: p, selectedTheme: t } = await backend.resume.getResumePremiumStatus({ id, sessionToken });
       setIsPremium(p);
       setSelectedTheme((t as ResumeTheme) || "classic_free");
     } catch {
@@ -98,7 +101,8 @@ export default function ResumeBuilderPreviewPage() {
     if (!id) return;
     setScoring(true);
     try {
-      const result = await backend.resume.scoreSession({ id });
+      const sessionToken = getSessionToken(id);
+      const result = await backend.resume.scoreSession({ id, sessionToken });
       setScoreData({ score: result.score, breakdown: result.breakdown, suggestions: result.suggestions });
       setSession(result.session as SessionData);
     } catch (err) {
@@ -113,7 +117,8 @@ export default function ResumeBuilderPreviewPage() {
     if (!id) return;
     setGenerating(true);
     try {
-      const { session: s } = await backend.resume.generateResumeContent({ id });
+      const sessionToken = getSessionToken(id);
+      const { session: s } = await backend.resume.generateResumeContent({ id, sessionToken });
       setSession(s as SessionData);
       toast({ title: "AI content generated!", description: "Your resume has been written in NDIS-aligned Australian English." });
     } catch (err: any) {
@@ -133,12 +138,15 @@ export default function ResumeBuilderPreviewPage() {
     if (!id) return;
     setEmailLoading(true);
     try {
-      const result = await backend.resume.emailCapture({ id, email, ...consents });
+      const sessionToken = getSessionToken(id);
+      const result = await backend.resume.emailCapture({ id, sessionToken, email, ...consents });
       setSession(result.session as SessionData);
       setShowEmailForm(false);
       if (result.profileCreated) {
         setProfileJustCreated(true);
         toast({ title: "Profile created!", description: "Check your email to set your password and log in." });
+      } else if (result.profileError) {
+        toast({ title: "Email saved", description: result.profileError, variant: "destructive" });
       } else {
         toast({ title: "Email saved!", description: "You can now download your resume." });
       }
@@ -327,7 +335,7 @@ export default function ResumeBuilderPreviewPage() {
                 <div className="w-full">
                   <h3 className="font-extrabold text-xl mb-1">Your resume is ready! 🎉</h3>
                   <p className="text-teal-100 text-sm mb-4">
-                    Upload your first compliance document to <strong className="text-white">activate your KizaziHire profile</strong> and claim your free verification package.
+                    Upload your compliance documents so our team can review and <strong className="text-white">approve your KizaziHire profile</strong>. This usually takes 1–2 business days.
                   </p>
                   <div className="bg-white/10 rounded-xl p-4 mb-4 space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-teal-100">
@@ -337,7 +345,7 @@ export default function ResumeBuilderPreviewPage() {
                       <span className="text-white font-bold">2.</span> Set your password and log in
                     </div>
                     <div className="flex items-center gap-2 text-teal-100">
-                      <span className="text-white font-bold">3.</span> Upload your first compliance document to go live
+                      <span className="text-white font-bold">3.</span> Upload compliance documents — our team reviews them (1–2 business days)
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-3">

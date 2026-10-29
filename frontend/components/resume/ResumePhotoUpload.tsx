@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Camera, Upload, CheckCircle, Loader2, X } from "lucide-react";
 import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
+import { getSessionToken } from "../../lib/sessionToken";
 
 interface Props {
   sessionId: string;
@@ -30,8 +31,10 @@ export function ResumePhotoUpload({ sessionId, currentPhotoUrl, onPhotoUploaded 
     setPreview(localPreview);
 
     try {
+      const sessionToken = getSessionToken(sessionId);
       const { uploadUrl, photoKey } = await backend.resume.getSessionPhotoUploadUrl({
         id: sessionId,
+        sessionToken,
         fileName: file.name,
       });
 
@@ -43,6 +46,7 @@ export function ResumePhotoUpload({ sessionId, currentPhotoUrl, onPhotoUploaded 
 
       const { photoUrl } = await backend.resume.confirmSessionPhoto({
         id: sessionId,
+        sessionToken,
         photoKey,
       });
 

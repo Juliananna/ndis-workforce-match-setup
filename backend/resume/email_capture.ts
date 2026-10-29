@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import { convertSessionToProfile } from "./convert_helpers";
 import { upsertContact, writeSyncLog } from "../ghl/client";
 import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
@@ -8,6 +9,7 @@ import type { ResumeSession } from "./types";
 
 interface EmailCaptureRequest {
   id: string;
+  sessionToken?: string;
   email: string;
   consentResumeGeneration: boolean;
   consentProfileCreation: boolean;
@@ -21,21 +23,33 @@ interface EmailCaptureResponse {
   session: ResumeSession;
   profileCreated: boolean;
   workerId: string | null;
+  profileError: string | null;
 }
 
 export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/email-capture" },
   async (req) => {
-    const existing = await db.queryRow`SELECT id FROM resume_sessions WHERE id = ${req.id}`;
+    await verifySessionToken(req.id, req.sessionToken);
+
+    const existing = await db.queryRow<{ id: string; status: string; converted_worker_id: string | null }>`
+      SELECT id, status, converted_worker_id FROM resume_sessions WHERE id = ${req.id}
+    `;
     if (!existing) throw APIError.notFound("session not found");
 
     if (!req.email || !req.email.includes("@")) {
       throw APIError.invalidArgument("a valid email address is required");
     }
 
+    const alreadyConverted = existing.status === "converted" && existing.converted_worker_id !== null;
+
     await db.exec`
       UPDATE resume_sessions
-      SET email = ${req.email}, status = 'email_captured', updated_at = NOW()
+      SET email = ${req.email},
+          status = CASE
+            WHEN status IN ('draft') THEN 'email_captured'
+            ELSE status
+          END,
+          updated_at = NOW()
       WHERE id = ${req.id}
     `;
 
@@ -87,15 +101,20 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
     const session = rowToSession(row!);
 
     let profileCreated = false;
-    let workerId: string | null = null;
+    let workerId: string | null = existing.converted_worker_id;
+    let profileError: string | null = null;
 
-    if (req.consentProfileCreation) {
+    if (alreadyConverted) {
+      profileCreated = false;
+    } else if (req.consentProfileCreation) {
       try {
         const result = await convertSessionToProfile(req.id, session);
         profileCreated = !result.alreadyExists;
         workerId = result.workerId;
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.error("[email_capture] profile conversion failed for session", req.id, err);
+        profileError = "We saved your email but could not create your profile automatically. Please try again or contact support.";
       }
     }
 
@@ -150,9 +169,9 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
 
     if (profileCreated || workerId) {
       const updatedRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
-      return { session: rowToSession(updatedRow!), profileCreated, workerId };
+      return { session: rowToSession(updatedRow!), profileCreated, workerId, profileError };
     }
 
-    return { session, profileCreated, workerId };
+    return { session, profileCreated, workerId, profileError };
   }
 );

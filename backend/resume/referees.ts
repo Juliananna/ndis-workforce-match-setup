@@ -1,9 +1,11 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
+import { verifySessionToken } from "./session_token";
 import type { RefereeRecord } from "./types";
 
 interface AddRefereeRequest {
   id: string;
+  sessionToken?: string;
   refereeName: string;
   refereeRole: string;
   organisation?: string;
@@ -18,10 +20,11 @@ interface AddRefereeResponse {
   referee: RefereeRecord;
 }
 
-// Adds a referee to a resume session.
 export const addReferee = api<AddRefereeRequest, AddRefereeResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/referees" },
   async (req) => {
+    await verifySessionToken(req.id, req.sessionToken);
+
     const existing = await db.queryRow`SELECT id FROM resume_sessions WHERE id = ${req.id}`;
     if (!existing) throw APIError.notFound("session not found");
 
@@ -69,9 +72,8 @@ interface UpdateRefereeResponse {
   referee: RefereeRecord;
 }
 
-// Updates a referee's status or notes (used by admin).
 export const updateReferee = api<UpdateRefereeRequest, UpdateRefereeResponse>(
-  { expose: true, method: "PATCH", path: "/resume-sessions/:id/referees/:refereeId" },
+  { expose: false, method: "PATCH", path: "/resume-sessions/:id/referees/:refereeId" },
   async (req) => {
     const row = await db.queryRow<{
       id: string; session_id: string; referee_name: string; referee_role: string; organisation: string | null;

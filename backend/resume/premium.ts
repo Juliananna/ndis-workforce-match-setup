@@ -2,6 +2,7 @@ import { api, APIError } from "encore.dev/api";
 import { secret } from "encore.dev/config";
 import db from "../db";
 import Stripe from "stripe";
+import { verifySessionToken } from "./session_token";
 
 const stripeSecretKey = secret("StripeSecretKey");
 const appBaseUrl = secret("AppBaseUrl");
@@ -33,9 +34,10 @@ export interface SaveResumeThemeResponse {
   selectedTheme: string;
 }
 
-export const getResumePremiumStatus = api<{ id: string }, ResumePremiumStatusResponse>(
+export const getResumePremiumStatus = api<{ id: string; sessionToken?: string }, ResumePremiumStatusResponse>(
   { expose: true, method: "GET", path: "/resume-sessions/:id/premium" },
-  async ({ id }) => {
+  async ({ id, sessionToken }) => {
+    await verifySessionToken(id, sessionToken);
     const row = await db.queryRow<{ is_premium: boolean; selected_theme: string }>`
       SELECT is_premium, selected_theme FROM resume_sessions WHERE id = ${id}
     `;
@@ -44,9 +46,10 @@ export const getResumePremiumStatus = api<{ id: string }, ResumePremiumStatusRes
   }
 );
 
-export const createResumePremiumCheckout = api<CreateResumePremiumCheckoutRequest, CreateResumePremiumCheckoutResponse>(
+export const createResumePremiumCheckout = api<CreateResumePremiumCheckoutRequest & { sessionToken?: string }, CreateResumePremiumCheckoutResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/premium/checkout" },
   async (req) => {
+    await verifySessionToken(req.id, req.sessionToken);
     const session = await db.queryRow<{ id: string; email: string | null }>`
       SELECT id, email FROM resume_sessions WHERE id = ${req.id}
     `;
@@ -91,9 +94,10 @@ export const createResumePremiumCheckout = api<CreateResumePremiumCheckoutReques
   }
 );
 
-export const saveResumeTheme = api<SaveResumeThemeRequest, SaveResumeThemeResponse>(
+export const saveResumeTheme = api<SaveResumeThemeRequest & { sessionToken?: string }, SaveResumeThemeResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/theme" },
   async (req) => {
+    await verifySessionToken(req.id, req.sessionToken);
     const ALLOWED_FREE_THEMES = ["classic_free"];
     const ALLOWED_PREMIUM_THEMES = ["modern", "executive", "minimal"];
     const ALL_THEMES = [...ALLOWED_FREE_THEMES, ...ALLOWED_PREMIUM_THEMES];

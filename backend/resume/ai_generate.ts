@@ -2,12 +2,14 @@ import { api, APIError } from "encore.dev/api";
 import { secret } from "encore.dev/config";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import type { ResumeSession } from "./types";
 
 const openAIKey = secret("OpenAIKey");
 
 interface GenerateParams {
   id: string;
+  sessionToken?: string;
 }
 
 interface GenerateResponse {
@@ -87,12 +89,25 @@ Languages: ${session.languages.join(", ") || "English"}
 `.trim();
 }
 
-const AI_GENERATION_LIMIT = 3;
+export const AI_GENERATION_LIMIT = 3;
 
-// Generates all AI content for a resume session (summary, bullets, bio, search card, interview prompts).
+async function checkAndIncrementLimit(id: string): Promise<void> {
+  const row = await db.queryRow<{ ai_generation_count: number }>`
+    SELECT ai_generation_count FROM resume_sessions WHERE id = ${id}
+  `;
+  if (!row) throw APIError.notFound("session not found");
+  if ((row.ai_generation_count ?? 0) >= AI_GENERATION_LIMIT) {
+    throw APIError.resourceExhausted(
+      `AI generation limit reached. Each resume session can generate AI content up to ${AI_GENERATION_LIMIT} times.`
+    );
+  }
+}
+
 export const generateResumeContent = api<GenerateParams, GenerateResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/generate-resume" },
-  async ({ id }) => {
+  async ({ id, sessionToken }) => {
+    await verifySessionToken(id, sessionToken);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
     if (!row) throw APIError.notFound("session not found");
 
@@ -184,15 +199,18 @@ Return a JSON array of 5 strings. Example: ["Tell me about a time...", "How do y
 
 interface AISummaryRequest {
   sessionId: string;
+  sessionToken?: string;
 }
 interface AISummaryResponse {
   summary: string;
 }
 
-// Generates only the AI resume summary for a session.
 export const generateSummary = api<AISummaryRequest, AISummaryResponse>(
   { expose: true, method: "POST", path: "/ai/resume-summary" },
-  async ({ sessionId }) => {
+  async ({ sessionId, sessionToken }) => {
+    await verifySessionToken(sessionId, sessionToken);
+    await checkAndIncrementLimit(sessionId);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${sessionId}`;
     if (!row) throw APIError.notFound("session not found");
     const session = rowToSession(row);
@@ -201,21 +219,30 @@ export const generateSummary = api<AISummaryRequest, AISummaryResponse>(
       `Write a 2–3 sentence professional career summary for this NDIS support worker resume. Use Australian English.\n\n${context}\n\nReturn only the summary text.`,
       NDIS_SYSTEM_PROMPT
     );
+
+    await db.exec`
+      UPDATE resume_sessions SET ai_generation_count = ai_generation_count + 1, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
     return { summary: summary.trim() };
   }
 );
 
 interface AIBulletsRequest {
   sessionId: string;
+  sessionToken?: string;
 }
 interface AIBulletsResponse {
   bullets: string[];
 }
 
-// Generates AI resume bullet points for a session.
 export const generateBullets = api<AIBulletsRequest, AIBulletsResponse>(
   { expose: true, method: "POST", path: "/ai/resume-bullets" },
-  async ({ sessionId }) => {
+  async ({ sessionId, sessionToken }) => {
+    await verifySessionToken(sessionId, sessionToken);
+    await checkAndIncrementLimit(sessionId);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${sessionId}`;
     if (!row) throw APIError.notFound("session not found");
     const session = rowToSession(row);
@@ -226,21 +253,30 @@ export const generateBullets = api<AIBulletsRequest, AIBulletsResponse>(
     );
     let bullets: string[] = [];
     try { bullets = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()); } catch { bullets = []; }
+
+    await db.exec`
+      UPDATE resume_sessions SET ai_generation_count = ai_generation_count + 1, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
     return { bullets };
   }
 );
 
 interface AIBioRequest {
   sessionId: string;
+  sessionToken?: string;
 }
 interface AIBioResponse {
   bio: string;
 }
 
-// Generates an AI profile bio for a session.
 export const generateBio = api<AIBioRequest, AIBioResponse>(
   { expose: true, method: "POST", path: "/ai/profile-bio" },
-  async ({ sessionId }) => {
+  async ({ sessionId, sessionToken }) => {
+    await verifySessionToken(sessionId, sessionToken);
+    await checkAndIncrementLimit(sessionId);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${sessionId}`;
     if (!row) throw APIError.notFound("session not found");
     const session = rowToSession(row);
@@ -249,21 +285,30 @@ export const generateBio = api<AIBioRequest, AIBioResponse>(
       `Write a 2–3 sentence warm profile bio for a KizaziHire provider-facing profile card.\n\n${context}\n\nReturn only the bio.`,
       NDIS_SYSTEM_PROMPT
     );
+
+    await db.exec`
+      UPDATE resume_sessions SET ai_generation_count = ai_generation_count + 1, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
     return { bio: bio.trim() };
   }
 );
 
 interface AISearchCardRequest {
   sessionId: string;
+  sessionToken?: string;
 }
 interface AISearchCardResponse {
   searchCard: string;
 }
 
-// Generates an AI search card summary for a session.
 export const generateSearchCard = api<AISearchCardRequest, AISearchCardResponse>(
   { expose: true, method: "POST", path: "/ai/search-card" },
-  async ({ sessionId }) => {
+  async ({ sessionId, sessionToken }) => {
+    await verifySessionToken(sessionId, sessionToken);
+    await checkAndIncrementLimit(sessionId);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${sessionId}`;
     if (!row) throw APIError.notFound("session not found");
     const session = rowToSession(row);
@@ -272,21 +317,30 @@ export const generateSearchCard = api<AISearchCardRequest, AISearchCardResponse>
       `Write a single concise sentence (max 25 words) for this NDIS support worker's search card.\n\n${context}\n\nReturn only the sentence.`,
       NDIS_SYSTEM_PROMPT
     );
+
+    await db.exec`
+      UPDATE resume_sessions SET ai_generation_count = ai_generation_count + 1, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
     return { searchCard: searchCard.trim() };
   }
 );
 
 interface AIInterviewPromptsRequest {
   sessionId: string;
+  sessionToken?: string;
 }
 interface AIInterviewPromptsResponse {
   prompts: string[];
 }
 
-// Generates AI interview prompts for a session.
 export const generateInterviewPrompts = api<AIInterviewPromptsRequest, AIInterviewPromptsResponse>(
   { expose: true, method: "POST", path: "/ai/interview-prompts" },
-  async ({ sessionId }) => {
+  async ({ sessionId, sessionToken }) => {
+    await verifySessionToken(sessionId, sessionToken);
+    await checkAndIncrementLimit(sessionId);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${sessionId}`;
     if (!row) throw APIError.notFound("session not found");
     const session = rowToSession(row);
@@ -297,6 +351,12 @@ export const generateInterviewPrompts = api<AIInterviewPromptsRequest, AIIntervi
     );
     let prompts: string[] = [];
     try { prompts = JSON.parse(raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()); } catch { prompts = []; }
+
+    await db.exec`
+      UPDATE resume_sessions SET ai_generation_count = ai_generation_count + 1, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+
     return { prompts };
   }
 );

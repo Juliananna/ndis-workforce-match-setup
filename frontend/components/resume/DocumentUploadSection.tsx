@@ -19,7 +19,7 @@ export function DocumentUploadSection({ hasProfile, hasEmail, onActivate }: Prop
         </div>
         <div className="rounded-xl border border-teal-200 bg-teal-50 p-4 space-y-3">
           <p className="text-sm text-teal-800 font-medium">
-            Upload your compliance documents to activate your KizaziHire profile.
+            Upload your compliance documents so our team can review and approve your profile.
           </p>
           <ul className="space-y-1.5 text-xs text-teal-700">
             {[
@@ -37,21 +37,21 @@ export function DocumentUploadSection({ hasProfile, hasEmail, onActivate }: Prop
           <div className="pt-1">
             <p className="text-xs text-teal-600 mb-3 flex items-center gap-1">
               <Lock size={11} />
-              Documents are private — only visible to providers after you accept a work offer.
+              Documents are reviewed by our compliance team before your profile goes live.
             </p>
             {onActivate ? (
               <button
                 onClick={onActivate}
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-teal-600 text-white text-sm font-bold rounded-xl hover:bg-teal-700 transition-colors"
               >
-                Activate my profile <ArrowRight size={14} />
+                Submit my documents <ArrowRight size={14} />
               </button>
             ) : (
               <a
                 href="/login?onboarding=compliance"
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-teal-600 text-white text-sm font-bold rounded-xl hover:bg-teal-700 transition-colors"
               >
-                Activate my profile <ArrowRight size={14} />
+                Submit my documents <ArrowRight size={14} />
               </a>
             )}
           </div>

@@ -3,6 +3,7 @@ import backend from "~backend/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useState, useEffect } from "react";
 import { captureAttribution, getEffectiveAttribution } from "../lib/attribution";
+import { storeSessionToken } from "../lib/sessionToken";
 import { CheckCircle, FileText, Star, Users, ShieldCheck, Download, ArrowRight, Sparkles, GraduationCap } from "lucide-react";
 
 const BENEFITS = [
@@ -41,7 +42,8 @@ export default function ResumeBuilderLandingPage() {
     setLoading(true);
     try {
       const attribution = getEffectiveAttribution();
-      const { session } = await backend.resume.createSession({ attribution });
+      const { session, sessionToken } = await backend.resume.createSession({ attribution });
+      if (sessionToken) storeSessionToken(session.id, sessionToken);
       navigate(`/resume-builder/session/${session.id}${isRtoSource ? `?source=rto&rtoCode=${rtoCode}&rtoId=${rtoId}` : ""}`);
     } catch (err) {
       console.error(err);

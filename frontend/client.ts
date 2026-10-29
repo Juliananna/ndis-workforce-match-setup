@@ -2002,7 +2002,10 @@ import {
     generateSearchCard as api_resume_ai_generate_generateSearchCard,
     generateSummary as api_resume_ai_generate_generateSummary
 } from "~backend/resume/ai_generate";
-import { convertToProfile as api_resume_convert_to_profile_convertToProfile } from "~backend/resume/convert_to_profile";
+import {
+    confirmAccountLink as api_resume_convert_to_profile_confirmAccountLink,
+    convertToProfile as api_resume_convert_to_profile_convertToProfile
+} from "~backend/resume/convert_to_profile";
 import { emailCapture as api_resume_email_capture_emailCapture } from "~backend/resume/email_capture";
 import {
     createResumePremiumCheckout as api_resume_premium_createResumePremiumCheckout,
@@ -2010,10 +2013,7 @@ import {
     saveResumeTheme as api_resume_premium_saveResumeTheme
 } from "~backend/resume/premium";
 import { purgeAnonymousLeads as api_resume_purge_anonymous_purgeAnonymousLeads } from "~backend/resume/purge_anonymous";
-import {
-    addReferee as api_resume_referees_addReferee,
-    updateReferee as api_resume_referees_updateReferee
-} from "~backend/resume/referees";
+import { addReferee as api_resume_referees_addReferee } from "~backend/resume/referees";
 import { createSession as api_resume_session_create_createSession } from "~backend/resume/session_create";
 import { getSession as api_resume_session_get_getSession } from "~backend/resume/session_get";
 import {
@@ -2033,6 +2033,7 @@ export namespace resume {
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.addReferee = this.addReferee.bind(this)
+            this.confirmAccountLink = this.confirmAccountLink.bind(this)
             this.confirmSessionPhoto = this.confirmSessionPhoto.bind(this)
             this.convertToProfile = this.convertToProfile.bind(this)
             this.createResumePremiumCheckout = this.createResumePremiumCheckout.bind(this)
@@ -2053,15 +2054,11 @@ export namespace resume {
             this.purgeAnonymousLeads = this.purgeAnonymousLeads.bind(this)
             this.saveResumeTheme = this.saveResumeTheme.bind(this)
             this.scoreSession = this.scoreSession.bind(this)
-            this.updateReferee = this.updateReferee.bind(this)
             this.updateSession = this.updateSession.bind(this)
             this.verifyResumeDocument = this.verifyResumeDocument.bind(this)
             this.workerCreateOrGetSession = this.workerCreateOrGetSession.bind(this)
         }
 
-        /**
-         * Adds a referee to a resume session.
-         */
         public async addReferee(params: RequestType<typeof api_resume_referees_addReferee>): Promise<ResponseType<typeof api_resume_referees_addReferee>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
@@ -2072,6 +2069,7 @@ export namespace resume {
                 refereeName:      params.refereeName,
                 refereeRole:      params.refereeRole,
                 relationship:     params.relationship,
+                sessionToken:     params.sessionToken,
                 yearsKnown:       params.yearsKnown,
             }
 
@@ -2080,10 +2078,17 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_addReferee>
         }
 
+        public async confirmAccountLink(params: RequestType<typeof api_resume_convert_to_profile_confirmAccountLink>): Promise<ResponseType<typeof api_resume_convert_to_profile_confirmAccountLink>> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/confirm-link`, {method: "POST", body: JSON.stringify(params)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_convert_to_profile_confirmAccountLink>
+        }
+
         public async confirmSessionPhoto(params: RequestType<typeof api_resume_session_photo_confirmSessionPhoto>): Promise<ResponseType<typeof api_resume_session_photo_confirmSessionPhoto>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                photoKey: params.photoKey,
+                photoKey:     params.photoKey,
+                sessionToken: params.sessionToken,
             }
 
             // Now make the actual call to the API
@@ -2091,17 +2096,23 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_photo_confirmSessionPhoto>
         }
 
-        public async convertToProfile(params: { id: string }): Promise<ResponseType<typeof api_resume_convert_to_profile_convertToProfile>> {
+        public async convertToProfile(params: RequestType<typeof api_resume_convert_to_profile_convertToProfile>): Promise<ResponseType<typeof api_resume_convert_to_profile_convertToProfile>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                sessionToken: params.sessionToken,
+            }
+
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/convert-to-profile`, {method: "POST", body: undefined})
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/convert-to-profile`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_convert_to_profile_convertToProfile>
         }
 
         public async createResumePremiumCheckout(params: RequestType<typeof api_resume_premium_createResumePremiumCheckout>): Promise<ResponseType<typeof api_resume_premium_createResumePremiumCheckout>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                cancelUrl:  params.cancelUrl,
-                successUrl: params.successUrl,
+                cancelUrl:    params.cancelUrl,
+                sessionToken: params.sessionToken,
+                successUrl:   params.successUrl,
             }
 
             // Now make the actual call to the API
@@ -2124,6 +2135,7 @@ export namespace resume {
                 consentResumeGeneration:   params.consentResumeGeneration,
                 email:                     params.email,
                 ipAddress:                 params.ipAddress,
+                sessionToken:              params.sessionToken,
                 userAgent:                 params.userAgent,
             }
 
@@ -2132,54 +2144,41 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_email_capture_emailCapture>
         }
 
-        /**
-         * Generates an AI profile bio for a session.
-         */
         public async generateBio(params: RequestType<typeof api_resume_ai_generate_generateBio>): Promise<ResponseType<typeof api_resume_ai_generate_generateBio>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/ai/profile-bio`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateBio>
         }
 
-        /**
-         * Generates AI resume bullet points for a session.
-         */
         public async generateBullets(params: RequestType<typeof api_resume_ai_generate_generateBullets>): Promise<ResponseType<typeof api_resume_ai_generate_generateBullets>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/ai/resume-bullets`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateBullets>
         }
 
-        /**
-         * Generates AI interview prompts for a session.
-         */
         public async generateInterviewPrompts(params: RequestType<typeof api_resume_ai_generate_generateInterviewPrompts>): Promise<ResponseType<typeof api_resume_ai_generate_generateInterviewPrompts>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/ai/interview-prompts`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateInterviewPrompts>
         }
 
-        /**
-         * Generates all AI content for a resume session (summary, bullets, bio, search card, interview prompts).
-         */
-        public async generateResumeContent(params: { id: string }): Promise<ResponseType<typeof api_resume_ai_generate_generateResumeContent>> {
+        public async generateResumeContent(params: RequestType<typeof api_resume_ai_generate_generateResumeContent>): Promise<ResponseType<typeof api_resume_ai_generate_generateResumeContent>> {
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                sessionToken: params.sessionToken,
+            }
+
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/generate-resume`, {method: "POST", body: undefined})
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/generate-resume`, {method: "POST", body: JSON.stringify(body)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateResumeContent>
         }
 
-        /**
-         * Generates an AI search card summary for a session.
-         */
         public async generateSearchCard(params: RequestType<typeof api_resume_ai_generate_generateSearchCard>): Promise<ResponseType<typeof api_resume_ai_generate_generateSearchCard>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/ai/search-card`, {method: "POST", body: JSON.stringify(params)})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_ai_generate_generateSearchCard>
         }
 
-        /**
-         * Generates only the AI resume summary for a session.
-         */
         public async generateSummary(params: RequestType<typeof api_resume_ai_generate_generateSummary>): Promise<ResponseType<typeof api_resume_ai_generate_generateSummary>> {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI(`/ai/resume-summary`, {method: "POST", body: JSON.stringify(params)})
@@ -2195,25 +2194,33 @@ export namespace resume {
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_admin_leads_getLeadDetail>
         }
 
-        public async getResumePremiumStatus(params: { id: string }): Promise<ResponseType<typeof api_resume_premium_getResumePremiumStatus>> {
+        public async getResumePremiumStatus(params: RequestType<typeof api_resume_premium_getResumePremiumStatus>): Promise<ResponseType<typeof api_resume_premium_getResumePremiumStatus>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                sessionToken: params.sessionToken,
+            })
+
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/premium`, {method: "GET", body: undefined})
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/premium`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_premium_getResumePremiumStatus>
         }
 
-        /**
-         * Retrieves a resume builder session with all associated data.
-         */
-        public async getSession(params: { id: string }): Promise<ResponseType<typeof api_resume_session_get_getSession>> {
+        public async getSession(params: RequestType<typeof api_resume_session_get_getSession>): Promise<ResponseType<typeof api_resume_session_get_getSession>> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                sessionToken: params.sessionToken,
+            })
+
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {method: "GET", body: undefined})
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}`, {query, method: "GET", body: undefined})
             return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_get_getSession>
         }
 
         public async getSessionPhotoUploadUrl(params: RequestType<typeof api_resume_session_photo_getSessionPhotoUploadUrl>): Promise<ResponseType<typeof api_resume_session_photo_getSessionPhotoUploadUrl>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                fileName: params.fileName,
+                fileName:     params.fileName,
+                sessionToken: params.sessionToken,
             }
 
             // Now make the actual call to the API
@@ -2255,7 +2262,8 @@ export namespace resume {
         public async saveResumeTheme(params: RequestType<typeof api_resume_premium_saveResumeTheme>): Promise<ResponseType<typeof api_resume_premium_saveResumeTheme>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                theme: params.theme,
+                sessionToken: params.sessionToken,
+                theme:        params.theme,
             }
 
             // Now make the actual call to the API
@@ -2266,25 +2274,15 @@ export namespace resume {
         /**
          * Calculates the resume strength score for a session.
          */
-        public async scoreSession(params: { id: string }): Promise<ResponseType<typeof api_resume_session_score_scoreSession>> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/score`, {method: "POST", body: undefined})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_score_scoreSession>
-        }
-
-        /**
-         * Updates a referee's status or notes (used by admin).
-         */
-        public async updateReferee(params: RequestType<typeof api_resume_referees_updateReferee>): Promise<ResponseType<typeof api_resume_referees_updateReferee>> {
+        public async scoreSession(params: RequestType<typeof api_resume_session_score_scoreSession>): Promise<ResponseType<typeof api_resume_session_score_scoreSession>> {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
-                referenceNotes:  params.referenceNotes,
-                referenceStatus: params.referenceStatus,
+                sessionToken: params.sessionToken,
             }
 
             // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/referees/${encodeURIComponent(params.refereeId)}`, {method: "PATCH", body: JSON.stringify(body)})
-            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_referees_updateReferee>
+            const resp = await this.baseClient.callTypedAPI(`/resume-sessions/${encodeURIComponent(params.id)}/score`, {method: "POST", body: JSON.stringify(body)})
+            return JSON.parse(await resp.text(), dateReviver) as ResponseType<typeof api_resume_session_score_scoreSession>
         }
 
         public async updateSession(params: RequestType<typeof api_resume_session_update_updateSession>): Promise<ResponseType<typeof api_resume_session_update_updateSession>> {
@@ -2305,6 +2303,7 @@ export namespace resume {
                 phone:               params.phone,
                 postcode:            params.postcode,
                 qualifications:      params.qualifications,
+                sessionToken:        params.sessionToken,
                 state:               params.state,
                 stepCompleted:       params.stepCompleted,
                 suburb:              params.suburb,

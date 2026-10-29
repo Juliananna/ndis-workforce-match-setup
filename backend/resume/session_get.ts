@@ -1,10 +1,12 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import type { ResumeSession, ConsentRecord, RefereeRecord, DocumentRecord } from "./types";
 
 interface GetSessionParams {
   id: string;
+  sessionToken?: string;
 }
 
 interface GetSessionResponse {
@@ -14,10 +16,11 @@ interface GetSessionResponse {
   documents: DocumentRecord[];
 }
 
-// Retrieves a resume builder session with all associated data.
 export const getSession = api<GetSessionParams, GetSessionResponse>(
   { expose: true, method: "GET", path: "/resume-sessions/:id" },
-  async ({ id }) => {
+  async ({ id, sessionToken }) => {
+    await verifySessionToken(id, sessionToken);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
     if (!row) throw APIError.notFound("session not found");
 

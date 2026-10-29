@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import type { ResumeSession, WorkHistoryEntry, QualificationEntry, TrainingEntry, CheckEntry, CapabilityStory, AvailabilityEntry } from "./types";
 import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 
@@ -8,6 +9,7 @@ export const RESUME_MAX_STEP = 8;
 
 interface UpdateSessionRequest {
   id: string;
+  sessionToken?: string;
   stepCompleted?: number;
   email?: string;
   firstName?: string;
@@ -42,6 +44,8 @@ interface UpdateSessionResponse {
 export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
   { expose: true, method: "PATCH", path: "/resume-sessions/:id" },
   async (req) => {
+    await verifySessionToken(req.id, req.sessionToken);
+
     const existing = await db.queryRow<{
       id: string;
       step_completed: number;
@@ -70,7 +74,8 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
     const trainingJson = req.training != null ? JSON.stringify(req.training) : null;
     const checksJson = req.checks != null ? JSON.stringify(req.checks) : null;
 
-    const incomingStep = req.stepCompleted ?? null;
+    const rawStep = req.stepCompleted ?? null;
+    const incomingStep = rawStep !== null ? Math.min(rawStep, RESUME_MAX_STEP) : null;
     const reachingFinalStep =
       incomingStep !== null &&
       incomingStep >= RESUME_MAX_STEP &&

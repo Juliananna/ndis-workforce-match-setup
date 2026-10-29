@@ -1,10 +1,12 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import { convertSessionToProfile } from "./convert_helpers";
 
 interface ConvertToProfileRequest {
   id: string;
+  sessionToken?: string;
 }
 
 interface ConvertToProfileResponse {
@@ -17,6 +19,8 @@ interface ConvertToProfileResponse {
 export const convertToProfile = api<ConvertToProfileRequest, ConvertToProfileResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/convert-to-profile" },
   async (req) => {
+    await verifySessionToken(req.id, req.sessionToken);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
     if (!row) throw APIError.notFound("session not found");
 

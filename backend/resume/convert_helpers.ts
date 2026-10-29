@@ -37,7 +37,7 @@ export async function issueSetPasswordEmail(userId: string, email: string): Prom
       <div style="background: linear-gradient(135deg, #0d9488, #059669); border-radius: 16px; padding: 32px; text-align: center; color: white; margin-bottom: 24px;">
         <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
         <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700;">Your resume is ready!</h1>
-        <p style="margin: 0; font-size: 15px; opacity: 0.9;">One last step — upload your first compliance document to activate your KizaziHire profile and get matched with providers.</p>
+        <p style="margin: 0; font-size: 15px; opacity: 0.9;">One last step — set your password and upload your compliance documents. Our team will review them and activate your profile.</p>
       </div>
 
       <div style="background: #f8fafc; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
@@ -55,10 +55,13 @@ export async function issueSetPasswordEmail(userId: string, email: string): Prom
             <span style="color: #0d9488;">1.</span> Set your password using the button above
           </div>
           <div style="color: #334155; font-size: 14px;">
-            <span style="color: #0d9488;">2.</span> Upload your first compliance document (Police Clearance, NDIS Screening, etc.)
+            <span style="color: #0d9488;">2.</span> Upload your compliance documents (Police Clearance, NDIS Screening, etc.)
           </div>
           <div style="color: #334155; font-size: 14px;">
-            <span style="color: #0d9488;">3.</span> Your profile goes live and you start appearing in provider searches
+            <span style="color: #0d9488;">3.</span> Our team reviews your documents — usually within 1–2 business days
+          </div>
+          <div style="color: #334155; font-size: 14px;">
+            <span style="color: #0d9488;">4.</span> Once approved, your profile goes live and providers can find you
           </div>
           <div style="color: #334155; font-size: 14px;">
             <span style="color: #0d9488;">✓</span> Your resume data pre-fills your profile — no re-entering anything
@@ -304,30 +307,17 @@ export async function convertSessionToProfile(
 
     if (existingWorker) {
       await db.exec`
+        UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
+        WHERE id = ${sessionId}
+      `;
+
+      await db.exec`
         UPDATE workers SET
-          target_role = COALESCE(${session.targetRole ?? null}, target_role),
-          experience_level = COALESCE(${session.experienceLevel ?? null}, experience_level),
-          suburb = COALESCE(${session.suburb ?? null}, suburb),
-          postcode = COALESCE(${session.postcode ?? null}, postcode),
-          support_settings = COALESCE(${supportSettingsJson}::jsonb, support_settings),
-          support_tasks = COALESCE(${supportTasksJson}::jsonb, support_tasks),
-          support_style = COALESCE(${session.supportStyle ?? null}, support_style),
-          languages = COALESCE(${languagesJson}::jsonb, languages),
-          work_history = COALESCE(${workHistoryJson}::jsonb, work_history),
-          qualifications_json = COALESCE(${qualificationsJsonVal}::jsonb, qualifications_json),
-          training = COALESCE(${trainingJson}::jsonb, training),
-          checks = COALESCE(${checksJson}::jsonb, checks),
-          capability_stories = COALESCE(${capabilityStoriesJson}::jsonb, capability_stories),
           resume_session_id = ${sessionId},
           updated_at = NOW()
         WHERE worker_id = ${existingWorker.worker_id}
       `;
 
-      await db.exec`
-        UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
-        WHERE id = ${sessionId}
-      `;
-      await buildWorkerExtras(session, existingWorker.worker_id, availabilityDays, availabilityShifts);
       await migrateResumeDocs(sessionId, existingWorker.worker_id);
       await migrateResumePhoto(sessionId, existingWorker.worker_id);
       await transferMarketingConsent(sessionId, existingWorker.worker_id);

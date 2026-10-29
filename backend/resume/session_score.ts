@@ -1,10 +1,12 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession, computeScore } from "./session_helpers";
+import { verifySessionToken } from "./session_token";
 import type { ResumeSession, ScoreBreakdown } from "./types";
 
 interface ScoreSessionParams {
   id: string;
+  sessionToken?: string;
 }
 
 interface ScoreSessionResponse {
@@ -17,7 +19,9 @@ interface ScoreSessionResponse {
 // Calculates the resume strength score for a session.
 export const scoreSession = api<ScoreSessionParams, ScoreSessionResponse>(
   { expose: true, method: "POST", path: "/resume-sessions/:id/score" },
-  async ({ id }) => {
+  async ({ id, sessionToken }) => {
+    await verifySessionToken(id, sessionToken);
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${id}`;
     if (!row) throw APIError.notFound("session not found");
 
