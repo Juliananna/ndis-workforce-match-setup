@@ -29,22 +29,57 @@ async function eventExists(idempotencyKey: string): Promise<boolean> {
   return row?.exists ?? false;
 }
 
+/**
+ * Attempts to write a lifecycle event and verifies it was actually persisted
+ * before counting it as a successful repair.
+ *
+ * writeLifecycleEvent() catches all errors internally and never throws, so a
+ * failed write is indistinguishable from a no-op at the call site. This
+ * function performs an explicit post-write existence check to confirm the row
+ * landed before reporting "inserted". A write that fails silently will appear
+ * as "error" in the output, not "inserted".
+ */
 async function tryWrite(
   opts: Parameters<typeof writeLifecycleEvent>[0],
   details: ReconcileDetail[],
   counters: { inserted: number; alreadyPresent: number; errors: number }
 ): Promise<void> {
   const key = opts.idempotencyKey ?? deriveEventId(opts.entityType, opts.entityId, opts.eventType);
+
   try {
-    const exists = await eventExists(key);
-    if (exists) {
+    const existsBefore = await eventExists(key);
+    if (existsBefore) {
       counters.alreadyPresent++;
-      details.push({ eventType: opts.eventType, entityId: opts.entityId, idempotencyKey: key, outcome: "already_present" });
+      details.push({
+        eventType: opts.eventType,
+        entityId: opts.entityId,
+        idempotencyKey: key,
+        outcome: "already_present",
+      });
       return;
     }
+
     await writeLifecycleEvent(opts);
-    counters.inserted++;
-    details.push({ eventType: opts.eventType, entityId: opts.entityId, idempotencyKey: key, outcome: "inserted" });
+
+    const existsAfter = await eventExists(key);
+    if (existsAfter) {
+      counters.inserted++;
+      details.push({
+        eventType: opts.eventType,
+        entityId: opts.entityId,
+        idempotencyKey: key,
+        outcome: "inserted",
+      });
+    } else {
+      counters.errors++;
+      details.push({
+        eventType: opts.eventType,
+        entityId: opts.entityId,
+        idempotencyKey: key,
+        outcome: "error",
+        errorMessage: "write appeared to succeed but row not found in post-write verification",
+      });
+    }
   } catch (err) {
     counters.errors++;
     details.push({
@@ -60,27 +95,27 @@ async function tryWrite(
 /**
  * Idempotent reconciliation of lifecycle_events against authoritative database state.
  *
- * For each expected lifecycle event type, this function derives the same
- * deterministic idempotency key used by the original writer and inserts the
- * event row only if it is absent. Rows that already exist are skipped via
- * ON CONFLICT DO NOTHING — making the entire operation safe to run repeatedly.
+ * For each expected lifecycle event, derives the same deterministic idempotency
+ * key used by the original writer and inserts the row only if it is absent.
+ * The post-write existence check ensures a silently-failed write is reported as
+ * an error, not a success.
  *
- * Covered event types (in the order they occur in the funnel):
- *   email_captured           — resume_sessions with email IS NOT NULL
- *   resume_completed         — resume_sessions with resume_completed_at IS NOT NULL
- *   worker_profile_created   — sessions with converted_worker_id, user is_new (created via resume builder)
- *   worker_profile_linked    — sessions with converted_worker_id, user pre-existed
- *   email_verified           — users.is_verified = TRUE (both paths)
- *   ready_to_hire_approved   — workers.ready_to_hire = TRUE (current approved state)
+ * Key anchoring strategy:
  *
- * NOT covered by this reconciler (revocation events):
- *   ready_to_hire_revoked / ready_to_hire_auto_revoked — these are point-in-time
- *   events tied to a specific admin action or auto-revoke run. They cannot be
- *   reconstructed from current DB state alone because the state has already
- *   transitioned back to ready_to_hire = FALSE. The ready_to_hire_audit table
- *   is the authoritative log for those events and should be consulted separately.
+ *   email_captured / resume_completed / worker_profile_created /
+ *   worker_profile_linked / email_verified
+ *     — keyed by (entity_type, entity_id, event_type[, suffix]).
+ *       These events are one-per-entity so the entity ID is sufficient.
  *
- * GHL sync state is not modified by this function.
+ *   ready_to_hire_approved / ready_to_hire_revoked / ready_to_hire_auto_revoked
+ *     — ALL sourced from ready_to_hire_audit using the audit row UUID as suffix.
+ *       This correctly handles repeated approval/revocation/reapproval cycles:
+ *       each audit row represents a distinct decision and gets a distinct stable key.
+ *       The original live-path writer uses a time-scoped suffix; the reconciler
+ *       uses audit IDs instead, which are stable even after the workers row is
+ *       overwritten by a later decision.
+ *
+ * Events not modified: GHL contact IDs, tags, sync logs, or any other state.
  */
 export async function runLifecycleReconcile(): Promise<LifecycleReconcileResponse> {
   const details: ReconcileDetail[] = [];
@@ -104,11 +139,14 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
       rs.id,
       rs.email,
       (SELECT granted FROM resume_session_consents
-       WHERE session_id = rs.id AND consent_type = 'marketing_emails' LIMIT 1) AS consent_marketing_emails,
+       WHERE session_id = rs.id AND consent_type = 'marketing_emails' LIMIT 1)
+        AS consent_marketing_emails,
       (SELECT granted FROM resume_session_consents
-       WHERE session_id = rs.id AND consent_type = 'profile_creation' LIMIT 1) AS consent_profile_creation,
+       WHERE session_id = rs.id AND consent_type = 'profile_creation' LIMIT 1)
+        AS consent_profile_creation,
       (SELECT granted FROM resume_session_consents
-       WHERE session_id = rs.id AND consent_type = 'provider_visibility' LIMIT 1) AS consent_provider_visibility,
+       WHERE session_id = rs.id AND consent_type = 'provider_visibility' LIMIT 1)
+        AS consent_provider_visibility,
       rs.created_at
     FROM resume_sessions rs
     WHERE rs.email IS NOT NULL
@@ -117,12 +155,11 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
 
   for (const s of emailCapturedSessions) {
     checked++;
-    const key = deriveEventId("resume_session", s.id, "email_captured");
     await tryWrite({
       eventType: "email_captured",
       entityType: "resume_session",
       entityId: s.id,
-      idempotencyKey: key,
+      idempotencyKey: deriveEventId("resume_session", s.id, "email_captured"),
       payload: {
         eventType: "email_captured",
         occurredAt: s.created_at.toISOString(),
@@ -163,12 +200,11 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
 
   for (const s of completedSessions) {
     checked++;
-    const key = deriveEventId("resume_session", s.id, "resume_completed");
     await tryWrite({
       eventType: "resume_completed",
       entityType: "resume_session",
       entityId: s.id,
-      idempotencyKey: key,
+      idempotencyKey: deriveEventId("resume_session", s.id, "resume_completed"),
       payload: {
         eventType: "resume_completed",
         occurredAt: s.resume_completed_at.toISOString(),
@@ -186,15 +222,10 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
   }
 
   // ------------------------------------------------------------------
-  // 3. worker_profile_created and worker_profile_linked
-  //    Source: resume_sessions with converted_worker_id IS NOT NULL
-  //    Key for both: sha256("resume_session:<sessionId>:worker_profile_created|linked")
-  //    Distinction: if the user was created IN THE SAME transaction (is_new),
-  //    we look at whether the user's created_at is close to the session's
-  //    conversion. The authoritative signal is resume_audit_log.
-  //    Simpler and safer: check both event types, insert whichever is missing.
-  //    The worker row always exists by the time we run; we use consent records
-  //    to reconstruct marketing consent accurately.
+  // 3. worker_profile_created / worker_profile_linked
+  //    Source: resume_sessions with converted_worker_id IS NOT NULL.
+  //    The audit log distinguishes linked (pre-existing user) from created.
+  //    Key: sha256("resume_session:<sessionId>:worker_profile_created|linked")
   // ------------------------------------------------------------------
   const convertedSessions = await db.queryAll<{
     id: string;
@@ -211,7 +242,11 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
       (
         SELECT event_type FROM resume_audit_log
         WHERE session_id = rs.id
-          AND event_type IN ('worker_profile_created_from_resume', 'converted_to_profile', 'worker_profile_linked')
+          AND event_type IN (
+            'worker_profile_created_from_resume',
+            'converted_to_profile',
+            'worker_profile_linked'
+          )
         ORDER BY created_at ASC
         LIMIT 1
       ) AS audit_event_type
@@ -236,12 +271,11 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
     const eventType = isLinked ? "worker_profile_linked" : "worker_profile_created";
 
     checked++;
-    const key = deriveEventId("resume_session", s.id, eventType);
     await tryWrite({
       eventType,
-      entityType: isLinked ? "worker" : "worker",
+      entityType: "worker",
       entityId: workerRow.worker_id,
-      idempotencyKey: key,
+      idempotencyKey: deriveEventId("resume_session", s.id, eventType),
       payload: isLinked
         ? {
             eventType: "worker_profile_linked",
@@ -270,8 +304,7 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
 
   // ------------------------------------------------------------------
   // 4. email_verified — direct_registration path
-  //    Source: users.is_verified = TRUE, verification_token IS NULL
-  //    and no worker was created via resume builder for this user
+  //    Users who verified via link click and have no resume-builder session.
   //    Key: sha256("user:<userId>:email_verified:direct_registration")
   // ------------------------------------------------------------------
   const directVerifiedUsers = await db.queryAll<{
@@ -284,23 +317,21 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
     FROM users u
     WHERE u.is_verified = TRUE
       AND u.verification_token IS NULL
+      AND u.is_demo = FALSE
       AND NOT EXISTS (
         SELECT 1 FROM resume_sessions rs
-        WHERE rs.converted_worker_id IN (
-          SELECT worker_id FROM workers WHERE user_id = u.user_id
-        )
+        JOIN workers w ON w.worker_id = rs.converted_worker_id
+        WHERE w.user_id = u.user_id
       )
-      AND u.is_demo = FALSE
   `;
 
   for (const u of directVerifiedUsers) {
     checked++;
-    const key = deriveEventId("user", u.user_id, "email_verified", "direct_registration");
     await tryWrite({
       eventType: "email_verified",
       entityType: "user",
       entityId: u.user_id,
-      idempotencyKey: key,
+      idempotencyKey: deriveEventId("user", u.user_id, "email_verified", "direct_registration"),
       payload: {
         eventType: "email_verified",
         occurredAt: u.updated_at.toISOString(),
@@ -315,8 +346,7 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
 
   // ------------------------------------------------------------------
   // 5. email_verified — resume_builder_auto path
-  //    Source: users created via resume builder (is_verified = TRUE at creation,
-  //    linked to a resume session that was converted)
+  //    Users created via resume builder (is_verified = TRUE at creation).
   //    Key: sha256("user:<userId>:email_verified:resume_builder_auto")
   // ------------------------------------------------------------------
   const resumeAutoVerifiedUsers = await db.queryAll<{
@@ -337,12 +367,11 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
 
   for (const u of resumeAutoVerifiedUsers) {
     checked++;
-    const key = deriveEventId("user", u.user_id, "email_verified", "resume_builder_auto");
     await tryWrite({
       eventType: "email_verified",
       entityType: "user",
       entityId: u.user_id,
-      idempotencyKey: key,
+      idempotencyKey: deriveEventId("user", u.user_id, "email_verified", "resume_builder_auto"),
       payload: {
         eventType: "email_verified",
         occurredAt: u.created_at.toISOString(),
@@ -358,55 +387,132 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
   }
 
   // ------------------------------------------------------------------
-  // 6. ready_to_hire_approved (current approved state only)
-  //    Source: workers.ready_to_hire = TRUE with approved_at set
-  //    Key: sha256("worker:<workerId>:ready_to_hire_approved:<date>")
-  //    Note: uses the date of approval as the suffix — same key as original.
+  // 6. ready_to_hire_approved / ready_to_hire_revoked / ready_to_hire_auto_revoked
+  //
+  //    ALL sourced from ready_to_hire_audit — the authoritative decision log.
+  //    The audit UUID is used as the idempotency suffix so that:
+  //      - Each distinct decision (approve, revoke, re-approve) gets a unique key.
+  //      - Repeated reconciliation runs are always no-ops for existing rows.
+  //      - Approval/revocation/reapproval cycles are preserved: e.g. a worker
+  //        approved, then revoked, then re-approved produces THREE rows with
+  //        THREE distinct keys, all correctly reconstructed.
+  //
+  //    The original live-path writers use time-scoped suffixes (date for approve,
+  //    minute for revoke, hour for auto_revoke). The reconciler cannot reproduce
+  //    those suffixes exactly for historical rows without storing them, so it uses
+  //    audit UUIDs instead. Live events written by the original writers will appear
+  //    as "already_present" when their key collides, or as independent events when
+  //    the audit-UUID key differs from the time-scoped key. Both outcomes are safe:
+  //    the lifecycle log is append-only and consumers must tolerate duplicates.
+  //
+  //    Original timestamps (created_at from audit) are preserved exactly.
+  //    No data is invented: every field comes directly from the audit row or the
+  //    associated workers/users join. mandatoryDocsPresent is taken from the
+  //    stored eligibility_snapshot when available; empty array otherwise.
   // ------------------------------------------------------------------
-  const approvedWorkers = await db.queryAll<{
+  const auditRows = await db.queryAll<{
+    id: string;
     worker_id: string;
-    email: string;
-    ready_to_hire_approved_at: Date;
-    ready_to_hire_approved_by: string | null;
+    action: string;
+    acted_by_email: string | null;
+    reason: string | null;
     verified_doc_count: number;
     verified_ref_count: number;
+    mandatory_doc_types: string[];
+    eligibility_snapshot: unknown;
+    created_at: Date;
+    worker_email: string;
   }>`
     SELECT
-      w.worker_id,
-      u.email,
-      w.ready_to_hire_approved_at,
-      w.ready_to_hire_approved_by,
-      (SELECT COUNT(*)::int FROM worker_documents
-       WHERE worker_id = w.worker_id AND verification_status = 'Verified') AS verified_doc_count,
-      (SELECT COUNT(*)::int FROM worker_references
-       WHERE worker_id = w.worker_id AND status = 'verified') AS verified_ref_count
-    FROM workers w
+      a.id,
+      a.worker_id,
+      a.action,
+      a.acted_by_email,
+      a.reason,
+      a.verified_doc_count,
+      a.verified_ref_count,
+      a.mandatory_doc_types,
+      a.eligibility_snapshot,
+      a.created_at,
+      u.email AS worker_email
+    FROM ready_to_hire_audit a
+    JOIN workers w ON w.worker_id = a.worker_id
     JOIN users u ON u.user_id = w.user_id
-    WHERE w.ready_to_hire = TRUE
-      AND w.ready_to_hire_approved_at IS NOT NULL
+    ORDER BY a.created_at ASC
   `;
 
-  for (const w of approvedWorkers) {
+  for (const a of auditRows) {
     checked++;
-    const dateKey = w.ready_to_hire_approved_at.toISOString().slice(0, 10);
-    const key = deriveEventId("worker", w.worker_id, "ready_to_hire_approved", dateKey);
-    await tryWrite({
-      eventType: "ready_to_hire_approved",
-      entityType: "worker",
-      entityId: w.worker_id,
-      idempotencyKey: key,
-      payload: {
+
+    const snapshot = a.eligibility_snapshot != null
+      ? (typeof a.eligibility_snapshot === "string"
+          ? JSON.parse(a.eligibility_snapshot)
+          : a.eligibility_snapshot) as Record<string, unknown>
+      : null;
+
+    const mandatoryDocsPresent: string[] =
+      Array.isArray(snapshot?.mandatoryDocsPresent)
+        ? (snapshot!.mandatoryDocsPresent as string[])
+        : a.mandatory_doc_types;
+
+    if (a.action === "approved") {
+      await tryWrite({
         eventType: "ready_to_hire_approved",
-        occurredAt: w.ready_to_hire_approved_at.toISOString(),
-        workerId: w.worker_id,
-        email: w.email,
-        approvedByEmail: w.ready_to_hire_approved_by ?? "unknown",
-        verifiedDocCount: w.verified_doc_count,
-        verifiedRefCount: w.verified_ref_count,
-        mandatoryDocsPresent: [],
-      },
-      workerId: w.worker_id,
-    }, details, counters);
+        entityType: "worker",
+        entityId: a.worker_id,
+        idempotencyKey: deriveEventId("worker", a.worker_id, "ready_to_hire_approved", `audit:${a.id}`),
+        payload: {
+          eventType: "ready_to_hire_approved",
+          occurredAt: a.created_at.toISOString(),
+          workerId: a.worker_id,
+          email: a.worker_email,
+          approvedByEmail: a.acted_by_email ?? "unknown",
+          verifiedDocCount: a.verified_doc_count,
+          verifiedRefCount: a.verified_ref_count,
+          mandatoryDocsPresent,
+        },
+        workerId: a.worker_id,
+      }, details, counters);
+
+    } else if (a.action === "revoked") {
+      await tryWrite({
+        eventType: "ready_to_hire_revoked",
+        entityType: "worker",
+        entityId: a.worker_id,
+        idempotencyKey: deriveEventId("worker", a.worker_id, "ready_to_hire_revoked", `audit:${a.id}`),
+        payload: {
+          eventType: "ready_to_hire_revoked",
+          occurredAt: a.created_at.toISOString(),
+          workerId: a.worker_id,
+          email: a.worker_email,
+          revokedByEmail: a.acted_by_email ?? "unknown",
+          reason: a.reason ?? "",
+        },
+        workerId: a.worker_id,
+      }, details, counters);
+
+    } else if (a.action === "auto_revoked") {
+      const mandatoryDocsExpiredOrFlagged: string[] =
+        Array.isArray(snapshot?.mandatoryDocsExpiredOrFlagged)
+          ? (snapshot!.mandatoryDocsExpiredOrFlagged as string[])
+          : [];
+
+      await tryWrite({
+        eventType: "ready_to_hire_auto_revoked",
+        entityType: "worker",
+        entityId: a.worker_id,
+        idempotencyKey: deriveEventId("worker", a.worker_id, "ready_to_hire_auto_revoked", `audit:${a.id}`),
+        payload: {
+          eventType: "ready_to_hire_auto_revoked",
+          occurredAt: a.created_at.toISOString(),
+          workerId: a.worker_id,
+          email: a.worker_email,
+          reason: a.reason ?? "",
+          mandatoryDocsExpiredOrFlagged,
+        },
+        workerId: a.worker_id,
+      }, details, counters);
+    }
   }
 
   return {
@@ -418,7 +524,6 @@ export async function runLifecycleReconcile(): Promise<LifecycleReconcileRespons
   };
 }
 
-// Admin-only manual trigger. GHL state is never modified.
 export const adminLifecycleReconcile = api<void, LifecycleReconcileResponse>(
   {
     expose: true,
