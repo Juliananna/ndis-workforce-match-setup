@@ -123,7 +123,7 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
       const lastName = session.lastName ?? undefined;
       const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || undefined;
       const tags = ["resume-lead", "worker"];
-      if (profileCreated || (req.consentProfileCreation && workerId)) {
+      if (profileCreated) {
         tags.push("resume-converted");
       } else {
         tags.push("profile-not-created");

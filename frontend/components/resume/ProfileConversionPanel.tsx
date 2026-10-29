@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { CheckCircle, ArrowRight, Zap, Shield, Users, Star, Loader2 } from "lucide-react";
+import { CheckCircle, ArrowRight, Zap, Shield, Users, Star, Loader2, LogIn } from "lucide-react";
 import backend from "~backend/client";
 import { useNavigate } from "react-router-dom";
 import type { SessionData } from "./types";
+import { getSessionToken } from "../../lib/sessionToken";
 
-interface Props  {
+interface Props {
   session: SessionData;
   onConverted: (workerId: string) => void;
 }
@@ -21,6 +22,7 @@ export function ProfileConversionPanel({ session, onConverted }: Props) {
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(!!session.convertedWorkerId);
+  const [pendingLink, setPendingLink] = useState(false);
 
   if (done || session.convertedWorkerId) {
     return (
@@ -38,13 +40,38 @@ export function ProfileConversionPanel({ session, onConverted }: Props) {
     );
   }
 
+  if (pendingLink) {
+    return (
+      <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200 text-center space-y-3">
+        <LogIn size={36} className="text-amber-500 mx-auto" />
+        <h3 className="font-bold text-amber-800 text-lg">Account already exists</h3>
+        <p className="text-sm text-amber-700">
+          An existing KizaziHire account is registered to <strong>{session.email}</strong>.
+          Log in to link this resume to your profile — your data will be transferred automatically.
+        </p>
+        <button
+          onClick={() => navigate("/login")}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white font-bold rounded-xl text-sm hover:bg-teal-700 transition-colors"
+        >
+          Log in to link my resume <ArrowRight size={16} />
+        </button>
+        <p className="text-xs text-amber-600">Your resume data is saved and will not be lost.</p>
+      </div>
+    );
+  }
+
   const handleConvert = async () => {
     setError("");
     setConverting(true);
     try {
-      const result = await backend.resume.convertToProfile({ id: session.id });
-      setDone(true);
-      onConverted(result.workerId);
+      const sessionToken = getSessionToken(session.id);
+      const result = await backend.resume.convertToProfile({ id: session.id, sessionToken });
+      if (result.pendingLink) {
+        setPendingLink(true);
+      } else {
+        setDone(true);
+        onConverted(result.workerId);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err?.message ?? "Something went wrong. Please try again.");

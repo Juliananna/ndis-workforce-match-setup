@@ -1,6 +1,6 @@
-ALTER TABLE resume_sessions
-  ADD COLUMN IF NOT EXISTS session_token_hash TEXT;
-
-CREATE INDEX IF NOT EXISTS resume_sessions_token_hash_idx
-  ON resume_sessions (session_token_hash)
-  WHERE session_token_hash IS NOT NULL;
+-- Migration 087 was applied in a prior environment state with different content
+-- (it added a 'session_token' TEXT column which is now unused).
+-- Migration 089 adds the 'session_token_hash' column used by all current code.
+-- This file is intentionally kept as a no-op to preserve migration numbering.
+-- DO NOT re-apply or modify.
+SELECT 1;

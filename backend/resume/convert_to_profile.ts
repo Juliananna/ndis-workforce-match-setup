@@ -102,9 +102,8 @@ export const confirmAccountLink = api<void, ConfirmAccountLinkResponse>(
     const session = await db.queryRow<{
       id: string;
       email: string | null;
-      converted_worker_id: string | null;
     }>`
-      SELECT id, email, converted_worker_id
+      SELECT id, email
       FROM resume_sessions
       WHERE pending_link_worker_id = ${worker.worker_id}
         AND converted_worker_id IS NULL
@@ -116,21 +115,30 @@ export const confirmAccountLink = api<void, ConfirmAccountLinkResponse>(
       throw APIError.notFound("no pending resume link found for this account");
     }
 
-    if (session.converted_worker_id) {
-      return { workerId: session.converted_worker_id, message: "Already linked" };
-    }
-
     const fullSessionRow = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${session.id}`;
     const fullSession = rowToSession(fullSessionRow!);
 
-    await db.exec`
+    const updated = await db.queryRow<{ id: string }>`
       UPDATE resume_sessions
       SET converted_worker_id = ${worker.worker_id},
           pending_link_worker_id = NULL,
           status = 'converted',
           updated_at = NOW()
       WHERE id = ${session.id}
+        AND pending_link_worker_id = ${worker.worker_id}
+        AND converted_worker_id IS NULL
+      RETURNING id
     `;
+
+    if (!updated) {
+      const already = await db.queryRow<{ converted_worker_id: string | null }>`
+        SELECT converted_worker_id FROM resume_sessions WHERE id = ${session.id}
+      `;
+      if (already?.converted_worker_id === worker.worker_id) {
+        return { workerId: worker.worker_id, message: "Resume linked to your KizaziHire profile" };
+      }
+      throw APIError.aborted("concurrent link attempt — please try again");
+    }
 
     await db.exec`
       UPDATE workers SET resume_session_id = ${session.id}, updated_at = NOW()
