@@ -2,6 +2,9 @@ import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
 import type { ResumeSession, WorkHistoryEntry, QualificationEntry, TrainingEntry, CheckEntry, CapabilityStory, AvailabilityEntry } from "./types";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
+
+export const RESUME_MAX_STEP = 8;
 
 interface UpdateSessionRequest {
   id: string;
@@ -36,11 +39,25 @@ interface UpdateSessionResponse {
   session: ResumeSession;
 }
 
-// Updates a resume builder session with new questionnaire data.
 export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
   { expose: true, method: "PATCH", path: "/resume-sessions/:id" },
   async (req) => {
-    const existing = await db.queryRow`SELECT id FROM resume_sessions WHERE id = ${req.id}`;
+    const existing = await db.queryRow<{
+      id: string;
+      step_completed: number;
+      email: string | null;
+      resume_completed_at: Date | null;
+      resume_strength_score: number | null;
+      converted_worker_id: string | null;
+      utm_source: string | null;
+      fbclid: string | null;
+      meta_campaign_id: string | null;
+    }>`
+      SELECT id, step_completed, email, resume_completed_at,
+             resume_strength_score, converted_worker_id,
+             utm_source, fbclid, meta_campaign_id
+      FROM resume_sessions WHERE id = ${req.id}
+    `;
     if (!existing) throw APIError.notFound("session not found");
 
     const supportSettingsJson = req.supportSettings != null ? JSON.stringify(req.supportSettings) : null;
@@ -53,10 +70,20 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
     const trainingJson = req.training != null ? JSON.stringify(req.training) : null;
     const checksJson = req.checks != null ? JSON.stringify(req.checks) : null;
 
+    const incomingStep = req.stepCompleted ?? null;
+    const reachingFinalStep =
+      incomingStep !== null &&
+      incomingStep >= RESUME_MAX_STEP &&
+      existing.resume_completed_at === null;
+
+    const completedAt = reachingFinalStep ? new Date() : null;
+
     await db.exec`
       UPDATE resume_sessions SET
         updated_at = NOW(),
-        step_completed = COALESCE(${req.stepCompleted ?? null}, step_completed),
+        step_completed = COALESCE(${incomingStep}, step_completed),
+        resume_completed_at = COALESCE(${completedAt}, resume_completed_at),
+        resume_completed_step = CASE WHEN ${reachingFinalStep} THEN ${incomingStep} ELSE resume_completed_step END,
         email = COALESCE(${req.email ?? null}, email),
         first_name = COALESCE(${req.firstName ?? null}, first_name),
         last_name = COALESCE(${req.lastName ?? null}, last_name),
@@ -85,6 +112,38 @@ export const updateSession = api<UpdateSessionRequest, UpdateSessionResponse>(
     `;
 
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
-    return { session: rowToSession(row!) };
+    const session = rowToSession(row!);
+
+    if (reachingFinalStep) {
+      await writeLifecycleEvent({
+        eventType: "resume_completed",
+        entityType: "resume_session",
+        entityId: req.id,
+        idempotencyKey: deriveEventId("resume_session", req.id, "resume_completed"),
+        payload: {
+          eventType: "resume_completed",
+          occurredAt: completedAt!.toISOString(),
+          sessionId: req.id,
+          email: session.email,
+          stepCompleted: incomingStep!,
+          resumeStrengthScore: session.resumeStrengthScore,
+          convertedWorkerId: session.convertedWorkerId,
+          utmSource: session.utmSource,
+          fbclid: session.fbclid,
+          metaCampaignId: session.metaCampaignId,
+        },
+        sessionId: req.id,
+      });
+
+      await db.exec`
+        INSERT INTO resume_audit_log (session_id, event_type, event_data)
+        VALUES (${req.id}, 'resume_completed', ${JSON.stringify({
+          stepCompleted: incomingStep,
+          email: session.email,
+        })}::jsonb)
+      `;
+    }
+
+    return { session };
   }
 );

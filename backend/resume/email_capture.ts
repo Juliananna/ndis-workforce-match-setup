@@ -2,7 +2,8 @@ import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
 import { convertSessionToProfile } from "./convert_helpers";
-import { upsertContact } from "../ghl/client";
+import { upsertContact, writeSyncLog } from "../ghl/client";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 import type { ResumeSession } from "./types";
 
 interface EmailCaptureRequest {
@@ -63,6 +64,25 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
       VALUES (${req.id}, 'email_captured', ${JSON.stringify({ email: req.email })}::jsonb)
     `;
 
+    await writeLifecycleEvent({
+      eventType: "email_captured",
+      entityType: "resume_session",
+      entityId: req.id,
+      idempotencyKey: deriveEventId("resume_session", req.id, "email_captured"),
+      payload: {
+        eventType: "email_captured",
+        occurredAt: new Date().toISOString(),
+        sessionId: req.id,
+        email: req.email,
+        consentMarketingEmails: req.consentMarketingEmails,
+        consentProfileCreation: req.consentProfileCreation,
+        consentProviderVisibility: req.consentProviderVisibility,
+        ipAddress: req.ipAddress ?? null,
+        userAgent: req.userAgent ?? null,
+      },
+      sessionId: req.id,
+    });
+
     const row = await db.queryRow`SELECT * FROM resume_sessions WHERE id = ${req.id}`;
     const session = rowToSession(row!);
 
@@ -90,7 +110,7 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
         tags.push("profile-not-created");
       }
       const resumeUrl = `https://kizazihire.com.au/resume-builder/preview/${req.id}`;
-      await upsertContact({
+      const upsertResult = await upsertContact({
         email: req.email,
         firstName,
         lastName,
@@ -99,7 +119,33 @@ export const emailCapture = api<EmailCaptureRequest, EmailCaptureResponse>(
         source: "resume-builder",
         website: resumeUrl,
       });
-    } catch {
+
+      if (upsertResult.contactId) {
+        await db.exec`
+          UPDATE resume_sessions
+          SET ghl_contact_id = ${upsertResult.contactId}, ghl_last_synced_at = NOW()
+          WHERE id = ${req.id}
+        `;
+      }
+
+      await writeSyncLog({
+        email: req.email,
+        entityType: "resume_session",
+        entityId: req.id,
+        operation: "email_capture_upsert",
+        success: true,
+        ghlContactId: upsertResult.contactId,
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await writeSyncLog({
+        email: req.email,
+        entityType: "resume_session",
+        entityId: req.id,
+        operation: "email_capture_upsert",
+        success: false,
+        errorMessage: errMsg,
+      });
     }
 
     if (profileCreated || workerId) {

@@ -6,7 +6,8 @@ import { sendEmail } from "../emailer/sender";
 import { workerDocumentsBucket } from "../workers/storage";
 import { profilePhotosBucket } from "../workers/storage";
 import { syncOnboardingStatus } from "../workers/compliance_status";
-import { upsertContact } from "../ghl/client";
+import { upsertContact, writeSyncLog } from "../ghl/client";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 import type { ResumeSession } from "./types";
 
 const appBaseUrl = secret("AppBaseUrl");
@@ -193,12 +194,47 @@ async function migrateResumePhoto(sessionId: string, workerId: string): Promise<
   }
 }
 
-async function syncResumeLeadToGHL(email: string, name: string): Promise<void> {
+/**
+ * Reads the marketing_emails consent from resume_session_consents and writes it
+ * to workers.marketing_consent so the worker record has an authoritative consent flag.
+ * The original consent record is preserved as the source of truth.
+ * SMS consent is never inferred from marketing consent — it stays NULL unless
+ * explicitly provided.
+ */
+async function transferMarketingConsent(sessionId: string, workerId: string): Promise<boolean> {
+  try {
+    const consentRow = await db.queryRow<{ granted: boolean; granted_at: Date | null; ip_address: string | null }>`
+      SELECT granted, granted_at, ip_address
+      FROM resume_session_consents
+      WHERE session_id = ${sessionId} AND consent_type = 'marketing_emails'
+    `;
+    if (consentRow === null) return false;
+
+    await db.exec`
+      UPDATE workers
+      SET marketing_consent    = ${consentRow.granted},
+          marketing_consent_at = ${consentRow.granted_at ?? new Date()},
+          updated_at           = NOW()
+      WHERE worker_id = ${workerId}
+    `;
+    return consentRow.granted;
+  } catch (err) {
+    console.error("[convert_helpers] failed to transfer marketing consent", workerId, err);
+    return false;
+  }
+}
+
+async function syncResumeLeadToGHL(
+  email: string,
+  name: string,
+  sessionId: string,
+  workerId: string
+): Promise<void> {
   try {
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts[0] ?? name;
     const lastName = nameParts.slice(1).join(" ") || undefined;
-    await upsertContact({
+    const upsertResult = await upsertContact({
       email,
       firstName,
       lastName,
@@ -206,7 +242,36 @@ async function syncResumeLeadToGHL(email: string, name: string): Promise<void> {
       tags: ["resume-lead", "resume-converted", "worker"],
       source: "resume-builder",
     });
-  } catch {
+
+    if (upsertResult.contactId) {
+      await db.exec`
+        UPDATE workers SET ghl_contact_id = ${upsertResult.contactId}, ghl_last_synced_at = NOW()
+        WHERE worker_id = ${workerId}
+      `;
+      await db.exec`
+        UPDATE resume_sessions SET ghl_contact_id = ${upsertResult.contactId}, ghl_last_synced_at = NOW()
+        WHERE id = ${sessionId}
+      `;
+    }
+
+    await writeSyncLog({
+      email,
+      entityType: "worker",
+      entityId: workerId,
+      operation: "profile_created_upsert",
+      success: true,
+      ghlContactId: upsertResult.contactId,
+    });
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    await writeSyncLog({
+      email,
+      entityType: "worker",
+      entityId: workerId,
+      operation: "profile_created_upsert",
+      success: false,
+      errorMessage: errMsg,
+    });
   }
 }
 
@@ -265,8 +330,28 @@ export async function convertSessionToProfile(
       await buildWorkerExtras(session, existingWorker.worker_id, availabilityDays, availabilityShifts);
       await migrateResumeDocs(sessionId, existingWorker.worker_id);
       await migrateResumePhoto(sessionId, existingWorker.worker_id);
+      await transferMarketingConsent(sessionId, existingWorker.worker_id);
       await syncOnboardingStatus(existingWorker.worker_id);
-      await syncResumeLeadToGHL(session.email!, fullName || name);
+      await syncResumeLeadToGHL(session.email!, fullName || name, sessionId, existingWorker.worker_id);
+
+      await writeLifecycleEvent({
+        eventType: "worker_profile_linked",
+        entityType: "worker",
+        entityId: existingWorker.worker_id,
+        idempotencyKey: deriveEventId("resume_session", sessionId, "worker_profile_linked"),
+        payload: {
+          eventType: "worker_profile_linked",
+          occurredAt: new Date().toISOString(),
+          workerId: existingWorker.worker_id,
+          userId: existingUser.user_id,
+          sessionId,
+          email: session.email!,
+        },
+        workerId: existingWorker.worker_id,
+        sessionId,
+        userId: existingUser.user_id,
+      });
+
       return { workerId: existingWorker.worker_id, userId: existingUser.user_id, alreadyExists: true };
     }
 
@@ -321,8 +406,9 @@ export async function convertSessionToProfile(
 
     const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
     await migrateResumePhoto(sessionId, worker.worker_id);
+    const marketingGranted = await transferMarketingConsent(sessionId, worker.worker_id);
     await syncOnboardingStatus(worker.worker_id);
-    await syncResumeLeadToGHL(session.email!, fullName || name);
+    await syncResumeLeadToGHL(session.email!, fullName || name, sessionId, worker.worker_id);
 
     await db.exec`
       INSERT INTO resume_audit_log (session_id, event_type, event_data)
@@ -333,6 +419,27 @@ export async function convertSessionToProfile(
         migratedDocuments: migratedCount,
       })}::jsonb)
     `;
+
+    await writeLifecycleEvent({
+      eventType: "worker_profile_created",
+      entityType: "worker",
+      entityId: worker.worker_id,
+      idempotencyKey: deriveEventId("resume_session", sessionId, "worker_profile_created"),
+      payload: {
+        eventType: "worker_profile_created",
+        occurredAt: new Date().toISOString(),
+        workerId: worker.worker_id,
+        userId: existingUser.user_id,
+        sessionId,
+        email: session.email!,
+        consentMarketingEmails: marketingGranted,
+        marketingConsentTransferred: true,
+        isNewUser: false,
+      },
+      workerId: worker.worker_id,
+      sessionId,
+      userId: existingUser.user_id,
+    });
 
     return { workerId: worker.worker_id, userId: existingUser.user_id, alreadyExists: false };
   }
@@ -404,8 +511,9 @@ export async function convertSessionToProfile(
 
   const migratedCount = await migrateResumeDocs(sessionId, worker.worker_id);
   await migrateResumePhoto(sessionId, worker.worker_id);
+  const marketingGranted = await transferMarketingConsent(sessionId, worker.worker_id);
   await syncOnboardingStatus(worker.worker_id);
-  await syncResumeLeadToGHL(session.email!, fullName || name);
+  await syncResumeLeadToGHL(session.email!, fullName || name, sessionId, worker.worker_id);
 
   await db.exec`
     INSERT INTO resume_audit_log (session_id, event_type, event_data)
@@ -415,6 +523,45 @@ export async function convertSessionToProfile(
       migratedDocuments: migratedCount,
     })}::jsonb)
   `;
+
+  await writeLifecycleEvent({
+    eventType: "worker_profile_created",
+    entityType: "worker",
+    entityId: worker.worker_id,
+    idempotencyKey: deriveEventId("resume_session", sessionId, "worker_profile_created"),
+    payload: {
+      eventType: "worker_profile_created",
+      occurredAt: new Date().toISOString(),
+      workerId: worker.worker_id,
+      userId: user.user_id,
+      sessionId,
+      email: session.email!,
+      consentMarketingEmails: marketingGranted,
+      marketingConsentTransferred: true,
+      isNewUser: true,
+    },
+    workerId: worker.worker_id,
+    sessionId,
+    userId: user.user_id,
+  });
+
+  await writeLifecycleEvent({
+    eventType: "email_verified",
+    entityType: "user",
+    entityId: user.user_id,
+    idempotencyKey: deriveEventId("user", user.user_id, "email_verified", "resume_builder_auto"),
+    payload: {
+      eventType: "email_verified",
+      occurredAt: new Date().toISOString(),
+      userId: user.user_id,
+      email: session.email!,
+      role: "WORKER",
+      verificationPath: "resume_builder_auto",
+    },
+    userId: user.user_id,
+    workerId: worker.worker_id,
+    sessionId,
+  });
 
   await issueSetPasswordEmail(user.user_id, session.email!);
 

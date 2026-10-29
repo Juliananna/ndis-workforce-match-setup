@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import db from "../db";
 import { userVerifiedTopic } from "../notifications/lifecycle_topics";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 
 export interface VerifyEmailRequest {
   token: string;
@@ -45,6 +46,22 @@ export const verifyEmail = api<VerifyEmailRequest, VerifyEmailResponse>(
       });
     } catch {
     }
+
+    await writeLifecycleEvent({
+      eventType: "email_verified",
+      entityType: "user",
+      entityId: user.user_id,
+      idempotencyKey: deriveEventId("user", user.user_id, "email_verified", "direct_registration"),
+      payload: {
+        eventType: "email_verified",
+        occurredAt: new Date().toISOString(),
+        userId: user.user_id,
+        email: user.email,
+        role: user.role,
+        verificationPath: "direct_registration",
+      },
+      userId: user.user_id,
+    });
 
     return { message: "Email verified successfully. You can now log in." };
   }

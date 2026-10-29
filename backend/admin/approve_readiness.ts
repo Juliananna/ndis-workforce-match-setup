@@ -8,6 +8,7 @@ import {
   type EligibilitySnapshot,
 } from "./readiness_eligibility";
 import { getLiveReadinessStatus, type LiveReadinessStatus } from "./readiness_live";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 
 export interface ReadinessEligibilityRequest {
   workerId: string;
@@ -137,6 +138,29 @@ export const adminApproveReadiness =
         }
       );
 
+      const workerEmailRow = await db.queryRow<{ email: string }>`
+        SELECT u.email FROM workers w JOIN users u ON u.user_id = w.user_id
+        WHERE w.worker_id = ${req.workerId}
+      `;
+
+      await writeLifecycleEvent({
+        eventType: "ready_to_hire_approved",
+        entityType: "worker",
+        entityId: req.workerId,
+        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_approved", new Date().toISOString().slice(0, 10)),
+        payload: {
+          eventType: "ready_to_hire_approved",
+          occurredAt: new Date().toISOString(),
+          workerId: req.workerId,
+          email: workerEmailRow?.email ?? "",
+          approvedByEmail: adminEmail,
+          verifiedDocCount: snapshot.verifiedDocCount,
+          verifiedRefCount: snapshot.verifiedRefCount,
+          mandatoryDocsPresent: snapshot.mandatoryDocsPresent,
+        },
+        workerId: req.workerId,
+      });
+
       const row = await db.queryRow<{ ready_to_hire_approved_at: Date }>`
         SELECT ready_to_hire_approved_at FROM workers WHERE worker_id = ${req.workerId}
       `;
@@ -218,6 +242,27 @@ export const adminRevokeReadiness =
         req.workerId,
         { reason: req.reason.trim() }
       );
+
+      const revokeWorkerEmailRow = await db.queryRow<{ email: string }>`
+        SELECT u.email FROM workers w JOIN users u ON u.user_id = w.user_id
+        WHERE w.worker_id = ${req.workerId}
+      `;
+
+      await writeLifecycleEvent({
+        eventType: "ready_to_hire_revoked",
+        entityType: "worker",
+        entityId: req.workerId,
+        idempotencyKey: deriveEventId("worker", req.workerId, "ready_to_hire_revoked", new Date().toISOString().slice(0, 16)),
+        payload: {
+          eventType: "ready_to_hire_revoked",
+          occurredAt: new Date().toISOString(),
+          workerId: req.workerId,
+          email: revokeWorkerEmailRow?.email ?? "",
+          revokedByEmail: adminEmail,
+          reason: req.reason.trim(),
+        },
+        workerId: req.workerId,
+      });
 
       const row = await db.queryRow<{ ready_to_hire_revoked_at: Date }>`
         SELECT ready_to_hire_revoked_at FROM workers WHERE worker_id = ${req.workerId}

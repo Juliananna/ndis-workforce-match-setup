@@ -93,6 +93,8 @@ export interface ResumeSession {
   aiGenerationCount: number;
   convertedWorkerId: string | null;
   photoKey: string | null;
+  resumeCompletedAt: Date | null;
+  resumeCompletedStep: number | null;
 
   utmSource: string | null;
   utmMedium: string | null;

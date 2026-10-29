@@ -49,6 +49,8 @@ export function rowToSession(row: Record<string, any>): ResumeSession {
     aiGenerationCount: row.ai_generation_count ?? 0,
     convertedWorkerId: row.converted_worker_id,
     photoKey: row.photo_key ?? null,
+    resumeCompletedAt: row.resume_completed_at ?? null,
+    resumeCompletedStep: row.resume_completed_step ?? null,
     utmSource: row.utm_source ?? null,
     utmMedium: row.utm_medium ?? null,
     utmCampaign: row.utm_campaign ?? null,

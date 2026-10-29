@@ -3,6 +3,7 @@ import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { workerDocumentsBucket } from "./storage";
 import { syncOnboardingStatus } from "./compliance_status";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 
 export const MANDATORY_DOCUMENT_TYPES = [
   "Driver's Licence",
@@ -194,7 +195,38 @@ export const confirmDocumentUpload = api<ConfirmDocumentUploadRequest, WorkerDoc
       throw APIError.internal("failed to record document");
     }
 
+    const docCountRow = await db.queryRow<{ cnt: number }>`
+      SELECT COUNT(*)::int AS cnt FROM worker_documents WHERE worker_id = ${workerId}
+    `;
+    const isFirstDocument = (docCountRow?.cnt ?? 0) === 1;
+
     await syncOnboardingStatus(workerId);
+
+    const workerUserRow = await db.queryRow<{ user_id: string; email: string }>`
+      SELECT w.user_id, u.email FROM workers w JOIN users u ON u.user_id = w.user_id
+      WHERE w.worker_id = ${workerId}
+    `;
+
+    if (workerUserRow) {
+      await writeLifecycleEvent({
+        eventType: "compliance_submitted",
+        entityType: "worker",
+        entityId: workerId,
+        idempotencyKey: deriveEventId("worker", workerId, "compliance_submitted", row.id),
+        payload: {
+          eventType: "compliance_submitted",
+          occurredAt: new Date().toISOString(),
+          workerId,
+          userId: workerUserRow.user_id,
+          email: workerUserRow.email,
+          documentType: req.documentType,
+          documentId: row.id,
+          isFirstDocument,
+        },
+        workerId,
+        userId: workerUserRow.user_id,
+      });
+    }
 
     const { url: fileUrl } = await workerDocumentsBucket.signedDownloadUrl(row.file_key, { ttl: 3600 });
 

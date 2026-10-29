@@ -3,6 +3,7 @@ import {
   computeReadinessEligibility,
   MANDATORY_COMPLIANCE_DOC_TYPES,
 } from "./readiness_eligibility";
+import { writeLifecycleEvent, deriveEventId } from "../lifecycle/writer";
 
 /**
  * Called after any compliance event that might invalidate a worker's readiness
@@ -60,6 +61,27 @@ export async function autoRevokeReadinessIfInvalid(
          ${JSON.stringify([...MANDATORY_COMPLIANCE_DOC_TYPES])},
          ${JSON.stringify(snapshot)}::jsonb)
     `;
+
+    const workerEmailRow = await db.queryRow<{ email: string }>`
+      SELECT u.email FROM workers w JOIN users u ON u.user_id = w.user_id
+      WHERE w.worker_id = ${workerId}
+    `;
+
+    await writeLifecycleEvent({
+      eventType: "ready_to_hire_auto_revoked",
+      entityType: "worker",
+      entityId: workerId,
+      idempotencyKey: deriveEventId("worker", workerId, "ready_to_hire_auto_revoked", new Date().toISOString().slice(0, 13)),
+      payload: {
+        eventType: "ready_to_hire_auto_revoked",
+        occurredAt: new Date().toISOString(),
+        workerId,
+        email: workerEmailRow?.email ?? "",
+        reason,
+        mandatoryDocsExpiredOrFlagged: snapshot.mandatoryDocsExpiredOrFlagged,
+      },
+      workerId,
+    });
   } catch (err) {
     console.error(
       "[readiness_auto_revoke] failed to auto-revoke readiness for worker",
