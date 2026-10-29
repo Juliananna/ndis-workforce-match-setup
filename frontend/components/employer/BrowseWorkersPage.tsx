@@ -230,13 +230,12 @@ export function BrowseWorkersPage({ isFreeTier, onUpgrade }: BrowseWorkersPagePr
       )}
 
       {!isFreeTier && (
-        <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-green-800">Verified workers are more reliable and ready to work</p>
-            <p className="text-xs text-green-700 mt-0.5">
-              Verified workers have confirmed their identity, uploaded compliance documents, set their availability, and provided references.
-              They appear first in search results.
+            <p className="text-sm font-semibold text-blue-800">Workers shown have submitted compliance documents</p>
+            <p className="text-xs text-blue-700 mt-0.5">
+              All workers visible here have at least one current document on file. Final clearance to commence work requires completed compliance review by the Kizazi team.
             </p>
           </div>
         </div>
@@ -267,8 +266,8 @@ export function BrowseWorkersPage({ isFreeTier, onUpgrade }: BrowseWorkersPagePr
             onChange={(e) => setVerifiedOnly(e.target.checked)}
           />
           <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-          <span className="text-sm font-semibold text-foreground">Verified workers only</span>
-          <span className="text-xs text-muted-foreground">(Confirmed ID, docs, references &amp; availability)</span>
+          <span className="text-sm font-semibold text-foreground">Admin-reviewed doc &amp; reference</span>
+          <span className="text-xs text-muted-foreground">(Has at least one admin-verified document and one verified reference)</span>
         </label>
 
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">

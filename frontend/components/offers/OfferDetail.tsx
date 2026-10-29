@@ -705,7 +705,7 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
         )}
 
         {offer.status === "Accepted" && (
-          <div className="px-5 py-4 bg-emerald-50 border-t border-emerald-100">
+          <div className="px-5 py-4 bg-emerald-50 border-t border-emerald-100 space-y-3">
             <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 className="h-5 w-5 shrink-0" />
               <div>
@@ -716,6 +716,15 @@ export function OfferDetail({ offer: initialOffer, role, onBack, onEmployerActio
                     : "You've accepted this offer. Your resume has been automatically shared with the employer."}
                 </p>
               </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+              <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">
+                <span className="font-semibold">Conditional offer — not clearance to commence.</span>{" "}
+                {role === "EMPLOYER"
+                  ? "This offer is accepted subject to completion of the worker's compliance review. Do not schedule commencement until their documents and references have been verified by the compliance team."
+                  : "This offer is accepted subject to your compliance documents and references being approved. You will be notified when your compliance review is complete."}
+              </p>
             </div>
           </div>
         )}

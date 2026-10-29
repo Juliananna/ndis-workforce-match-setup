@@ -208,11 +208,11 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
             </div>
 
             {worker.isFullyVerified ? (
-              <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+              <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-green-800">Verified Worker ✅</p>
-                  <p className="text-xs text-green-700 mt-0.5">ID confirmed, compliance docs uploaded, availability set &amp; references provided.</p>
+                  <p className="text-sm font-bold text-blue-800">Compliance Review In Progress</p>
+                  <p className="text-xs text-blue-700 mt-0.5">This worker has submitted documents and references. Their profile is under compliance review — clearance to commence will be confirmed by the compliance team.</p>
                 </div>
               </div>
             ) : (
@@ -221,7 +221,7 @@ export function WorkerProfileDrawer({ worker, onClose, savedIds, savingIds, onTo
                 <div>
                   <p className="text-sm font-semibold text-amber-800">Profile incomplete</p>
                   <p className="text-xs text-amber-700 mt-0.5">
-                    Verification score: {worker.verificationScore}% — this worker hasn't fully completed their profile.
+                    Profile score: {worker.verificationScore}% — this worker is still completing their profile and compliance submission.
                   </p>
                 </div>
               </div>
