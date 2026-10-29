@@ -26,12 +26,10 @@ export async function verifySessionToken(sessionId: string, token: string | unde
   }
 
   if (row.session_token_hash === null) {
-    await db.exec`
-      UPDATE resume_sessions
-      SET session_token_hash = ${tokenHash}, updated_at = NOW()
-      WHERE id = ${sessionId}
-    `;
-    return;
+    throw APIError.permissionDenied(
+      "This resume session was created before secure tokens were introduced. " +
+      "Please log in to your KizaziHire account to access it, or contact support."
+    );
   }
 
   if (row.session_token_hash !== tokenHash) {

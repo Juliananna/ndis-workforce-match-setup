@@ -130,7 +130,7 @@ function isInternalStorageKey(value: string): boolean {
   }
 }
 
-async function migrateResumeDocs(sessionId: string, workerId: string): Promise<number> {
+export async function migrateResumeDocs(sessionId: string, workerId: string): Promise<number> {
   const resumeDocs = await db.queryAll<{
     document_type: string;
     document_title: string;
@@ -173,7 +173,7 @@ async function migrateResumeDocs(sessionId: string, workerId: string): Promise<n
   return migratedCount;
 }
 
-async function migrateResumePhoto(sessionId: string, workerId: string): Promise<string | null> {
+export async function migrateResumePhoto(sessionId: string, workerId: string): Promise<string | null> {
   const sessionRow = await db.queryRow<{ photo_key: string | null }>`
     SELECT photo_key FROM resume_sessions WHERE id = ${sessionId}
   `;
@@ -204,7 +204,7 @@ async function migrateResumePhoto(sessionId: string, workerId: string): Promise<
  * SMS consent is never inferred from marketing consent — it stays NULL unless
  * explicitly provided.
  */
-async function transferMarketingConsent(sessionId: string, workerId: string): Promise<boolean> {
+export async function transferMarketingConsent(sessionId: string, workerId: string): Promise<boolean> {
   try {
     const consentRow = await db.queryRow<{ granted: boolean; granted_at: Date | null; ip_address: string | null }>`
       SELECT granted, granted_at, ip_address
@@ -227,7 +227,7 @@ async function transferMarketingConsent(sessionId: string, workerId: string): Pr
   }
 }
 
-async function syncResumeLeadToGHL(
+export async function syncResumeLeadToGHL(
   email: string,
   name: string,
   sessionId: string,
@@ -307,40 +307,21 @@ export async function convertSessionToProfile(
 
     if (existingWorker) {
       await db.exec`
-        UPDATE resume_sessions SET converted_worker_id = ${existingWorker.worker_id}, status = 'converted', updated_at = NOW()
+        UPDATE resume_sessions
+        SET pending_link_worker_id = ${existingWorker.worker_id},
+            status = CASE WHEN status = 'draft' THEN 'email_captured' ELSE status END,
+            updated_at = NOW()
         WHERE id = ${sessionId}
       `;
 
       await db.exec`
-        UPDATE workers SET
-          resume_session_id = ${sessionId},
-          updated_at = NOW()
-        WHERE worker_id = ${existingWorker.worker_id}
-      `;
-
-      await migrateResumeDocs(sessionId, existingWorker.worker_id);
-      await migrateResumePhoto(sessionId, existingWorker.worker_id);
-      await transferMarketingConsent(sessionId, existingWorker.worker_id);
-      await syncOnboardingStatus(existingWorker.worker_id);
-      await syncResumeLeadToGHL(session.email!, fullName || name, sessionId, existingWorker.worker_id);
-
-      await writeLifecycleEvent({
-        eventType: "worker_profile_linked",
-        entityType: "worker",
-        entityId: existingWorker.worker_id,
-        idempotencyKey: deriveEventId("resume_session", sessionId, "worker_profile_linked"),
-        payload: {
-          eventType: "worker_profile_linked",
-          occurredAt: new Date().toISOString(),
-          workerId: existingWorker.worker_id,
+        INSERT INTO resume_audit_log (session_id, event_type, event_data)
+        VALUES (${sessionId}, 'link_pending_account_ownership', ${JSON.stringify({
+          pendingWorkerId: existingWorker.worker_id,
           userId: existingUser.user_id,
-          sessionId,
-          email: session.email!,
-        },
-        workerId: existingWorker.worker_id,
-        sessionId,
-        userId: existingUser.user_id,
-      });
+          email: session.email,
+        })}::jsonb)
+      `;
 
       return { workerId: existingWorker.worker_id, userId: existingUser.user_id, alreadyExists: true };
     }

@@ -2,11 +2,40 @@ import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
 import { rowToSession } from "./session_helpers";
+import { generateSessionToken, hashToken } from "./session_token";
 import type { ResumeSession } from "./types";
 
 interface WorkerCreateOrGetSessionResponse {
   session: ResumeSession;
+  sessionToken: string;
   prefilled: boolean;
+}
+
+async function ensureTokenOnSession(sessionId: string): Promise<string> {
+  const existing = await db.queryRow<{ session_token_hash: string | null }>`
+    SELECT session_token_hash FROM resume_sessions WHERE id = ${sessionId}
+  `;
+  if (!existing) throw APIError.notFound("session not found");
+
+  if (existing.session_token_hash !== null) {
+    const newToken = generateSessionToken();
+    const newHash = hashToken(newToken);
+    await db.exec`
+      UPDATE resume_sessions
+      SET session_token_hash = ${newHash}, updated_at = NOW()
+      WHERE id = ${sessionId} AND session_token_hash = ${existing.session_token_hash}
+    `;
+    return newToken;
+  }
+
+  const token = generateSessionToken();
+  const tokenHash = hashToken(token);
+  await db.exec`
+    UPDATE resume_sessions
+    SET session_token_hash = ${tokenHash}, updated_at = NOW()
+    WHERE id = ${sessionId}
+  `;
+  return token;
 }
 
 export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionResponse>(
@@ -72,7 +101,8 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
         SELECT * FROM resume_sessions WHERE id = ${worker.resume_session_id}
       `;
       if (existing) {
-        return { session: rowToSession(existing), prefilled: false };
+        const sessionToken = await ensureTokenOnSession(worker.resume_session_id);
+        return { session: rowToSession(existing), sessionToken, prefilled: false };
       }
     }
 
@@ -83,7 +113,8 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
       LIMIT 1
     `;
     if (existingByWorker) {
-      return { session: rowToSession(existingByWorker), prefilled: false };
+      const sessionToken = await ensureTokenOnSession(existingByWorker.id as string);
+      return { session: rowToSession(existingByWorker), sessionToken, prefilled: false };
     }
 
     const nameParts = (worker.full_name ?? "").trim().split(/\s+/);
@@ -99,6 +130,9 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
     const checks = parseJsonb<object[]>(worker.checks, []);
     const capabilityStories = parseJsonb<object[]>(worker.capability_stories, []);
 
+    const newToken = generateSessionToken();
+    const newTokenHash = hashToken(newToken);
+
     const row = await db.queryRow<{ id: string }>`
       INSERT INTO resume_sessions (
         email, first_name, last_name, phone, suburb, postcode, state,
@@ -106,7 +140,7 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
         experience_years, experience_level, target_role, ndis_screening_number,
         support_settings, support_tasks, support_style, languages,
         work_history, qualifications, training, checks, capability_stories,
-        converted_worker_id
+        converted_worker_id, session_token_hash
       )
       VALUES (
         ${worker.email},
@@ -132,7 +166,8 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
         ${JSON.stringify(training)}::jsonb,
         ${JSON.stringify(checks)}::jsonb,
         ${JSON.stringify(capabilityStories)}::jsonb,
-        ${worker.worker_id}
+        ${worker.worker_id},
+        ${newTokenHash}
       )
       RETURNING id
     `;
@@ -150,6 +185,6 @@ export const workerCreateOrGetSession = api<void, WorkerCreateOrGetSessionRespon
       SELECT * FROM resume_sessions WHERE id = ${row!.id}
     `;
 
-    return { session: rowToSession(session!), prefilled: true };
+    return { session: rowToSession(session!), sessionToken: newToken, prefilled: true };
   }
 );

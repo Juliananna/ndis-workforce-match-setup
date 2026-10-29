@@ -13,6 +13,7 @@ import { StepAvailability } from "../resume/StepAvailability";
 import { StepCapabilities } from "../resume/StepCapabilities";
 import type { SessionData } from "../resume/types";
 import { STEPS } from "../resume/types";
+import { storeSessionToken, getSessionToken } from "../../lib/sessionToken";
 
 const defaultSession = (): SessionData => ({
   id: "", stepCompleted: 0, email: null, firstName: null, lastName: null, phone: null,
@@ -40,7 +41,10 @@ export function WorkerResumeTab({ onBack }: Props) {
   useEffect(() => {
     if (!api) return;
     api.resume.workerCreateOrGetSession()
-      .then(({ session: s }) => {
+      .then(({ session: s, sessionToken }) => {
+        if (s.id && sessionToken) {
+          storeSessionToken(s.id, sessionToken);
+        }
         setSession(s as SessionData);
         setCurrentStep(Math.min(s.stepCompleted, STEPS.length - 1));
       })
@@ -53,10 +57,13 @@ export function WorkerResumeTab({ onBack }: Props) {
 
   const saveStep = useCallback(async (data: SessionData, step: number) => {
     if (!data.id || !api) return;
+    const sessionToken = getSessionToken(data.id);
     setSaving(true);
     try {
       await api.resume.updateSession({
-        id: data.id, stepCompleted: step,
+        id: data.id,
+        sessionToken,
+        stepCompleted: step,
         firstName: data.firstName ?? undefined,
         lastName: data.lastName ?? undefined,
         phone: data.phone ?? undefined,

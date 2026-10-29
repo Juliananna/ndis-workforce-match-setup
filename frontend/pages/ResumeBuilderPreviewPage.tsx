@@ -158,10 +158,18 @@ export default function ResumeBuilderPreviewPage() {
     }
   };
 
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   const handleDownload = () => {
     const el = document.getElementById("resume-preview");
     if (!el) return;
-    const fullName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
+    const rawName = [session.firstName, session.lastName].filter(Boolean).join(" ") || "Resume";
+    const safeName = rawName
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
     const printWin = window.open("", "_blank", "width=900,height=700");
     if (!printWin) {
@@ -173,11 +181,18 @@ export default function ResumeBuilderPreviewPage() {
       .map((l) => `<link rel="stylesheet" href="${(l as HTMLLinkElement).href}">`)
       .join("\n");
 
+    const mobileHint = isMobile
+      ? `<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-family:Arial,sans-serif;font-size:13px;color:#92400e;">
+           <strong>To save as PDF:</strong> tap the Share icon and choose <em>Print</em>, then pinch to zoom out and tap the PDF icon — or choose <em>Save to Files</em>.
+         </div>`
+      : "";
+
     printWin.document.write(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${fullName} – NDIS Support Worker Resume</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${safeName} \u2013 NDIS Support Worker Resume</title>
   ${links}
   <style>
     @page { size: A4; margin: 12mm 10mm; }
@@ -185,20 +200,32 @@ export default function ResumeBuilderPreviewPage() {
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     #resume-root { max-width: 680px; margin: 0 auto; }
     @media screen { body { padding: 20px; } }
+    @media print {
+      .mobile-hint { display: none !important; }
+      [class*="work-entry"], [class*="qual-entry"] { page-break-inside: avoid; }
+      h2 { page-break-after: avoid; }
+    }
   </style>
 </head>
 <body>
+  <div class="mobile-hint">${mobileHint}<\/div>
   <div id="resume-root">${el.outerHTML}<\/div>
   <script>
     window.onload = function() {
-      document.title = "${fullName} – NDIS Support Worker Resume";
-      setTimeout(function() { window.print(); }, 400);
+      setTimeout(function() { window.print(); }, 500);
       window.onafterprint = function() { window.close(); };
     };
   <\/script>
 </body>
 </html>`);
     printWin.document.close();
+
+    if (isMobile) {
+      toast({
+        title: "Print dialog opened",
+        description: "Tap the Share icon → Print, then save as PDF.",
+      });
+    }
   };
 
   if (loading) {
