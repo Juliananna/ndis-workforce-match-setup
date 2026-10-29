@@ -49,6 +49,19 @@ export function rowToSession(row: Record<string, any>): ResumeSession {
     aiGenerationCount: row.ai_generation_count ?? 0,
     convertedWorkerId: row.converted_worker_id,
     photoKey: row.photo_key ?? null,
+    utmSource: row.utm_source ?? null,
+    utmMedium: row.utm_medium ?? null,
+    utmCampaign: row.utm_campaign ?? null,
+    utmContent: row.utm_content ?? null,
+    utmTerm: row.utm_term ?? null,
+    metaCampaignId: row.meta_campaign_id ?? null,
+    metaAdsetId: row.meta_adset_id ?? null,
+    metaAdId: row.meta_ad_id ?? null,
+    metaLeadId: row.meta_lead_id ?? null,
+    fbclid: row.fbclid ?? null,
+    landingPage: row.landing_page ?? null,
+    ghlContactId: row.ghl_contact_id ?? null,
+    ghlLastSyncedAt: row.ghl_last_synced_at ?? null,
   };
 }
 

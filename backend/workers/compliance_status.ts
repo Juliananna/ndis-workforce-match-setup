@@ -1,6 +1,7 @@
 import { api, APIError } from "encore.dev/api";
 import { getAuthData } from "~encore/auth";
 import db from "../db";
+import { autoRevokeReadinessIfInvalid } from "../admin/readiness_auto_revoke";
 
 export interface ComplianceStatusResponse {
   onboardingStatus: "active" | "compliance_required";
@@ -22,6 +23,10 @@ export async function syncOnboardingStatus(workerId: string): Promise<"active" |
   await db.exec`
     UPDATE workers SET onboarding_status = ${newStatus} WHERE worker_id = ${workerId}
   `;
+
+  if (newStatus === "compliance_required") {
+    await autoRevokeReadinessIfInvalid(workerId);
+  }
 
   return newStatus;
 }

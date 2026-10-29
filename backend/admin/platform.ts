@@ -31,6 +31,13 @@ export interface PlatformStats {
   resumeLeadsThisMonth: number;
   totalDemoLeads: number;
   demoLeadsThisMonth: number;
+
+  funnelUniquePeople: number;
+  funnelResumeLeadsOnly: number;
+  funnelConvertedToAccount: number;
+  funnelVerifiedWorkers: number;
+  funnelReadyToHire: number;
+  funnelConversionRatePct: number;
 }
 
 export const adminGetPlatformStats = api<void, PlatformStats>(
@@ -56,6 +63,7 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       pendingRefsRow,
       profileCompletionRow,
       resumeLeadsRow,
+      funnelRow,
       demoLeadsRow,
     ] = await Promise.all([
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
@@ -122,6 +130,47 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
         FROM resume_sessions
         WHERE status != 'draft' OR email IS NOT NULL
       `,
+      db.queryRow<{
+        unique_people: number;
+        resume_leads_only: number;
+        converted_to_account: number;
+        verified_workers: number;
+        ready_to_hire: number;
+      }>`
+        WITH all_emails AS (
+          SELECT u.email, TRUE AS has_account, u.is_verified,
+                 w.ready_to_hire,
+                 (rs.id IS NOT NULL AND rs.converted_worker_id IS NOT NULL) AS converted
+          FROM users u
+          JOIN workers w ON w.user_id = u.user_id
+          LEFT JOIN resume_sessions rs ON rs.converted_worker_id = w.worker_id
+          WHERE u.is_demo = FALSE AND u.role = 'WORKER'
+          UNION
+          SELECT rs.email, FALSE AS has_account, FALSE AS is_verified,
+                 FALSE AS ready_to_hire, FALSE AS converted
+          FROM resume_sessions rs
+          WHERE rs.email IS NOT NULL
+            AND rs.converted_worker_id IS NULL
+            AND rs.status NOT IN ('draft', 'archived')
+        ),
+        deduped AS (
+          SELECT email,
+                 BOOL_OR(has_account)    AS has_account,
+                 BOOL_OR(is_verified)    AS is_verified,
+                 BOOL_OR(ready_to_hire)  AS ready_to_hire,
+                 BOOL_OR(converted)      AS converted
+          FROM all_emails
+          WHERE email IS NOT NULL
+          GROUP BY email
+        )
+        SELECT
+          COUNT(*)::int                                           AS unique_people,
+          COUNT(*) FILTER (WHERE NOT has_account)::int           AS resume_leads_only,
+          COUNT(*) FILTER (WHERE has_account)::int               AS converted_to_account,
+          COUNT(*) FILTER (WHERE is_verified)::int               AS verified_workers,
+          COUNT(*) FILTER (WHERE ready_to_hire)::int             AS ready_to_hire
+        FROM deduped
+      `,
       db.queryRow<{ total: number; this_month: number }>`
         SELECT
           COUNT(*)::int AS total,
@@ -157,6 +206,17 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       resumeLeadsThisMonth: resumeLeadsRow?.this_month ?? 0,
       totalDemoLeads: demoLeadsRow?.total ?? 0,
       demoLeadsThisMonth: demoLeadsRow?.this_month ?? 0,
+      funnelUniquePeople: funnelRow?.unique_people ?? 0,
+      funnelResumeLeadsOnly: funnelRow?.resume_leads_only ?? 0,
+      funnelConvertedToAccount: funnelRow?.converted_to_account ?? 0,
+      funnelVerifiedWorkers: funnelRow?.verified_workers ?? 0,
+      funnelReadyToHire: funnelRow?.ready_to_hire ?? 0,
+      funnelConversionRatePct:
+        funnelRow?.unique_people
+          ? Math.round(
+              ((funnelRow.converted_to_account ?? 0) / funnelRow.unique_people) * 100
+            )
+          : 0,
     };
   }
 );

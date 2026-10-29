@@ -4,6 +4,7 @@ import db from "../db";
 import { assertAdminOrCompliance } from "./guard";
 import { workerDocumentsBucket } from "../workers/storage";
 import { sendEmail } from "../emailer/sender";
+import { autoRevokeReadinessIfInvalid } from "./readiness_auto_revoke";
 
 export type FlagReason = "expired" | "unclear" | "wrong_doc" | "missing_info";
 
@@ -94,6 +95,8 @@ export const adminVerifyDocument = api<VerifyDocumentRequest, VerifyDocumentResp
     `;
 
     if (!row) throw APIError.notFound("document not found");
+
+    await autoRevokeReadinessIfInvalid(row.worker_id);
 
     if (req.action === "flag") {
       const workerUser = await db.queryRow<{ user_id: string; name: string; email: string }>`

@@ -93,6 +93,20 @@ export interface ResumeSession {
   aiGenerationCount: number;
   convertedWorkerId: string | null;
   photoKey: string | null;
+
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+  metaCampaignId: string | null;
+  metaAdsetId: string | null;
+  metaAdId: string | null;
+  metaLeadId: string | null;
+  fbclid: string | null;
+  landingPage: string | null;
+  ghlContactId: string | null;
+  ghlLastSyncedAt: Date | null;
 }
 
 export interface ConsentRecord {
