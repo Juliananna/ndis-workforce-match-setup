@@ -275,6 +275,43 @@ export function AdminDashboardHome({
       </div>
 
       <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">Lead Pipeline</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile
+            icon={<FileText className="h-5 w-5 text-teal-400" />}
+            label="Resume Builder Leads"
+            value={stats?.totalResumeLeads ?? "—"}
+            sub={stats ? `+${stats.resumeLeadsThisMonth} this month` : undefined}
+            color="bg-teal-500/10"
+            onClick={() => window.location.href = "/admin/resume-leads"}
+          />
+          <StatTile
+            icon={<CheckCircle className="h-5 w-5 text-green-400" />}
+            label="Email Captured"
+            value={stats?.resumeLeadsEmailCaptured ?? "—"}
+            sub={stats ? `${stats.resumeLeadsConverted} converted to profiles` : undefined}
+            color="bg-green-500/10"
+            onClick={() => window.location.href = "/admin/resume-leads"}
+          />
+          <StatTile
+            icon={<Users className="h-5 w-5 text-orange-400" />}
+            label="Demo Leads"
+            value={stats?.totalDemoLeads ?? "—"}
+            sub={stats ? `+${stats.demoLeadsThisMonth} this month` : undefined}
+            color="bg-orange-500/10"
+            onClick={() => onNavigate("overview")}
+          />
+          <StatTile
+            icon={<TrendingUp className="h-5 w-5 text-violet-400" />}
+            label="Total Pipeline"
+            value={stats ? stats.totalResumeLeads + stats.totalDemoLeads + stats.totalWorkers + stats.totalEmployers : "—"}
+            sub="Leads + registered users"
+            color="bg-violet-500/10"
+          />
+        </div>
+      </div>
+
+      <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">Worker Profile Completion</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile

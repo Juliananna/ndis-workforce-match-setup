@@ -232,6 +232,8 @@ function OverviewTab({ api }: { api: ReturnType<typeof useAuthedBackend> }) {
           <StatCard icon={<CheckCircle className="h-4.5 w-4.5 text-emerald-400" />} label="Accepted Offers" value={stats.acceptedOffers} sub={`${stats.totalOffers} total offers`} color="bg-emerald-500/10" />
           <StatCard icon={<MessageSquare className="h-4.5 w-4.5 text-cyan-400" />} label="Messages Sent" value={stats.totalMessages} color="bg-cyan-500/10" />
           <StatCard icon={<UserCheck className="h-4.5 w-4.5 text-rose-400" />} label="Unverified Users" value={stats.unverifiedUsers} sub="Email not confirmed" color="bg-rose-500/10" />
+          <StatCard icon={<FileText className="h-4.5 w-4.5 text-teal-400" />} label="Resume Builder Leads" value={stats.totalResumeLeads} sub={`${stats.resumeLeadsConverted} converted · +${stats.resumeLeadsThisMonth} this month`} color="bg-teal-500/10" />
+          <StatCard icon={<Users className="h-4.5 w-4.5 text-orange-400" />} label="Demo Leads" value={stats.totalDemoLeads} sub={`+${stats.demoLeadsThisMonth} this month`} color="bg-orange-500/10" />
         </div>
       </div>
     </div>

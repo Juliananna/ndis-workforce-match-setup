@@ -25,6 +25,12 @@ export interface PlatformStats {
   workersMostlyComplete: number;
   workersIncomplete: number;
   pendingReferenceChecks: number;
+  totalResumeLeads: number;
+  resumeLeadsEmailCaptured: number;
+  resumeLeadsConverted: number;
+  resumeLeadsThisMonth: number;
+  totalDemoLeads: number;
+  demoLeadsThisMonth: number;
 }
 
 export const adminGetPlatformStats = api<void, PlatformStats>(
@@ -49,6 +55,8 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       unverifiedRow,
       pendingRefsRow,
       profileCompletionRow,
+      resumeLeadsRow,
+      demoLeadsRow,
     ] = await Promise.all([
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM workers w JOIN users u ON u.user_id = w.user_id WHERE u.is_demo = FALSE`,
       db.queryRow<{ count: number }>`SELECT COUNT(*)::int AS count FROM employers e JOIN users u ON u.user_id = e.user_id WHERE u.is_demo = FALSE`,
@@ -105,6 +113,21 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
           COUNT(*) FILTER (WHERE pct < 50)::int AS incomplete
         FROM completion
       `,
+      db.queryRow<{ total: number; email_captured: number; converted: number; this_month: number }>`
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status IN ('email_captured', 'converted'))::int AS email_captured,
+          COUNT(*) FILTER (WHERE status = 'converted')::int AS converted,
+          COUNT(*) FILTER (WHERE created_at >= date_trunc('month', NOW()))::int AS this_month
+        FROM resume_sessions
+        WHERE status != 'draft' OR email IS NOT NULL
+      `,
+      db.queryRow<{ total: number; this_month: number }>`
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE created_at >= date_trunc('month', NOW()))::int AS this_month
+        FROM demo_leads
+      `,
     ]);
 
     return {
@@ -128,6 +151,12 @@ export const adminGetPlatformStats = api<void, PlatformStats>(
       workersMostlyComplete: profileCompletionRow?.mostly_complete ?? 0,
       workersIncomplete: profileCompletionRow?.incomplete ?? 0,
       pendingReferenceChecks: pendingRefsRow?.count ?? 0,
+      totalResumeLeads: resumeLeadsRow?.total ?? 0,
+      resumeLeadsEmailCaptured: resumeLeadsRow?.email_captured ?? 0,
+      resumeLeadsConverted: resumeLeadsRow?.converted ?? 0,
+      resumeLeadsThisMonth: resumeLeadsRow?.this_month ?? 0,
+      totalDemoLeads: demoLeadsRow?.total ?? 0,
+      demoLeadsThisMonth: demoLeadsRow?.this_month ?? 0,
     };
   }
 );
